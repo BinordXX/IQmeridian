@@ -1,0 +1,21 @@
+{
+  "name": "iqmeridian",
+  "version": "1.0.0",
+  "description": "IQMeridian cognitive assessment platform",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BinordXX/IQmeridian.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/BinordXX/IQmeridian/issues"
+  },
+  "homepage": "https://github.com/BinordXX/IQmeridian#readme"
+}
