@@ -1,21 +1,29 @@
 {
   "name": "iqmeridian",
   "version": "1.0.0",
+  "private": true,
   "description": "IQMeridian cognitive assessment platform",
-  "main": "index.js",
+  "packageManager": "pnpm@10.33.3",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "echo \"Root dev command not set yet\"",
+    "build": "echo \"Root build command not set yet\"",
+    "lint": "echo \"Root lint command not set yet\"",
+    "test": "echo \"Root test command not set yet\"",
+    "typecheck": "echo \"Root typecheck command not set yet\"",
+    "format": "echo \"Root format command not set yet\""
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/BinordXX/IQmeridian.git"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
+  "author": "Binord",
+  "license": "UNLICENSED",
   "bugs": {
     "url": "https://github.com/BinordXX/IQmeridian/issues"
   },
-  "homepage": "https://github.com/BinordXX/IQmeridian#readme"
+  "homepage": "https://github.com/BinordXX/IQmeridian#readme",
+  "devDependencies": {
+    "typescript": "^6.0.3"
+  }
 }
