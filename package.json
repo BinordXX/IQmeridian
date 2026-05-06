@@ -5,12 +5,12 @@
   "description": "IQMeridian cognitive assessment platform",
   "packageManager": "pnpm@10.33.3",
   "scripts": {
-    "dev": "echo \"Root dev command not set yet\"",
-    "build": "echo \"Root build command not set yet\"",
-    "lint": "echo \"Root lint command not set yet\"",
-    "test": "echo \"Root test command not set yet\"",
-    "typecheck": "echo \"Root typecheck command not set yet\"",
-    "format": "echo \"Root format command not set yet\""
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck",
+    "format": "turbo run format"
   },
   "repository": {
     "type": "git",
@@ -24,6 +24,7 @@
   },
   "homepage": "https://github.com/BinordXX/IQmeridian#readme",
   "devDependencies": {
-    "typescript": "^6.0.3"
+    "turbo": "^2.5.6",
+    "typescript": "^5.9.2"
   }
 }
