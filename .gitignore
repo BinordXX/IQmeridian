@@ -67,6 +67,19 @@ web_modules/
 
 # dotenv environment variable files
 .env
+node_modules/
+.pnpm-store/
+.next/
+dist/
+coverage/
+.turbo/
+.env
+.env.local
+.env.*.local
+apps/web/.env.local
+apps/api/.env
+.DS_Store
+*.log
 .env.*
 !.env.example
 .env
