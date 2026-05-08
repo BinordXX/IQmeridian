@@ -13,6 +13,14 @@ on:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  DATABASE_URL: postgresql://postgres:postgres@localhost:5432/iqmeridian
+  REDIS_URL: redis://localhost:6379
+  S3_ENDPOINT: http://localhost:9000
+  S3_REGION: us-east-1
+  S3_BUCKET: iqmeridian-dev
+  S3_ACCESS_KEY: minioadmin
+  S3_SECRET_KEY: minioadmin
+  AUTH_SECRET: ci_dummy_secret
 
 jobs:
   ci:
