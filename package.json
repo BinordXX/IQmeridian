@@ -31,5 +31,8 @@
     "turbo": "^2.5.6",
     "typescript": "^5.9.2",
     "typescript-eslint": "^8.59.2"
+  },
+  "dependencies": {
+    "zod": "^4.4.3"
   }
 }
