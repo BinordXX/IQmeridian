@@ -65,51 +65,50 @@ model User {
 
   auditLogs      AuditLog[]
   sessions       Session[]
-  campaignsOwned Campaign[]    @relation("CampaignOwner")
-  reports        Report[]      @relation("ReportSubject")
-  invitations    Invitation[]  @relation("InvitationCandidate")
+  campaignsOwned Campaign[]   @relation("CampaignOwner")
+  reports        Report[]     @relation("ReportSubject")
+  invitations    Invitation[] @relation("InvitationCandidate")
 }
 
-
 model Organisation {
-  id          String     @id @default(cuid())
-  name        String
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  users       User[]
-  campaigns   Campaign[]
+  users     User[]
+  campaigns Campaign[]
 }
 
 model Campaign {
-  id               String         @id @default(cuid())
+  id               String          @id @default(cuid())
   name             String
-  status           CampaignStatus @default(DRAFT)
+  status           CampaignStatus  @default(DRAFT)
   organisationId   String
-  organisation     Organisation   @relation(fields: [organisationId], references: [id])
+  organisation     Organisation    @relation(fields: [organisationId], references: [id])
   ownerId          String?
-  owner            User?          @relation("CampaignOwner", fields: [ownerId], references: [id])
+  owner            User?           @relation("CampaignOwner", fields: [ownerId], references: [id])
   assessmentFormId String?
   assessmentForm   AssessmentForm? @relation(fields: [assessmentFormId], references: [id])
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
 
-  invitations      Invitation[]
-  sessions         Session[]
+  invitations Invitation[]
+  sessions    Session[]
 }
 
 model AssessmentForm {
-  id          String              @id @default(cuid())
-  name        String
-  version     Int                 @default(1)
-  isActive    Boolean             @default(false)
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
+  id        String   @id @default(cuid())
+  name      String
+  version   Int      @default(1)
+  isActive  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  sections    AssessmentSection[]
-  items       FormItemMapping[]
-  campaigns   Campaign[]
-  sessions    Session[]
+  sections  AssessmentSection[]
+  items     FormItemMapping[]
+  campaigns Campaign[]
+  sessions  Session[]
 }
 
 model AssessmentSection {
@@ -122,8 +121,8 @@ model AssessmentSection {
   timeLimitSec Int
   orderIndex   Int
 
-  items        FormItemMapping[]
-  activeSessions Session[]          @relation("CurrentSessionSection")
+  items          FormItemMapping[]
+  activeSessions Session[]         @relation("CurrentSessionSection")
 }
 
 model Item {
@@ -139,8 +138,8 @@ model Item {
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
 
-  formMappings  FormItemMapping[]
-  responses     Response[]
+  formMappings FormItemMapping[]
+  responses    Response[]
 }
 
 model FormItemMapping {
@@ -172,84 +171,87 @@ model Invitation {
   expiresAt       DateTime?
   usedAt          DateTime?
 
-  sessions        Session[]
+  sessions Session[]
 }
 
 model Session {
-  id               String         @id @default(cuid())
-  userId           String
-  user             User           @relation(fields: [userId], references: [id])
-  campaignId       String?
-  campaign         Campaign?      @relation(fields: [campaignId], references: [id])
-  invitationId     String?
-  invitation       Invitation?    @relation(fields: [invitationId], references: [id])
-  assessmentFormId String
-  assessmentForm   AssessmentForm @relation(fields: [assessmentFormId], references: [id])
-  status           SessionStatus  @default(NOT_STARTED)
-  startedAt        DateTime?
-  completedAt      DateTime?
-  currentSectionId String?
-  currentSection   AssessmentSection? @relation("CurrentSessionSection", fields: [currentSectionId], references: [id])
+  id                  String             @id @default(cuid())
+  userId              String
+  user                User               @relation(fields: [userId], references: [id])
+  campaignId          String?
+  campaign            Campaign?          @relation(fields: [campaignId], references: [id])
+  invitationId        String?
+  invitation          Invitation?        @relation(fields: [invitationId], references: [id])
+  assessmentFormId    String
+  assessmentForm      AssessmentForm     @relation(fields: [assessmentFormId], references: [id])
+  status              SessionStatus      @default(NOT_STARTED)
+  startedAt           DateTime?
+  completedAt         DateTime?
+  currentSectionId    String?
+  currentSection      AssessmentSection? @relation("CurrentSessionSection", fields: [currentSectionId], references: [id])
   currentSectionOrder Int?
-  sectionStartedAt DateTime?
-  sectionEndsAt    DateTime?
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
+  sectionStartedAt    DateTime?
+  sectionEndsAt       DateTime?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
 
-  responses        Response[]
-  score            Score?
-  report           Report?
+  responses Response[]
+  score     Score?
+  report    Report?
 }
 
 model Response {
-  id         String    @id @default(cuid())
-  sessionId  String
-  session    Session   @relation(fields: [sessionId], references: [id])
-  itemId     String
-  item       Item      @relation(fields: [itemId], references: [id])
-  answer     Json?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  id          String    @id @default(cuid())
+  sessionId   String
+  session     Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  itemId      String
+  item        Item      @relation(fields: [itemId], references: [id])
+  answer      Json?
+  submittedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@unique([sessionId, itemId])
+  @@index([sessionId])
+  @@index([itemId])
 }
 
 model Score {
-  id                   String    @id @default(cuid())
-  sessionId            String    @unique
-  session              Session   @relation(fields: [sessionId], references: [id])
-  abstractRawScore     Int?
-  numericalRawScore    Int?
-  overallRawScore      Int?
-  abstractBand         String?
-  numericalBand        String?
-  overallBand          String?
-  scoringVersion       Int       @default(1)
-  createdAt            DateTime  @default(now())
+  id                String   @id @default(cuid())
+  sessionId         String   @unique
+  session           Session  @relation(fields: [sessionId], references: [id])
+  abstractRawScore  Int?
+  numericalRawScore Int?
+  overallRawScore   Int?
+  abstractBand      String?
+  numericalBand     String?
+  overallBand       String?
+  scoringVersion    Int      @default(1)
+  createdAt         DateTime @default(now())
 }
 
 model Report {
-  id             String           @id @default(cuid())
-  sessionId      String           @unique
-  session        Session          @relation(fields: [sessionId], references: [id])
-  subjectUserId  String?
-  subjectUser    User?            @relation("ReportSubject", fields: [subjectUserId], references: [id])
-  visibility     ReportVisibility
-  summary        Json?
-  reportVersion  Int              @default(1)
-  createdAt      DateTime         @default(now())
+  id            String           @id @default(cuid())
+  sessionId     String           @unique
+  session       Session          @relation(fields: [sessionId], references: [id])
+  subjectUserId String?
+  subjectUser   User?            @relation("ReportSubject", fields: [subjectUserId], references: [id])
+  visibility    ReportVisibility
+  summary       Json?
+  reportVersion Int              @default(1)
+  createdAt     DateTime         @default(now())
 }
 
 model AuditLog {
-  id         String    @id @default(cuid())
+  id         String   @id @default(cuid())
   action     String
   entityType String?
   entityId   String?
   metadata   Json?
-  createdAt  DateTime  @default(now())
+  createdAt  DateTime @default(now())
 
-  userId     String?
-  user       User?     @relation(fields: [userId], references: [id])
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id])
 }
 
 enum FormItemMappingStatus {
