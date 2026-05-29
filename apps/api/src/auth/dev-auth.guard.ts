@@ -11,6 +11,7 @@ export class DevAuthGuard implements CanActivate {
         id: 'dev-admin-1',
         email: 'admin@iqmeridian.local',
         role: 'PLATFORM_ADMIN',
+        organisationId: null,
       };
       return true;
     }
