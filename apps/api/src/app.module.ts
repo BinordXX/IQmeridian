@@ -12,6 +12,7 @@ import { InvitationsModule } from './invitations/invitations.module';
 import { SessionsModule } from './sessions/sessions.module';
 import { ResponsesModule } from './responses/responses.module';
 import { ScoringModule } from './scoring/scoring.module';
+import { ReportsModule } from './reports/reports.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { ScoringModule } from './scoring/scoring.module';
     SessionsModule,
     ResponsesModule,
     ScoringModule,
+    ReportsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

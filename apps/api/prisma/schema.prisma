@@ -197,7 +197,7 @@ model Session {
 
   responses Response[]
   score     Score?
-  report    Report?
+  report    Report[]
 }
 
 model Response {
@@ -243,14 +243,23 @@ model Score {
 
 model Report {
   id            String           @id @default(cuid())
-  sessionId     String           @unique
-  session       Session          @relation(fields: [sessionId], references: [id])
+  sessionId     String
+  session       Session          @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  scoreId       String?
+  scoreSnapshot Json?
   subjectUserId String?
   subjectUser   User?            @relation("ReportSubject", fields: [subjectUserId], references: [id])
   visibility    ReportVisibility
   summary       Json?
+  metadata      Json?
   reportVersion Int              @default(1)
   createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@unique([sessionId, visibility])
+  @@index([sessionId])
+  @@index([subjectUserId])
+  @@index([visibility])
 }
 
 model AuditLog {
