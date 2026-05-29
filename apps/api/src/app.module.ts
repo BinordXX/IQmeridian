@@ -11,6 +11,7 @@ import { ItemBankModule } from './item-bank/item-bank.module';
 import { InvitationsModule } from './invitations/invitations.module';
 import { SessionsModule } from './sessions/sessions.module';
 import { ResponsesModule } from './responses/responses.module';
+import { ScoringModule } from './scoring/scoring.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { ResponsesModule } from './responses/responses.module';
     InvitationsModule,
     SessionsModule,
     ResponsesModule,
+    ScoringModule,
   ],
   controllers: [AppController],
   providers: [AppService],
