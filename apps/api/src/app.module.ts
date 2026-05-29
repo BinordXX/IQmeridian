@@ -3,10 +3,16 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
 import { RedisModule } from './redis/redis.module';
+import { UsersModule } from './users/users.module';
+import { OrganisationsModule } from './organisations/organisations.module';
+import { CampaignsModule } from './campaigns/campaigns.module';
+import { AssessmentsModule } from './assessments/assessments.module';
+
 
 @Module({
-  imports: [PrismaModule, RedisModule],
+  imports: [PrismaModule, RedisModule, UsersModule, OrganisationsModule, CampaignsModule, AssessmentsModule],
   controllers: [AppController],
   providers: [AppService],
 })
 export class AppModule {}
+
