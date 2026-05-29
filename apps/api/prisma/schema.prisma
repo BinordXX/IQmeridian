@@ -67,7 +67,9 @@ model User {
   sessions       Session[]
   campaignsOwned Campaign[]    @relation("CampaignOwner")
   reports        Report[]      @relation("ReportSubject")
+  invitations    Invitation[]  @relation("InvitationCandidate")
 }
+
 
 model Organisation {
   id          String     @id @default(cuid())
@@ -111,16 +113,17 @@ model AssessmentForm {
 }
 
 model AssessmentSection {
-  id          String                @id @default(cuid())
-  formId      String
-  form        AssessmentForm        @relation(fields: [formId], references: [id])
-  type        AssessmentSectionType
-  domain      AssessmentDomain
-  title       String
+  id           String                @id @default(cuid())
+  formId       String
+  form         AssessmentForm        @relation(fields: [formId], references: [id])
+  type         AssessmentSectionType
+  domain       AssessmentDomain
+  title        String
   timeLimitSec Int
-  orderIndex  Int
+  orderIndex   Int
 
-  items       FormItemMapping[]
+  items        FormItemMapping[]
+  activeSessions Session[]          @relation("CurrentSessionSection")
 }
 
 model Item {
@@ -141,29 +144,35 @@ model Item {
 }
 
 model FormItemMapping {
-  id         String             @id @default(cuid())
+  id         String                @id @default(cuid())
   formId     String
-  form       AssessmentForm     @relation(fields: [formId], references: [id])
+  form       AssessmentForm        @relation(fields: [formId], references: [id])
   sectionId  String?
-  section    AssessmentSection? @relation(fields: [sectionId], references: [id])
+  section    AssessmentSection?    @relation(fields: [sectionId], references: [id])
   itemId     String
-  item       Item               @relation(fields: [itemId], references: [id])
+  item       Item                  @relation(fields: [itemId], references: [id])
   orderIndex Int
+  status     FormItemMappingStatus @default(ACTIVE)
+  createdAt  DateTime              @default(now())
+  updatedAt  DateTime              @updatedAt
 
   @@unique([formId, itemId])
 }
 
 model Invitation {
-  id          String     @id @default(cuid())
-  campaignId  String
-  campaign    Campaign   @relation(fields: [campaignId], references: [id])
-  email       String
-  token       String     @unique
-  createdAt   DateTime   @default(now())
-  expiresAt   DateTime?
-  usedAt      DateTime?
+  id              String           @id @default(cuid())
+  campaignId      String
+  campaign        Campaign         @relation(fields: [campaignId], references: [id])
+  email           String
+  token           String           @unique
+  status          InvitationStatus @default(PENDING)
+  candidateUserId String?
+  candidateUser   User?            @relation("InvitationCandidate", fields: [candidateUserId], references: [id])
+  createdAt       DateTime         @default(now())
+  expiresAt       DateTime?
+  usedAt          DateTime?
 
-  sessions    Session[]
+  sessions        Session[]
 }
 
 model Session {
@@ -179,6 +188,11 @@ model Session {
   status           SessionStatus  @default(NOT_STARTED)
   startedAt        DateTime?
   completedAt      DateTime?
+  currentSectionId String?
+  currentSection   AssessmentSection? @relation("CurrentSessionSection", fields: [currentSectionId], references: [id])
+  currentSectionOrder Int?
+  sectionStartedAt DateTime?
+  sectionEndsAt    DateTime?
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
 
@@ -236,4 +250,16 @@ model AuditLog {
 
   userId     String?
   user       User?     @relation(fields: [userId], references: [id])
+}
+
+enum FormItemMappingStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  CANCELLED
 }

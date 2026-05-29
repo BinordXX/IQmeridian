@@ -61,4 +61,53 @@ export class AssessmentsController {
   createNextVersion(@Param('id') id: string) {
     return this.assessmentsService.createNextVersion(id);
   }
+  @Roles('PLATFORM_ADMIN', 'RESEARCHER')
+@Post(':formId/sections')
+createSection(
+  @Param('formId') formId: string,
+  @Body()
+  body: {
+    type: AssessmentSectionType;
+    domain: AssessmentDomain;
+    title: string;
+    timeLimitSec: number;
+    orderIndex: number;
+  },
+) {
+  return this.assessmentsService.createSection(formId, body);
+}
+
+@Roles('PLATFORM_ADMIN', 'RESEARCHER', 'EMPLOYER_ADMIN')
+@Get(':formId/sections')
+listSectionsForForm(@Param('formId') formId: string) {
+  return this.assessmentsService.listSectionsForForm(formId);
+}
+@Roles('PLATFORM_ADMIN', 'RESEARCHER')
+@Post(':formId/items')
+attachItemToForm(
+  @Param('formId') formId: string,
+  @Body()
+  body: {
+    sectionId: string;
+    itemId: string;
+    orderIndex: number;
+  },
+) {
+  return this.assessmentsService.attachItemToForm({
+    formId,
+    ...body,
+  });
+}
+
+@Roles('PLATFORM_ADMIN', 'RESEARCHER')
+@Patch('form-items/:mappingId/status')
+updateFormItemMappingStatus(
+  @Param('mappingId') mappingId: string,
+  @Body() body: { status: 'ACTIVE' | 'INACTIVE' },
+) {
+  return this.assessmentsService.updateFormItemMappingStatus(
+    mappingId,
+    body.status,
+  );
+}
 }
