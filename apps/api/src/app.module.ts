@@ -10,6 +10,9 @@ import { AssessmentsModule } from './assessments/assessments.module';
 import { ItemBankModule } from './item-bank/item-bank.module';
 import { InvitationsModule } from './invitations/invitations.module';
 import { SessionsModule } from './sessions/sessions.module';
+import { ResponsesModule } from './responses/responses.module';
+import { ScoringModule } from './scoring/scoring.module';
+import { ReportsModule } from './reports/reports.module';
 
 @Module({
   imports: [
@@ -22,6 +25,9 @@ import { SessionsModule } from './sessions/sessions.module';
     ItemBankModule,
     InvitationsModule,
     SessionsModule,
+    ResponsesModule,
+    ScoringModule,
+    ReportsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
