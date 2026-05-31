@@ -14,6 +14,8 @@ import { ResponsesModule } from './responses/responses.module';
 import { ScoringModule } from './scoring/scoring.module';
 import { ReportsModule } from './reports/reports.module';
 import { AuditModule } from './audit/audit.module';
+import { DiagnosticsModule } from './diagnostics/diagnostics.module';
+
 
 @Module({
   imports: [
@@ -30,6 +32,7 @@ import { AuditModule } from './audit/audit.module';
     ScoringModule,
     ReportsModule,
     AuditModule,
+    DiagnosticsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
