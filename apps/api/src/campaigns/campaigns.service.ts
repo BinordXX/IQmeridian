@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { CampaignStatus, UserRole } from '@prisma/client';
+import { CampaignStatus, Prisma, UserRole } from '@prisma/client';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -78,32 +78,64 @@ export class CampaignsService {
     return campaign;
   }
 
-  async findCampaignsForUser(user: RequestUser) {
-    if (user.role === UserRole.PLATFORM_ADMIN) {
-      return this.prisma.campaign.findMany({
-        orderBy: { createdAt: 'desc' },
-        include: {
-          organisation: true,
-          assessmentForm: true,
-        },
-      });
-    }
+async findCampaignsForUser(
+  user: RequestUser,
+  filters: {
+    page?: number;
+    limit?: number;
+    status?: CampaignStatus;
+    organisationId?: string;
+    assessmentFormId?: string;
+    ownerId?: string;
+  } = {},
+) {
+  const page = filters.page ?? 1;
+  const limit = Math.min(filters.limit ?? 25, 100);
+  const skip = (page - 1) * limit;
 
+  let organisationId = filters.organisationId;
+
+  if (user.role !== UserRole.PLATFORM_ADMIN) {
     if (!user.organisationId) {
       throw new ForbiddenException('User is not attached to an organisation');
     }
 
-    return this.prisma.campaign.findMany({
-      where: {
-        organisationId: user.organisationId,
-      },
+    organisationId = user.organisationId;
+  }
+
+  const where: Prisma.CampaignWhereInput = {
+    ...(organisationId ? { organisationId } : {}),
+    ...(filters.status ? { status: filters.status } : {}),
+    ...(filters.assessmentFormId
+      ? { assessmentFormId: filters.assessmentFormId }
+      : {}),
+    ...(filters.ownerId ? { ownerId: filters.ownerId } : {}),
+  };
+
+  const [total, data] = await this.prisma.$transaction([
+    this.prisma.campaign.count({ where }),
+    this.prisma.campaign.findMany({
+      where,
       orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit,
       include: {
         organisation: true,
         assessmentForm: true,
       },
-    });
-  }
+    }),
+  ]);
+
+  return {
+    data,
+    meta: {
+      page,
+      limit,
+      total,
+      pageCount: Math.ceil(total / limit),
+    },
+  };
+}
 
   async findCampaignById(id: string, user: RequestUser) {
     const campaign = await this.prisma.campaign.findUnique({

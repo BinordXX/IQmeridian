@@ -1,9 +1,19 @@
-import { Body, Controller, Param, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { DevAuthGuard } from '../auth/dev-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { CreateConsumerSessionDto } from './dto/create-consumer-session.dto';
 import { CreateSessionFromInvitationDto } from './dto/create-session-from-invitation.dto';
+import { ListSessionsQueryDto } from './dto/list-sessions-query.dto';
 import { SessionIdParamDto } from './dto/session-route-params.dto';
 import { SessionsService } from './sessions.service';
 
@@ -17,6 +27,15 @@ type RequestUser = {
 @UseGuards(DevAuthGuard, RolesGuard)
 export class SessionsController {
   constructor(private readonly sessionsService: SessionsService) {}
+
+  @Roles('CANDIDATE', 'CONSUMER', 'EMPLOYER_ADMIN', 'PLATFORM_ADMIN')
+  @Get()
+  listSessions(
+    @Req() req: { user: RequestUser },
+    @Query() query: ListSessionsQueryDto,
+  ) {
+    return this.sessionsService.listSessions(req.user, query);
+  }
 
   @Roles('CONSUMER', 'PLATFORM_ADMIN')
   @Post('consumer')

@@ -7,6 +7,7 @@ import {
   AssessmentDomain,
   AssessmentSectionType,
   FormItemMappingStatus,
+  Prisma,
 } from '@prisma/client';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -65,10 +66,30 @@ export class AssessmentsService {
     return form;
   }
 
-  findActiveForms() {
-    return this.prisma.assessmentForm.findMany({
-      where: { isActive: true },
+async findActiveForms(filters: { page?: number; limit?: number; name?: string } = {}) {
+  const page = filters.page ?? 1;
+  const limit = Math.min(filters.limit ?? 25, 100);
+  const skip = (page - 1) * limit;
+
+  const where: Prisma.AssessmentFormWhereInput = {
+    isActive: true,
+    ...(filters.name
+      ? {
+          name: {
+            contains: filters.name,
+            mode: 'insensitive',
+          },
+        }
+      : {}),
+  };
+
+  const [total, data] = await this.prisma.$transaction([
+    this.prisma.assessmentForm.count({ where }),
+    this.prisma.assessmentForm.findMany({
+      where,
       orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit,
       include: {
         sections: true,
         items: {
@@ -78,8 +99,19 @@ export class AssessmentsService {
           },
         },
       },
-    });
-  }
+    }),
+  ]);
+
+  return {
+    data,
+    meta: {
+      page,
+      limit,
+      total,
+      pageCount: Math.ceil(total / limit),
+    },
+  };
+}
 
   async findFormById(id: string) {
     const form = await this.prisma.assessmentForm.findUnique({

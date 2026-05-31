@@ -5,6 +5,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -13,6 +14,7 @@ import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { CampaignIdParamDto } from './dto/campaign-route-params.dto';
 import { CreateCampaignDto } from './dto/create-campaign.dto';
+import { ListCampaignsQueryDto } from './dto/list-campaigns-query.dto';
 import { UpdateCampaignStatusDto } from './dto/update-campaign-status.dto';
 import { CampaignsService } from './campaigns.service';
 
@@ -41,8 +43,11 @@ export class CampaignsController {
 
   @Roles('PLATFORM_ADMIN', 'EMPLOYER_ADMIN')
   @Get()
-  findCampaigns(@Req() req: { user: RequestUser }) {
-    return this.campaignsService.findCampaignsForUser(req.user);
+  findCampaigns(
+    @Req() req: { user: RequestUser },
+    @Query() query: ListCampaignsQueryDto,
+  ) {
+    return this.campaignsService.findCampaignsForUser(req.user, query);
   }
 
   @Roles('PLATFORM_ADMIN', 'EMPLOYER_ADMIN')

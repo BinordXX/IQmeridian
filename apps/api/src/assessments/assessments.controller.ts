@@ -5,9 +5,11 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { ListActiveFormsQueryDto } from './dto/list-active-forms-query.dto';
 import { DevAuthGuard } from '../auth/dev-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
@@ -43,11 +45,11 @@ export class AssessmentsController {
     return this.assessmentsService.createForm(body, req.user.id);
   }
 
-  @Roles('PLATFORM_ADMIN', 'RESEARCHER', 'EMPLOYER_ADMIN')
-  @Get('active')
-  findActiveForms() {
-    return this.assessmentsService.findActiveForms();
-  }
+@Roles('PLATFORM_ADMIN', 'RESEARCHER', 'EMPLOYER_ADMIN')
+@Get('active')
+findActiveForms(@Query() query: ListActiveFormsQueryDto) {
+  return this.assessmentsService.findActiveForms(query);
+}
 
   @Roles('PLATFORM_ADMIN', 'RESEARCHER', 'EMPLOYER_ADMIN')
   @Get(':id')
