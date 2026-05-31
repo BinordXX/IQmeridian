@@ -5,12 +5,19 @@ import {
   Param,
   Patch,
   Post,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { DevAuthGuard } from '../auth/dev-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { OrganisationsService } from './organisations.service';
+
+type RequestUser = {
+  id: string;
+  role: string;
+  organisationId?: string | null;
+};
 
 @Controller('organisations')
 @UseGuards(DevAuthGuard, RolesGuard)
@@ -19,8 +26,11 @@ export class OrganisationsController {
 
   @Roles('PLATFORM_ADMIN')
   @Post()
-  createOrganisation(@Body() body: { name: string }) {
-    return this.organisationsService.createOrganisation(body.name);
+  createOrganisation(
+    @Body() body: { name: string },
+    @Req() req: { user: RequestUser },
+  ) {
+    return this.organisationsService.createOrganisation(body.name, req.user.id);
   }
 
   @Roles('PLATFORM_ADMIN')
@@ -40,8 +50,13 @@ export class OrganisationsController {
   updateOrganisation(
     @Param('id') id: string,
     @Body() body: { name: string },
+    @Req() req: { user: RequestUser },
   ) {
-    return this.organisationsService.updateOrganisation(id, body.name);
+    return this.organisationsService.updateOrganisation(
+      id,
+      body.name,
+      req.user.id,
+    );
   }
 
   @Roles('PLATFORM_ADMIN')
@@ -49,10 +64,12 @@ export class OrganisationsController {
   attachEmployerAdmin(
     @Param('id') id: string,
     @Body() body: { userId: string },
+    @Req() req: { user: RequestUser },
   ) {
     return this.organisationsService.attachEmployerAdminToOrganisation(
       id,
       body.userId,
+      req.user.id,
     );
   }
 }

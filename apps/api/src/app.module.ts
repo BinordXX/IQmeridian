@@ -13,6 +13,7 @@ import { SessionsModule } from './sessions/sessions.module';
 import { ResponsesModule } from './responses/responses.module';
 import { ScoringModule } from './scoring/scoring.module';
 import { ReportsModule } from './reports/reports.module';
+import { AuditModule } from './audit/audit.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { ReportsModule } from './reports/reports.module';
     ResponsesModule,
     ScoringModule,
     ReportsModule,
+    AuditModule,
   ],
   controllers: [AppController],
   providers: [AppService],

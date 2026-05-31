@@ -14,6 +14,12 @@ import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { CampaignsService } from './campaigns.service';
 
+type RequestUser = {
+  id: string;
+  role: string;
+  organisationId?: string | null;
+};
+
 @Controller('campaigns')
 @UseGuards(DevAuthGuard, RolesGuard)
 export class CampaignsController {
@@ -22,10 +28,7 @@ export class CampaignsController {
   @Roles('PLATFORM_ADMIN', 'EMPLOYER_ADMIN')
   @Post()
   createCampaign(
-    @Req()
-    req: {
-      user: { id: string; role: string; organisationId?: string | null };
-    },
+    @Req() req: { user: RequestUser },
     @Body()
     body: {
       name: string;
@@ -42,12 +45,7 @@ export class CampaignsController {
 
   @Roles('PLATFORM_ADMIN', 'EMPLOYER_ADMIN')
   @Get()
-  findCampaigns(
-    @Req()
-    req: {
-      user: { role: string; organisationId?: string | null };
-    },
-  ) {
+  findCampaigns(@Req() req: { user: RequestUser }) {
     return this.campaignsService.findCampaignsForUser(req.user);
   }
 
@@ -55,10 +53,7 @@ export class CampaignsController {
   @Get(':id')
   findCampaignById(
     @Param('id') id: string,
-    @Req()
-    req: {
-      user: { role: string; organisationId?: string | null };
-    },
+    @Req() req: { user: RequestUser },
   ) {
     return this.campaignsService.findCampaignById(id, req.user);
   }
@@ -67,10 +62,7 @@ export class CampaignsController {
   @Patch(':id/status')
   updateCampaignStatus(
     @Param('id') id: string,
-    @Req()
-    req: {
-      user: { role: string; organisationId?: string | null };
-    },
+    @Req() req: { user: RequestUser },
     @Body() body: { status: CampaignStatus },
   ) {
     return this.campaignsService.updateCampaignStatus(

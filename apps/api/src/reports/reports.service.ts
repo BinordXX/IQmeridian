@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma, ReportVisibility, SessionStatus } from '@prisma/client';
+import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 type RequestUser = {
@@ -23,7 +24,10 @@ const REPORT_VERSION = 1;
 
 @Injectable()
 export class ReportsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditService: AuditService,
+  ) {}
 
   async generateReport(input: GenerateReportInput) {
     const session = await this.getSessionForReport(input.sessionId);
@@ -56,7 +60,7 @@ export class ReportsService {
       campaignId: session.campaignId,
     };
 
-    return this.prisma.report.upsert({
+    const report = await this.prisma.report.upsert({
       where: {
         sessionId_visibility: {
           sessionId: input.sessionId,
@@ -90,6 +94,22 @@ export class ReportsService {
         },
       },
     });
+
+    await this.auditService.record({
+      action: 'REPORT_GENERATED',
+      userId: input.user.id,
+      entityType: 'Report',
+      entityId: report.id,
+      metadata: {
+        sessionId: report.sessionId,
+        visibility: report.visibility,
+        reportVersion: report.reportVersion,
+        subjectUserId: report.subjectUserId,
+        scoreId: report.scoreId,
+      },
+    });
+
+    return report;
   }
 
   async getReportById(id: string, user: RequestUser) {

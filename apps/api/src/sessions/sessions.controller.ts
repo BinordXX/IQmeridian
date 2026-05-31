@@ -4,6 +4,12 @@ import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { SessionsService } from './sessions.service';
 
+type RequestUser = {
+  id: string;
+  role: string;
+  organisationId?: string | null;
+};
+
 @Controller('sessions')
 @UseGuards(DevAuthGuard, RolesGuard)
 export class SessionsController {
@@ -12,7 +18,7 @@ export class SessionsController {
   @Roles('CONSUMER', 'PLATFORM_ADMIN')
   @Post('consumer')
   createConsumerSession(
-    @Req() req: { user: { id: string } },
+    @Req() req: { user: RequestUser },
     @Body() body: { assessmentFormId: string },
   ) {
     return this.sessionsService.createConsumerSession({
@@ -24,7 +30,7 @@ export class SessionsController {
   @Roles('CANDIDATE', 'PLATFORM_ADMIN')
   @Post('invitation')
   createSessionFromInvitation(
-    @Req() req: { user: { id: string } },
+    @Req() req: { user: RequestUser },
     @Body() body: { invitationToken: string },
   ) {
     return this.sessionsService.createSessionFromInvitation({
@@ -33,20 +39,23 @@ export class SessionsController {
     });
   }
 
+  @Roles('CANDIDATE', 'CONSUMER', 'PLATFORM_ADMIN')
   @Post(':id/start')
-  startSession(@Param('id') id: string, @Req() req: { user: { id: string } }) {
+  startSession(@Param('id') id: string, @Req() req: { user: RequestUser }) {
     return this.sessionsService.startSession(id, req.user.id);
   }
 
+  @Roles('CANDIDATE', 'CONSUMER', 'PLATFORM_ADMIN')
   @Post(':id/resume')
-  resumeSession(@Param('id') id: string, @Req() req: { user: { id: string } }) {
+  resumeSession(@Param('id') id: string, @Req() req: { user: RequestUser }) {
     return this.sessionsService.resumeSession(id, req.user.id);
   }
 
+  @Roles('CANDIDATE', 'CONSUMER', 'PLATFORM_ADMIN')
   @Post(':id/finalise')
   finaliseSession(
     @Param('id') id: string,
-    @Req() req: { user: { id: string } },
+    @Req() req: { user: RequestUser },
   ) {
     return this.sessionsService.finaliseSession(id, req.user.id);
   }

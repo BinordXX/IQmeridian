@@ -3,32 +3,55 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { AssessmentDomain, ItemStatus } from '@prisma/client';
+import { AssessmentDomain, ItemStatus, Prisma } from '@prisma/client';
+import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class ItemBankService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditService: AuditService,
+  ) {}
 
-  createItem(input: {
-    domain: AssessmentDomain;
-    prompt: string;
-    itemType: string;
-    options?: unknown;
-    correctAnswer?: unknown;
-    difficulty?: string;
-  }) {
-    return this.prisma.item.create({
+  async createItem(
+    input: {
+      domain: AssessmentDomain;
+      prompt: string;
+      itemType: string;
+      options?: unknown;
+      correctAnswer?: unknown;
+      difficulty?: string;
+    },
+    actorUserId: string,
+  ) {
+    const item = await this.prisma.item.create({
       data: {
         domain: input.domain,
         prompt: input.prompt,
         itemType: input.itemType,
-        options: input.options as object,
-        correctAnswer: input.correctAnswer as object,
+        options: this.toOptionalJsonValue(input.options),
+        correctAnswer: this.toOptionalJsonValue(input.correctAnswer),
         difficulty: input.difficulty,
         status: ItemStatus.DRAFT,
       },
     });
+
+    await this.auditService.record({
+      action: 'ITEM_CREATED',
+      userId: actorUserId,
+      entityType: 'Item',
+      entityId: item.id,
+      metadata: {
+        domain: item.domain,
+        itemType: item.itemType,
+        difficulty: item.difficulty,
+        status: item.status,
+        version: item.version,
+      },
+    });
+
+    return item;
   }
 
   async getItem(id: string) {
@@ -60,37 +83,90 @@ export class ItemBankService {
       correctAnswer?: unknown;
       difficulty?: string;
     },
+    actorUserId: string,
   ) {
-    const item = await this.getItem(id);
+    const existingItem = await this.getItem(id);
 
-    if (item.status !== ItemStatus.DRAFT) {
+    if (existingItem.status !== ItemStatus.DRAFT) {
       throw new BadRequestException('Only draft items can be edited');
     }
 
-    return this.prisma.item.update({
+    const item = await this.prisma.item.update({
       where: { id },
       data: {
         prompt: input.prompt,
         itemType: input.itemType,
-        options: input.options as object,
-        correctAnswer: input.correctAnswer as object,
+        options: this.toOptionalJsonValue(input.options),
+        correctAnswer: this.toOptionalJsonValue(input.correctAnswer),
         difficulty: input.difficulty,
       },
     });
+
+    await this.auditService.record({
+      action: 'ITEM_DRAFT_UPDATED',
+      userId: actorUserId,
+      entityType: 'Item',
+      entityId: item.id,
+      metadata: {
+        domain: item.domain,
+        itemType: item.itemType,
+        difficulty: item.difficulty,
+        status: item.status,
+        version: item.version,
+      },
+    });
+
+    return item;
   }
 
-  activateItem(id: string) {
-    return this.prisma.item.update({
+  async activateItem(id: string, actorUserId: string) {
+    await this.getItem(id);
+
+    const item = await this.prisma.item.update({
       where: { id },
       data: { status: ItemStatus.ACTIVE },
     });
+
+    await this.auditService.record({
+      action: 'ITEM_ACTIVATED',
+      userId: actorUserId,
+      entityType: 'Item',
+      entityId: item.id,
+      metadata: {
+        domain: item.domain,
+        itemType: item.itemType,
+        difficulty: item.difficulty,
+        status: item.status,
+        version: item.version,
+      },
+    });
+
+    return item;
   }
 
-  retireItem(id: string) {
-    return this.prisma.item.update({
+  async retireItem(id: string, actorUserId: string) {
+    await this.getItem(id);
+
+    const item = await this.prisma.item.update({
       where: { id },
       data: { status: ItemStatus.RETIRED },
     });
+
+    await this.auditService.record({
+      action: 'ITEM_RETIRED',
+      userId: actorUserId,
+      entityType: 'Item',
+      entityId: item.id,
+      metadata: {
+        domain: item.domain,
+        itemType: item.itemType,
+        difficulty: item.difficulty,
+        status: item.status,
+        version: item.version,
+      },
+    });
+
+    return item;
   }
 
   listItems(filters: {
@@ -120,5 +196,19 @@ export class ItemBankService {
         },
       },
     });
+  }
+
+  private toOptionalJsonValue(
+    value: unknown,
+  ): Prisma.InputJsonValue | undefined {
+    if (value === undefined) {
+      return undefined;
+    }
+
+    try {
+      return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
+    } catch {
+      throw new BadRequestException('Value must be JSON-serialisable');
+    }
   }
 }

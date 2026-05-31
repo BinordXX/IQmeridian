@@ -1,16 +1,24 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { SessionStatus } from '@prisma/client';
+import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class SessionsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditService: AuditService,
+  ) {}
 
-  async createConsumerSession(input: { userId: string; assessmentFormId: string }) {
+  async createConsumerSession(input: {
+    userId: string;
+    assessmentFormId: string;
+  }) {
     const form = await this.getUsableForm(input.assessmentFormId);
 
     const existing = await this.prisma.session.findFirst({
@@ -25,16 +33,31 @@ export class SessionsService {
     });
 
     if (existing) {
-      throw new BadRequestException('User already has an active consumer session for this form');
+      throw new BadRequestException(
+        'User already has an active consumer session for this form',
+      );
     }
 
-    return this.prisma.session.create({
+    const session = await this.prisma.session.create({
       data: {
         userId: input.userId,
         assessmentFormId: form.id,
         status: SessionStatus.NOT_STARTED,
       },
     });
+
+    await this.auditService.record({
+      action: 'CONSUMER_SESSION_CREATED',
+      userId: input.userId,
+      entityType: 'Session',
+      entityId: session.id,
+      metadata: {
+        assessmentFormId: session.assessmentFormId,
+        status: session.status,
+      },
+    });
+
+    return session;
   }
 
   async createSessionFromInvitation(input: {
@@ -74,10 +97,12 @@ export class SessionsService {
     });
 
     if (existing) {
-      throw new BadRequestException('An active session already exists for this invitation');
+      throw new BadRequestException(
+        'An active session already exists for this invitation',
+      );
     }
 
-    return this.prisma.session.create({
+    const session = await this.prisma.session.create({
       data: {
         userId: input.userId,
         campaignId: invitation.campaignId,
@@ -86,6 +111,21 @@ export class SessionsService {
         status: SessionStatus.NOT_STARTED,
       },
     });
+
+    await this.auditService.record({
+      action: 'INVITATION_SESSION_CREATED',
+      userId: input.userId,
+      entityType: 'Session',
+      entityId: session.id,
+      metadata: {
+        campaignId: session.campaignId,
+        invitationId: session.invitationId,
+        assessmentFormId: session.assessmentFormId,
+        status: session.status,
+      },
+    });
+
+    return session;
   }
 
   async startSession(sessionId: string, userId: string) {
@@ -106,7 +146,7 @@ export class SessionsService {
 
     const now = new Date();
 
-    return this.prisma.session.update({
+    const startedSession = await this.prisma.session.update({
       where: { id: sessionId },
       data: {
         status: SessionStatus.IN_PROGRESS,
@@ -114,7 +154,9 @@ export class SessionsService {
         currentSectionId: firstSection.id,
         currentSectionOrder: firstSection.orderIndex,
         sectionStartedAt: now,
-        sectionEndsAt: new Date(now.getTime() + firstSection.timeLimitSec * 1000),
+        sectionEndsAt: new Date(
+          now.getTime() + firstSection.timeLimitSec * 1000,
+        ),
       },
       include: {
         assessmentForm: {
@@ -127,6 +169,24 @@ export class SessionsService {
         currentSection: true,
       },
     });
+
+    await this.auditService.record({
+      action: 'SESSION_STARTED',
+      userId: startedSession.userId,
+      entityType: 'Session',
+      entityId: startedSession.id,
+      metadata: {
+        campaignId: startedSession.campaignId,
+        invitationId: startedSession.invitationId,
+        assessmentFormId: startedSession.assessmentFormId,
+        currentSectionId: startedSession.currentSectionId,
+        currentSectionOrder: startedSession.currentSectionOrder,
+        startedAt: startedSession.startedAt,
+        sectionEndsAt: startedSession.sectionEndsAt,
+      },
+    });
+
+    return startedSession;
   }
 
   async resumeSession(sessionId: string, userId: string) {
@@ -153,13 +213,31 @@ export class SessionsService {
       throw new BadRequestException('This session cannot be finalised');
     }
 
-    return this.prisma.session.update({
+    const completedAt = new Date();
+
+    const finalisedSession = await this.prisma.session.update({
       where: { id: sessionId },
       data: {
         status: SessionStatus.COMPLETED,
-        completedAt: new Date(),
+        completedAt,
       },
     });
+
+    await this.auditService.record({
+      action: 'SESSION_SUBMITTED',
+      userId: finalisedSession.userId,
+      entityType: 'Session',
+      entityId: finalisedSession.id,
+      metadata: {
+        campaignId: finalisedSession.campaignId,
+        invitationId: finalisedSession.invitationId,
+        assessmentFormId: finalisedSession.assessmentFormId,
+        completedAt: finalisedSession.completedAt,
+        status: finalisedSession.status,
+      },
+    });
+
+    return finalisedSession;
   }
 
   private async getUsableForm(assessmentFormId: string) {
@@ -192,7 +270,7 @@ export class SessionsService {
     }
 
     if (session.userId !== userId) {
-      throw new BadRequestException('Session does not belong to this user');
+      throw new ForbiddenException('Session does not belong to this user');
     }
 
     return session;

@@ -5,22 +5,28 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { CampaignStatus, UserRole } from '@prisma/client';
+import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
+
+type RequestUser = {
+  id: string;
+  role: string;
+  organisationId?: string | null;
+};
 
 @Injectable()
 export class CampaignsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditService: AuditService,
+  ) {}
 
   async createCampaign(input: {
     name: string;
     organisationId: string;
     ownerId?: string;
     assessmentFormId?: string;
-    requestingUser: {
-      id: string;
-      role: string;
-      organisationId?: string | null;
-    };
+    requestingUser: RequestUser;
   }) {
     this.assertCanManageOrganisation(
       input.requestingUser,
@@ -41,7 +47,7 @@ export class CampaignsService {
       }
     }
 
-    return this.prisma.campaign.create({
+    const campaign = await this.prisma.campaign.create({
       data: {
         name: input.name,
         organisationId: input.organisationId,
@@ -54,12 +60,25 @@ export class CampaignsService {
         assessmentForm: true,
       },
     });
+
+    await this.auditService.record({
+      action: 'CAMPAIGN_CREATED',
+      userId: input.requestingUser.id,
+      entityType: 'Campaign',
+      entityId: campaign.id,
+      metadata: {
+        name: campaign.name,
+        organisationId: campaign.organisationId,
+        ownerId: campaign.ownerId,
+        assessmentFormId: campaign.assessmentFormId,
+        status: campaign.status,
+      },
+    });
+
+    return campaign;
   }
 
-  async findCampaignsForUser(user: {
-    role: string;
-    organisationId?: string | null;
-  }) {
+  async findCampaignsForUser(user: RequestUser) {
     if (user.role === UserRole.PLATFORM_ADMIN) {
       return this.prisma.campaign.findMany({
         orderBy: { createdAt: 'desc' },
@@ -86,10 +105,7 @@ export class CampaignsService {
     });
   }
 
-  async findCampaignById(
-    id: string,
-    user: { role: string; organisationId?: string | null },
-  ) {
+  async findCampaignById(id: string, user: RequestUser) {
     const campaign = await this.prisma.campaign.findUnique({
       where: { id },
       include: {
@@ -113,7 +129,7 @@ export class CampaignsService {
   async updateCampaignStatus(
     id: string,
     status: CampaignStatus,
-    user: { role: string; organisationId?: string | null },
+    user: RequestUser,
   ) {
     const campaign = await this.prisma.campaign.findUnique({
       where: { id },
@@ -124,19 +140,30 @@ export class CampaignsService {
     }
 
     this.assertCanManageOrganisation(user, campaign.organisationId);
-
     this.assertValidStatusTransition(campaign.status, status);
 
-    return this.prisma.campaign.update({
+    const updatedCampaign = await this.prisma.campaign.update({
       where: { id },
       data: { status },
     });
+
+    await this.auditService.record({
+      action: 'CAMPAIGN_STATUS_UPDATED',
+      userId: user.id,
+      entityType: 'Campaign',
+      entityId: updatedCampaign.id,
+      metadata: {
+        previousStatus: campaign.status,
+        newStatus: updatedCampaign.status,
+        organisationId: updatedCampaign.organisationId,
+        assessmentFormId: updatedCampaign.assessmentFormId,
+      },
+    });
+
+    return updatedCampaign;
   }
 
-  private assertCanManageOrganisation(
-    user: { role: string; organisationId?: string | null },
-    organisationId: string,
-  ) {
+  private assertCanManageOrganisation(user: RequestUser, organisationId: string) {
     if (user.role === UserRole.PLATFORM_ADMIN) {
       return;
     }
