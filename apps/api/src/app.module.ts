@@ -15,7 +15,7 @@ import { ScoringModule } from './scoring/scoring.module';
 import { ReportsModule } from './reports/reports.module';
 import { AuditModule } from './audit/audit.module';
 import { DiagnosticsModule } from './diagnostics/diagnostics.module';
-import { FormItemMappingStatus, ItemStatus, Prisma } from '@prisma/client';
+
 
 @Module({
   imports: [

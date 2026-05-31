@@ -52,7 +52,8 @@ export class DiagnosticsService {
       return {
         status: 'DOWN' as DependencyStatus,
         message: 'Database connection failed',
-        detail: error instanceof Error ? error.message : 'Unknown database error',
+        detail:
+          error instanceof Error ? error.message : 'Unknown database error',
       };
     }
   }
@@ -108,9 +109,6 @@ export class DiagnosticsService {
             status: FormItemMappingStatus.ACTIVE,
             item: {
               status: ItemStatus.ACTIVE,
-              correctAnswer: {
-                not: undefined,
-              },
             },
           },
         }),
@@ -141,7 +139,10 @@ export class DiagnosticsService {
       return {
         status: 'DOWN' as DependencyStatus,
         message: 'Domain readiness check failed',
-        detail: error instanceof Error ? error.message : 'Unknown domain readiness error',
+        detail:
+          error instanceof Error
+            ? error.message
+            : 'Unknown domain readiness error',
       };
     }
   }
