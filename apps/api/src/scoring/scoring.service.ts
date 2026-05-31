@@ -10,6 +10,7 @@ import {
   Prisma,
   SessionStatus,
 } from '@prisma/client';
+import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 type RequestUser = {
@@ -27,7 +28,10 @@ const SCORING_VERSION = 1;
 
 @Injectable()
 export class ScoringService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditService: AuditService,
+  ) {}
 
   async scoreCompletedSession(sessionId: string, user: RequestUser) {
     const session = await this.getSessionOrThrow(sessionId);
@@ -35,9 +39,7 @@ export class ScoringService {
     this.assertUserCanAccessSession(session, user);
 
     if (session.status !== SessionStatus.COMPLETED) {
-      throw new BadRequestException(
-        'Only completed sessions can be scored',
-      );
+      throw new BadRequestException('Only completed sessions can be scored');
     }
 
     const mappings = await this.prisma.formItemMapping.findMany({
@@ -165,7 +167,7 @@ export class ScoringService {
       responseCount: responses.length,
     };
 
-    return this.prisma.score.upsert({
+    const score = await this.prisma.score.upsert({
       where: {
         sessionId,
       },
@@ -201,6 +203,23 @@ export class ScoringService {
         scoringVersion: SCORING_VERSION,
       },
     });
+
+    await this.auditService.record({
+      action: 'SCORE_GENERATED',
+      userId: user.id,
+      entityType: 'Score',
+      entityId: score.id,
+      metadata: {
+        sessionId: score.sessionId,
+        scoringVersion: score.scoringVersion,
+        overallRawScore: score.overallRawScore,
+        overallMaxScore: score.overallMaxScore,
+        overallComposite: score.overallComposite,
+        overallBand: score.overallBand,
+      },
+    });
+
+    return score;
   }
 
   async getSessionScore(sessionId: string, user: RequestUser) {
@@ -279,28 +298,28 @@ export class ScoringService {
     return JSON.stringify(this.normaliseJsonValue(value));
   }
 
-private normaliseJsonValue(value: Prisma.JsonValue): Prisma.JsonValue {
-  if (Array.isArray(value)) {
-    return value.map((item) => this.normaliseJsonValue(item));
+  private normaliseJsonValue(value: Prisma.JsonValue): Prisma.JsonValue {
+    if (Array.isArray(value)) {
+      return value.map((item) => this.normaliseJsonValue(item));
+    }
+
+    if (value !== null && typeof value === 'object') {
+      const jsonObject = value as Prisma.JsonObject;
+
+      const sortedEntries = Object.entries(jsonObject)
+        .filter((entry): entry is [string, Prisma.JsonValue] => {
+          return entry[1] !== undefined;
+        })
+        .sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey))
+        .map(([key, item]): [string, Prisma.JsonValue] => {
+          return [key, this.normaliseJsonValue(item)];
+        });
+
+      return Object.fromEntries(sortedEntries) as Prisma.JsonObject;
+    }
+
+    return value;
   }
-
-  if (value !== null && typeof value === 'object') {
-    const jsonObject = value as Prisma.JsonObject;
-
-    const sortedEntries = Object.entries(jsonObject)
-      .filter((entry): entry is [string, Prisma.JsonValue] => {
-        return entry[1] !== undefined;
-      })
-      .sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey))
-      .map(([key, item]): [string, Prisma.JsonValue] => {
-        return [key, this.normaliseJsonValue(item)];
-      });
-
-    return Object.fromEntries(sortedEntries) as Prisma.JsonObject;
-  }
-
-  return value;
-}
 
   private mapBand(rawScore: number, maxScore: number) {
     if (maxScore === 0) {

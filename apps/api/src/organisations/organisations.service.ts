@@ -1,15 +1,31 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
+import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class OrganisationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditService: AuditService,
+  ) {}
 
-  createOrganisation(name: string) {
-    return this.prisma.organisation.create({
+  async createOrganisation(name: string, actorUserId: string) {
+    const organisation = await this.prisma.organisation.create({
       data: { name },
     });
+
+    await this.auditService.record({
+      action: 'ORGANISATION_CREATED',
+      userId: actorUserId,
+      entityType: 'Organisation',
+      entityId: organisation.id,
+      metadata: {
+        name: organisation.name,
+      },
+    });
+
+    return organisation;
   }
 
   findAllOrganisations() {
@@ -38,22 +54,35 @@ export class OrganisationsService {
     return organisation;
   }
 
-  async updateOrganisation(id: string, name: string) {
+  async updateOrganisation(id: string, name: string, actorUserId: string) {
     await this.findOrganisationById(id);
 
-    return this.prisma.organisation.update({
+    const organisation = await this.prisma.organisation.update({
       where: { id },
       data: { name },
     });
+
+    await this.auditService.record({
+      action: 'ORGANISATION_UPDATED',
+      userId: actorUserId,
+      entityType: 'Organisation',
+      entityId: organisation.id,
+      metadata: {
+        name: organisation.name,
+      },
+    });
+
+    return organisation;
   }
 
   async attachEmployerAdminToOrganisation(
     organisationId: string,
     userId: string,
+    actorUserId: string,
   ) {
     await this.findOrganisationById(organisationId);
 
-    return this.prisma.user.update({
+    const user = await this.prisma.user.update({
       where: { id: userId },
       data: {
         organisationId,
@@ -63,5 +92,18 @@ export class OrganisationsService {
         organisation: true,
       },
     });
+
+    await this.auditService.record({
+      action: 'EMPLOYER_ADMIN_ATTACHED',
+      userId: actorUserId,
+      entityType: 'User',
+      entityId: user.id,
+      metadata: {
+        organisationId,
+        assignedRole: UserRole.EMPLOYER_ADMIN,
+      },
+    });
+
+    return user;
   }
 }

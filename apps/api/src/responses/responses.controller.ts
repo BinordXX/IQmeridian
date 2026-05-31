@@ -2,6 +2,11 @@ import { Body, Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/comm
 import { DevAuthGuard } from '../auth/dev-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
+import { SaveItemResponseDto } from './dto/save-item-response.dto';
+import {
+  SessionIdParamDto,
+  SessionItemParamDto,
+} from './dto/response-route-params.dto';
 import { ResponsesService } from './responses.service';
 
 type RequestUser = {
@@ -18,14 +23,13 @@ export class ResponsesController {
   @Roles('CANDIDATE', 'CONSUMER', 'PLATFORM_ADMIN')
   @Post('sessions/:sessionId/items/:itemId')
   saveItemResponse(
-    @Param('sessionId') sessionId: string,
-    @Param('itemId') itemId: string,
+    @Param() params: SessionItemParamDto,
     @Req() req: { user: RequestUser },
-    @Body() body: { answer: unknown },
+    @Body() body: SaveItemResponseDto,
   ) {
     return this.responsesService.saveItemResponse({
-      sessionId,
-      itemId,
+      sessionId: params.sessionId,
+      itemId: params.itemId,
       user: req.user,
       answer: body.answer,
     });
@@ -34,18 +38,21 @@ export class ResponsesController {
   @Roles('CANDIDATE', 'CONSUMER', 'EMPLOYER_ADMIN', 'PLATFORM_ADMIN')
   @Get('sessions/:sessionId')
   getSessionResponses(
-    @Param('sessionId') sessionId: string,
+    @Param() params: SessionIdParamDto,
     @Req() req: { user: RequestUser },
   ) {
-    return this.responsesService.getSessionResponses(sessionId, req.user);
+    return this.responsesService.getSessionResponses(params.sessionId, req.user);
   }
 
   @Roles('CANDIDATE', 'CONSUMER', 'PLATFORM_ADMIN')
   @Post('sessions/:sessionId/finalise')
   finaliseResponseSet(
-    @Param('sessionId') sessionId: string,
+    @Param() params: SessionIdParamDto,
     @Req() req: { user: RequestUser },
   ) {
-    return this.responsesService.finaliseResponseSet(sessionId, req.user);
+    return this.responsesService.finaliseResponseSet(
+      params.sessionId,
+      req.user,
+    );
   }
 }

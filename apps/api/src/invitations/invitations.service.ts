@@ -1,21 +1,33 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { CampaignStatus, InvitationStatus, UserRole } from '@prisma/client';
 import { randomUUID } from 'crypto';
-import { CampaignStatus, InvitationStatus } from '@prisma/client';
+import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
+
+type RequestUser = {
+  id: string;
+  role: string;
+  organisationId?: string | null;
+};
 
 @Injectable()
 export class InvitationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditService: AuditService,
+  ) {}
 
   async createInvitation(input: {
     campaignId: string;
     email: string;
     candidateUserId?: string;
     expiresAt?: string;
+    requestingUser: RequestUser;
   }) {
     const campaign = await this.prisma.campaign.findUnique({
       where: { id: input.campaignId },
@@ -25,11 +37,15 @@ export class InvitationsService {
       throw new NotFoundException('Campaign not found');
     }
 
+    this.assertCanManageCampaign(input.requestingUser, campaign.organisationId);
+
     if (campaign.status !== CampaignStatus.ACTIVE) {
-      throw new BadRequestException('Invitations can only be created for active campaigns');
+      throw new BadRequestException(
+        'Invitations can only be created for active campaigns',
+      );
     }
 
-    return this.prisma.invitation.create({
+    const invitation = await this.prisma.invitation.create({
       data: {
         campaignId: input.campaignId,
         email: input.email,
@@ -38,6 +54,22 @@ export class InvitationsService {
         expiresAt: input.expiresAt ? new Date(input.expiresAt) : undefined,
       },
     });
+
+    await this.auditService.record({
+      action: 'INVITATION_CREATED',
+      userId: input.requestingUser.id,
+      entityType: 'Invitation',
+      entityId: invitation.id,
+      metadata: {
+        campaignId: invitation.campaignId,
+        email: invitation.email,
+        status: invitation.status,
+        candidateUserId: invitation.candidateUserId,
+        expiresAt: invitation.expiresAt,
+      },
+    });
+
+    return invitation;
   }
 
   async validateInvitation(token: string) {
@@ -62,9 +94,22 @@ export class InvitationsService {
     }
 
     if (invitation.expiresAt && invitation.expiresAt < new Date()) {
-      await this.prisma.invitation.update({
+      const expiredInvitation = await this.prisma.invitation.update({
         where: { id: invitation.id },
         data: { status: InvitationStatus.EXPIRED },
+      });
+
+      await this.auditService.record({
+        action: 'INVITATION_EXPIRED',
+        userId: null,
+        entityType: 'Invitation',
+        entityId: expiredInvitation.id,
+        metadata: {
+          campaignId: expiredInvitation.campaignId,
+          email: expiredInvitation.email,
+          status: expiredInvitation.status,
+          expiredAt: expiredInvitation.expiresAt,
+        },
       });
 
       throw new BadRequestException('Invitation has expired');
@@ -73,13 +118,44 @@ export class InvitationsService {
     return invitation;
   }
 
-  acceptInvitation(id: string) {
-    return this.prisma.invitation.update({
+  async acceptInvitation(id: string, actorUserId?: string) {
+    const invitation = await this.prisma.invitation.update({
       where: { id },
       data: {
         status: InvitationStatus.ACCEPTED,
         usedAt: new Date(),
       },
     });
+
+    await this.auditService.record({
+      action: 'INVITATION_ACCEPTED',
+      userId: actorUserId ?? invitation.candidateUserId ?? null,
+      entityType: 'Invitation',
+      entityId: invitation.id,
+      metadata: {
+        campaignId: invitation.campaignId,
+        email: invitation.email,
+        status: invitation.status,
+        candidateUserId: invitation.candidateUserId,
+        usedAt: invitation.usedAt,
+      },
+    });
+
+    return invitation;
+  }
+
+  private assertCanManageCampaign(user: RequestUser, organisationId: string) {
+    if (user.role === UserRole.PLATFORM_ADMIN) {
+      return;
+    }
+
+    if (
+      user.role === UserRole.EMPLOYER_ADMIN &&
+      user.organisationId === organisationId
+    ) {
+      return;
+    }
+
+    throw new ForbiddenException('Not authorised for this campaign');
   }
 }

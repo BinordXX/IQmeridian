@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { FormItemMappingStatus, Prisma, SessionStatus } from '@prisma/client';
+import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 type RequestUser = {
@@ -22,7 +23,10 @@ type SaveItemResponseInput = {
 
 @Injectable()
 export class ResponsesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditService: AuditService,
+  ) {}
 
   async saveItemResponse(input: SaveItemResponseInput) {
     const session = await this.getSessionOrThrow(input.sessionId);
@@ -87,7 +91,7 @@ export class ResponsesService {
 
     const now = new Date();
 
-    return this.prisma.$transaction(async (tx) => {
+    const finalisedSession = await this.prisma.$transaction(async (tx) => {
       await tx.response.updateMany({
         where: {
           sessionId,
@@ -111,6 +115,23 @@ export class ResponsesService {
         },
       });
     });
+
+    await this.auditService.record({
+      action: 'SESSION_RESPONSES_SUBMITTED',
+      userId: finalisedSession.userId,
+      entityType: 'Session',
+      entityId: finalisedSession.id,
+      metadata: {
+        campaignId: finalisedSession.campaignId,
+        invitationId: finalisedSession.invitationId,
+        assessmentFormId: finalisedSession.assessmentFormId,
+        responseCount: finalisedSession.responses.length,
+        completedAt: finalisedSession.completedAt,
+        status: finalisedSession.status,
+      },
+    });
+
+    return finalisedSession;
   }
 
   private async getSessionOrThrow(sessionId: string) {

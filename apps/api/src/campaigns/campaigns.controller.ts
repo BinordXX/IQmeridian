@@ -5,14 +5,24 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { CampaignStatus } from '@prisma/client';
 import { DevAuthGuard } from '../auth/dev-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
+import { CampaignIdParamDto } from './dto/campaign-route-params.dto';
+import { CreateCampaignDto } from './dto/create-campaign.dto';
+import { ListCampaignsQueryDto } from './dto/list-campaigns-query.dto';
+import { UpdateCampaignStatusDto } from './dto/update-campaign-status.dto';
 import { CampaignsService } from './campaigns.service';
+
+type RequestUser = {
+  id: string;
+  role: string;
+  organisationId?: string | null;
+};
 
 @Controller('campaigns')
 @UseGuards(DevAuthGuard, RolesGuard)
@@ -22,17 +32,8 @@ export class CampaignsController {
   @Roles('PLATFORM_ADMIN', 'EMPLOYER_ADMIN')
   @Post()
   createCampaign(
-    @Req()
-    req: {
-      user: { id: string; role: string; organisationId?: string | null };
-    },
-    @Body()
-    body: {
-      name: string;
-      organisationId: string;
-      ownerId?: string;
-      assessmentFormId?: string;
-    },
+    @Req() req: { user: RequestUser },
+    @Body() body: CreateCampaignDto,
   ) {
     return this.campaignsService.createCampaign({
       ...body,
@@ -43,38 +44,30 @@ export class CampaignsController {
   @Roles('PLATFORM_ADMIN', 'EMPLOYER_ADMIN')
   @Get()
   findCampaigns(
-    @Req()
-    req: {
-      user: { role: string; organisationId?: string | null };
-    },
+    @Req() req: { user: RequestUser },
+    @Query() query: ListCampaignsQueryDto,
   ) {
-    return this.campaignsService.findCampaignsForUser(req.user);
+    return this.campaignsService.findCampaignsForUser(req.user, query);
   }
 
   @Roles('PLATFORM_ADMIN', 'EMPLOYER_ADMIN')
   @Get(':id')
   findCampaignById(
-    @Param('id') id: string,
-    @Req()
-    req: {
-      user: { role: string; organisationId?: string | null };
-    },
+    @Param() params: CampaignIdParamDto,
+    @Req() req: { user: RequestUser },
   ) {
-    return this.campaignsService.findCampaignById(id, req.user);
+    return this.campaignsService.findCampaignById(params.id, req.user);
   }
 
   @Roles('PLATFORM_ADMIN', 'EMPLOYER_ADMIN')
   @Patch(':id/status')
   updateCampaignStatus(
-    @Param('id') id: string,
-    @Req()
-    req: {
-      user: { role: string; organisationId?: string | null };
-    },
-    @Body() body: { status: CampaignStatus },
+    @Param() params: CampaignIdParamDto,
+    @Req() req: { user: RequestUser },
+    @Body() body: UpdateCampaignStatusDto,
   ) {
     return this.campaignsService.updateCampaignStatus(
-      id,
+      params.id,
       body.status,
       req.user,
     );

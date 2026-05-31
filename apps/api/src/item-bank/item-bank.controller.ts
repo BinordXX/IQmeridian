@@ -6,13 +6,23 @@ import {
   Patch,
   Post,
   Query,
+  Req,
   UseGuards,
 } from '@nestjs/common';
-import { AssessmentDomain, ItemStatus } from '@prisma/client';
 import { DevAuthGuard } from '../auth/dev-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
+import { CreateItemDto } from './dto/create-item.dto';
+import { ItemIdParamDto } from './dto/item-route-params.dto';
+import { ListItemsQueryDto } from './dto/list-items-query.dto';
+import { UpdateDraftItemDto } from './dto/update-draft-item.dto';
 import { ItemBankService } from './item-bank.service';
+
+type RequestUser = {
+  id: string;
+  role: string;
+  organisationId?: string | null;
+};
 
 @Controller('item-bank')
 @UseGuards(DevAuthGuard, RolesGuard)
@@ -22,60 +32,49 @@ export class ItemBankController {
   @Roles('PLATFORM_ADMIN', 'RESEARCHER')
   @Post()
   createItem(
-    @Body()
-    body: {
-      domain: AssessmentDomain;
-      prompt: string;
-      itemType: string;
-      options?: unknown;
-      correctAnswer?: unknown;
-      difficulty?: string;
-    },
+    @Req() req: { user: RequestUser },
+    @Body() body: CreateItemDto,
   ) {
-    return this.itemBankService.createItem(body);
+    return this.itemBankService.createItem(body, req.user.id);
   }
 
   @Roles('PLATFORM_ADMIN', 'RESEARCHER')
   @Get()
-  listItems(
-    @Query('domain') domain?: AssessmentDomain,
-    @Query('status') status?: ItemStatus,
-    @Query('formId') formId?: string,
-  ) {
-    return this.itemBankService.listItems({ domain, status, formId });
+  listItems(@Query() query: ListItemsQueryDto) {
+    return this.itemBankService.listItems(query);
   }
 
   @Roles('PLATFORM_ADMIN', 'RESEARCHER')
   @Get(':id')
-  getItem(@Param('id') id: string) {
-    return this.itemBankService.getItem(id);
+  getItem(@Param() params: ItemIdParamDto) {
+    return this.itemBankService.getItem(params.id);
   }
 
   @Roles('PLATFORM_ADMIN', 'RESEARCHER')
-@Patch(':id')
-updateDraftItem(
-  @Param('id') id: string,
-  @Body()
-  body: {
-    prompt?: string;
-    itemType?: string;
-    options?: unknown;
-    correctAnswer?: unknown;
-    difficulty?: string;
-  },
-) {
-  return this.itemBankService.updateDraftItem(id, body);
-}
+  @Patch(':id')
+  updateDraftItem(
+    @Param() params: ItemIdParamDto,
+    @Req() req: { user: RequestUser },
+    @Body() body: UpdateDraftItemDto,
+  ) {
+    return this.itemBankService.updateDraftItem(params.id, body, req.user.id);
+  }
 
   @Roles('PLATFORM_ADMIN', 'RESEARCHER')
   @Post(':id/activate')
-  activateItem(@Param('id') id: string) {
-    return this.itemBankService.activateItem(id);
+  activateItem(
+    @Param() params: ItemIdParamDto,
+    @Req() req: { user: RequestUser },
+  ) {
+    return this.itemBankService.activateItem(params.id, req.user.id);
   }
 
   @Roles('PLATFORM_ADMIN', 'RESEARCHER')
   @Post(':id/retire')
-  retireItem(@Param('id') id: string) {
-    return this.itemBankService.retireItem(id);
+  retireItem(
+    @Param() params: ItemIdParamDto,
+    @Req() req: { user: RequestUser },
+  ) {
+    return this.itemBankService.retireItem(params.id, req.user.id);
   }
 }
