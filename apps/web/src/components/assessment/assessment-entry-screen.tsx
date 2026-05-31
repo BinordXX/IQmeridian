@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 type AssessmentEntryScreenProps = {
   mode: 'invitation' | 'consumer';
   invitationToken?: string;
@@ -8,6 +10,10 @@ export function AssessmentEntryScreen({
   invitationToken,
 }: AssessmentEntryScreenProps) {
   const isInvitation = mode === 'invitation';
+
+  const instructionsHref = isInvitation
+    ? `/assessment/invitation/${invitationToken}/instructions`
+    : '/assessment/instructions';
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-1 items-center">
@@ -23,9 +29,9 @@ export function AssessmentEntryScreen({
 
           <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-300">
             This assessment is designed to capture structured cognitive
-            performance across the currently assigned reasoning domains. Once
-            started, your responses may be saved during the session and
-            finalised when you submit.
+            performance across the currently assigned reasoning domains. Before
+            the timed session begins, you will review the assessment
+            instructions and confirm that you are ready.
           </p>
         </div>
 
@@ -41,8 +47,7 @@ export function AssessmentEntryScreen({
           <div className="rounded-2xl border border-slate-800 bg-slate-950 p-5">
             <p className="text-sm font-medium text-slate-200">Timing</p>
             <p className="mt-2 text-sm leading-6 text-slate-400">
-              The backend controls section timing. Time limits become active
-              once the session starts.
+              Section timing begins only after the readiness confirmation step.
             </p>
           </div>
 
@@ -56,9 +61,7 @@ export function AssessmentEntryScreen({
         </div>
 
         <div className="mt-8 rounded-2xl border border-slate-800 bg-slate-950 p-5">
-          <p className="text-sm font-medium text-slate-200">
-            Access context
-          </p>
+          <p className="text-sm font-medium text-slate-200">Access context</p>
 
           <dl className="mt-4 grid gap-4 text-sm md:grid-cols-2">
             <div>
@@ -71,7 +74,7 @@ export function AssessmentEntryScreen({
             <div>
               <dt className="text-slate-500">Current status</dt>
               <dd className="mt-1 text-slate-100">
-                Ready for session setup
+                Awaiting instruction review
               </dd>
             </div>
 
@@ -88,23 +91,17 @@ export function AssessmentEntryScreen({
 
         <div className="mt-8 flex flex-col gap-3 border-t border-slate-800 pt-6 sm:flex-row sm:items-center sm:justify-between">
           <p className="max-w-xl text-xs leading-5 text-slate-500">
-            By continuing, the platform will create or resume an authorised
-            assessment session using the backend session lifecycle.
+            Continue to the instruction screen before confirming readiness. The
+            timed session will not start on this page.
           </p>
 
-          <button
-            type="button"
-            disabled
-            className="rounded-xl bg-slate-700 px-5 py-3 text-sm font-medium text-slate-300 opacity-70"
+          <Link
+            href={instructionsHref}
+            className="inline-flex items-center justify-center rounded-xl bg-slate-50 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-white"
           >
-            Start assessment
-          </button>
+            View instructions
+          </Link>
         </div>
-
-        <p className="mt-3 text-right text-xs text-slate-500">
-          Start action will be connected after the assessment API client is
-          added.
-        </p>
       </section>
     </div>
   );
