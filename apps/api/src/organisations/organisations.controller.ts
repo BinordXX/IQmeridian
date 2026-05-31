@@ -11,6 +11,10 @@ import {
 import { DevAuthGuard } from '../auth/dev-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
+import { AttachEmployerAdminDto } from './dto/attach-employer-admin.dto';
+import { CreateOrganisationDto } from './dto/create-organisation.dto';
+import { OrganisationIdParamDto } from './dto/organisation-route-params.dto';
+import { UpdateOrganisationDto } from './dto/update-organisation.dto';
 import { OrganisationsService } from './organisations.service';
 
 type RequestUser = {
@@ -27,7 +31,7 @@ export class OrganisationsController {
   @Roles('PLATFORM_ADMIN')
   @Post()
   createOrganisation(
-    @Body() body: { name: string },
+    @Body() body: CreateOrganisationDto,
     @Req() req: { user: RequestUser },
   ) {
     return this.organisationsService.createOrganisation(body.name, req.user.id);
@@ -41,19 +45,19 @@ export class OrganisationsController {
 
   @Roles('PLATFORM_ADMIN', 'EMPLOYER_ADMIN')
   @Get(':id')
-  findOrganisationById(@Param('id') id: string) {
-    return this.organisationsService.findOrganisationById(id);
+  findOrganisationById(@Param() params: OrganisationIdParamDto) {
+    return this.organisationsService.findOrganisationById(params.id);
   }
 
   @Roles('PLATFORM_ADMIN')
   @Patch(':id')
   updateOrganisation(
-    @Param('id') id: string,
-    @Body() body: { name: string },
+    @Param() params: OrganisationIdParamDto,
+    @Body() body: UpdateOrganisationDto,
     @Req() req: { user: RequestUser },
   ) {
     return this.organisationsService.updateOrganisation(
-      id,
+      params.id,
       body.name,
       req.user.id,
     );
@@ -62,12 +66,12 @@ export class OrganisationsController {
   @Roles('PLATFORM_ADMIN')
   @Post(':id/employer-admins')
   attachEmployerAdmin(
-    @Param('id') id: string,
-    @Body() body: { userId: string },
+    @Param() params: OrganisationIdParamDto,
+    @Body() body: AttachEmployerAdminDto,
     @Req() req: { user: RequestUser },
   ) {
     return this.organisationsService.attachEmployerAdminToOrganisation(
-      id,
+      params.id,
       body.userId,
       req.user.id,
     );

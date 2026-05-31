@@ -3,6 +3,7 @@ import { DevAuthGuard } from '../auth/dev-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { AuditService } from './audit.service';
+import { ListAuditLogsQueryDto } from './dto/list-audit-logs-query.dto';
 
 type RequestUser = {
   id: string;
@@ -19,21 +20,11 @@ export class AuditController {
   @Get()
   listAuditLogs(
     @Req() req: { user: RequestUser },
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
-    @Query('action') action?: string,
-    @Query('entityType') entityType?: string,
-    @Query('entityId') entityId?: string,
-    @Query('userId') userId?: string,
+    @Query() query: ListAuditLogsQueryDto,
   ) {
     return this.auditService.list({
       user: req.user,
-      page,
-      limit,
-      action,
-      entityType,
-      entityId,
-      userId,
+      ...query,
     });
   }
 }

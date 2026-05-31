@@ -1,8 +1,15 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { AssessmentDomain, AssessmentSectionType } from '@prisma/client';
-import { PrismaService } from '../prisma/prisma.service';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import {
+  AssessmentDomain,
+  AssessmentSectionType,
+  FormItemMappingStatus,
+} from '@prisma/client';
 import { AuditService } from '../audit/audit.service';
-
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class AssessmentsService {
@@ -11,19 +18,22 @@ export class AssessmentsService {
     private readonly auditService: AuditService,
   ) {}
 
-  createForm(input: {
-    name: string;
-    version?: number;
-    isActive?: boolean;
-    sections?: {
-      type: AssessmentSectionType;
-      domain: AssessmentDomain;
-      title: string;
-      timeLimitSec: number;
-      orderIndex: number;
-    }[];
-  }) {
-    return this.prisma.assessmentForm.create({
+  async createForm(
+    input: {
+      name: string;
+      version?: number;
+      isActive?: boolean;
+      sections?: {
+        type: AssessmentSectionType;
+        domain: AssessmentDomain;
+        title: string;
+        timeLimitSec: number;
+        orderIndex: number;
+      }[];
+    },
+    actorUserId: string,
+  ) {
+    const form = await this.prisma.assessmentForm.create({
       data: {
         name: input.name,
         version: input.version ?? 1,
@@ -38,6 +48,21 @@ export class AssessmentsService {
         sections: true,
       },
     });
+
+    await this.auditService.record({
+      action: 'ASSESSMENT_FORM_CREATED',
+      userId: actorUserId,
+      entityType: 'AssessmentForm',
+      entityId: form.id,
+      metadata: {
+        name: form.name,
+        version: form.version,
+        isActive: form.isActive,
+        sectionCount: form.sections.length,
+      },
+    });
+
+    return form;
   }
 
   findActiveForms() {
@@ -77,19 +102,33 @@ export class AssessmentsService {
     return form;
   }
 
-  async setFormActive(id: string, isActive: boolean) {
+  async setFormActive(id: string, isActive: boolean, actorUserId: string) {
     await this.findFormById(id);
 
-    return this.prisma.assessmentForm.update({
+    const form = await this.prisma.assessmentForm.update({
       where: { id },
       data: { isActive },
     });
+
+    await this.auditService.record({
+      action: 'ASSESSMENT_FORM_ACTIVE_STATUS_UPDATED',
+      userId: actorUserId,
+      entityType: 'AssessmentForm',
+      entityId: form.id,
+      metadata: {
+        name: form.name,
+        version: form.version,
+        isActive: form.isActive,
+      },
+    });
+
+    return form;
   }
 
-  async createNextVersion(id: string) {
+  async createNextVersion(id: string, actorUserId: string) {
     const existing = await this.findFormById(id);
 
-    return this.prisma.assessmentForm.create({
+    const form = await this.prisma.assessmentForm.create({
       data: {
         name: existing.name,
         version: existing.version + 1,
@@ -108,97 +147,169 @@ export class AssessmentsService {
         sections: true,
       },
     });
-  }
-  async createSection(
-  formId: string,
-  input: {
-    type: AssessmentSectionType;
-    domain: AssessmentDomain;
-    title: string;
-    timeLimitSec: number;
-    orderIndex: number;
-  },
-) {
-  await this.findFormById(formId);
 
-  return this.prisma.assessmentSection.create({
-    data: {
-      formId,
-      type: input.type,
-      domain: input.domain,
-      title: input.title,
-      timeLimitSec: input.timeLimitSec,
-      orderIndex: input.orderIndex,
-    },
-  });
-}
-
-async listSectionsForForm(formId: string) {
-  await this.findFormById(formId);
-
-  return this.prisma.assessmentSection.findMany({
-    where: { formId },
-    orderBy: { orderIndex: 'asc' },
-    include: {
-      items: {
-        where: { status: 'ACTIVE' },
-        include: { item: true },
-        orderBy: { orderIndex: 'asc' },
+    await this.auditService.record({
+      action: 'ASSESSMENT_FORM_VERSION_CREATED',
+      userId: actorUserId,
+      entityType: 'AssessmentForm',
+      entityId: form.id,
+      metadata: {
+        sourceFormId: existing.id,
+        name: form.name,
+        version: form.version,
+        isActive: form.isActive,
+        sectionCount: form.sections.length,
       },
-    },
-  });
-}
-async attachItemToForm(input: {
-  formId: string;
-  sectionId: string;
-  itemId: string;
-  orderIndex: number;
-}) {
-  const form = await this.findFormById(input.formId);
+    });
 
-  const section = await this.prisma.assessmentSection.findUnique({
-    where: { id: input.sectionId },
-  });
-
-  if (!section || section.formId !== form.id) {
-    throw new NotFoundException('Section not found for this form');
+    return form;
   }
 
-  const item = await this.prisma.item.findUnique({
-    where: { id: input.itemId },
-  });
+  async createSection(
+    formId: string,
+    input: {
+      type: AssessmentSectionType;
+      domain: AssessmentDomain;
+      title: string;
+      timeLimitSec: number;
+      orderIndex: number;
+    },
+    actorUserId: string,
+  ) {
+    await this.findFormById(formId);
 
-  if (!item) {
-    throw new NotFoundException('Item not found');
+    const section = await this.prisma.assessmentSection.create({
+      data: {
+        formId,
+        type: input.type,
+        domain: input.domain,
+        title: input.title,
+        timeLimitSec: input.timeLimitSec,
+        orderIndex: input.orderIndex,
+      },
+    });
+
+    await this.auditService.record({
+      action: 'ASSESSMENT_SECTION_CREATED',
+      userId: actorUserId,
+      entityType: 'AssessmentSection',
+      entityId: section.id,
+      metadata: {
+        formId: section.formId,
+        type: section.type,
+        domain: section.domain,
+        title: section.title,
+        orderIndex: section.orderIndex,
+        timeLimitSec: section.timeLimitSec,
+      },
+    });
+
+    return section;
   }
 
-  if (item.status !== 'ACTIVE') {
-    throw new BadRequestException('Only active items can be attached to a form');
+  async listSectionsForForm(formId: string) {
+    await this.findFormById(formId);
+
+    return this.prisma.assessmentSection.findMany({
+      where: { formId },
+      orderBy: { orderIndex: 'asc' },
+      include: {
+        items: {
+          where: { status: FormItemMappingStatus.ACTIVE },
+          include: { item: true },
+          orderBy: { orderIndex: 'asc' },
+        },
+      },
+    });
   }
 
-  return this.prisma.formItemMapping.create({
-    data: {
-      formId: input.formId,
-      sectionId: input.sectionId,
-      itemId: input.itemId,
-      orderIndex: input.orderIndex,
-      status: 'ACTIVE',
+  async attachItemToForm(
+    input: {
+      formId: string;
+      sectionId: string;
+      itemId: string;
+      orderIndex: number;
     },
-    include: {
-      item: true,
-      section: true,
-      form: true,
-    },
-  });
-}
+    actorUserId: string,
+  ) {
+    const form = await this.findFormById(input.formId);
 
-async updateFormItemMappingStatus(
-  mappingId: string,
-  status: 'ACTIVE' | 'INACTIVE',
-) {
-  return this.prisma.formItemMapping.update({
-    where: { id: mappingId },
-    data: { status },
-  });
-}
+    const section = await this.prisma.assessmentSection.findUnique({
+      where: { id: input.sectionId },
+    });
+
+    if (!section || section.formId !== form.id) {
+      throw new NotFoundException('Section not found for this form');
+    }
+
+    const item = await this.prisma.item.findUnique({
+      where: { id: input.itemId },
+    });
+
+    if (!item) {
+      throw new NotFoundException('Item not found');
+    }
+
+    if (item.status !== 'ACTIVE') {
+      throw new BadRequestException('Only active items can be attached to a form');
+    }
+
+    const mapping = await this.prisma.formItemMapping.create({
+      data: {
+        formId: input.formId,
+        sectionId: input.sectionId,
+        itemId: input.itemId,
+        orderIndex: input.orderIndex,
+        status: FormItemMappingStatus.ACTIVE,
+      },
+      include: {
+        item: true,
+        section: true,
+        form: true,
+      },
+    });
+
+    await this.auditService.record({
+      action: 'ASSESSMENT_ITEM_ATTACHED',
+      userId: actorUserId,
+      entityType: 'FormItemMapping',
+      entityId: mapping.id,
+      metadata: {
+        formId: mapping.formId,
+        sectionId: mapping.sectionId,
+        itemId: mapping.itemId,
+        orderIndex: mapping.orderIndex,
+        status: mapping.status,
+      },
+    });
+
+    return mapping;
+  }
+
+  async updateFormItemMappingStatus(
+    mappingId: string,
+    status: FormItemMappingStatus,
+    actorUserId: string,
+  ) {
+    const mapping = await this.prisma.formItemMapping.update({
+      where: { id: mappingId },
+      data: { status },
+    });
+
+    await this.auditService.record({
+      action: 'ASSESSMENT_ITEM_MAPPING_STATUS_UPDATED',
+      userId: actorUserId,
+      entityType: 'FormItemMapping',
+      entityId: mapping.id,
+      metadata: {
+        formId: mapping.formId,
+        sectionId: mapping.sectionId,
+        itemId: mapping.itemId,
+        orderIndex: mapping.orderIndex,
+        status: mapping.status,
+      },
+    });
+
+    return mapping;
+  }
 }

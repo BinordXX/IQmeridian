@@ -2,6 +2,9 @@ import { Body, Controller, Param, Post, Req, UseGuards } from '@nestjs/common';
 import { DevAuthGuard } from '../auth/dev-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
+import { CreateConsumerSessionDto } from './dto/create-consumer-session.dto';
+import { CreateSessionFromInvitationDto } from './dto/create-session-from-invitation.dto';
+import { SessionIdParamDto } from './dto/session-route-params.dto';
 import { SessionsService } from './sessions.service';
 
 type RequestUser = {
@@ -19,7 +22,7 @@ export class SessionsController {
   @Post('consumer')
   createConsumerSession(
     @Req() req: { user: RequestUser },
-    @Body() body: { assessmentFormId: string },
+    @Body() body: CreateConsumerSessionDto,
   ) {
     return this.sessionsService.createConsumerSession({
       userId: req.user.id,
@@ -31,7 +34,7 @@ export class SessionsController {
   @Post('invitation')
   createSessionFromInvitation(
     @Req() req: { user: RequestUser },
-    @Body() body: { invitationToken: string },
+    @Body() body: CreateSessionFromInvitationDto,
   ) {
     return this.sessionsService.createSessionFromInvitation({
       userId: req.user.id,
@@ -41,22 +44,28 @@ export class SessionsController {
 
   @Roles('CANDIDATE', 'CONSUMER', 'PLATFORM_ADMIN')
   @Post(':id/start')
-  startSession(@Param('id') id: string, @Req() req: { user: RequestUser }) {
-    return this.sessionsService.startSession(id, req.user.id);
+  startSession(
+    @Param() params: SessionIdParamDto,
+    @Req() req: { user: RequestUser },
+  ) {
+    return this.sessionsService.startSession(params.id, req.user.id);
   }
 
   @Roles('CANDIDATE', 'CONSUMER', 'PLATFORM_ADMIN')
   @Post(':id/resume')
-  resumeSession(@Param('id') id: string, @Req() req: { user: RequestUser }) {
-    return this.sessionsService.resumeSession(id, req.user.id);
+  resumeSession(
+    @Param() params: SessionIdParamDto,
+    @Req() req: { user: RequestUser },
+  ) {
+    return this.sessionsService.resumeSession(params.id, req.user.id);
   }
 
   @Roles('CANDIDATE', 'CONSUMER', 'PLATFORM_ADMIN')
   @Post(':id/finalise')
   finaliseSession(
-    @Param('id') id: string,
+    @Param() params: SessionIdParamDto,
     @Req() req: { user: RequestUser },
   ) {
-    return this.sessionsService.finaliseSession(id, req.user.id);
+    return this.sessionsService.finaliseSession(params.id, req.user.id);
   }
 }

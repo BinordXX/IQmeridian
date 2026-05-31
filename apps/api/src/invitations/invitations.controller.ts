@@ -10,6 +10,8 @@ import {
 import { DevAuthGuard } from '../auth/dev-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
+import { CreateInvitationDto } from './dto/create-invitation.dto';
+import { InvitationTokenParamDto } from './dto/invitation-route-params.dto';
 import { InvitationsService } from './invitations.service';
 
 type RequestUser = {
@@ -27,13 +29,7 @@ export class InvitationsController {
   @Post()
   createInvitation(
     @Req() req: { user: RequestUser },
-    @Body()
-    body: {
-      campaignId: string;
-      email: string;
-      candidateUserId?: string;
-      expiresAt?: string;
-    },
+    @Body() body: CreateInvitationDto,
   ) {
     return this.invitationsService.createInvitation({
       ...body,
@@ -43,7 +39,7 @@ export class InvitationsController {
 
   @Roles('PLATFORM_ADMIN', 'EMPLOYER_ADMIN', 'CANDIDATE')
   @Get('validate/:token')
-  validateInvitation(@Param('token') token: string) {
-    return this.invitationsService.validateInvitation(token);
+  validateInvitation(@Param() params: InvitationTokenParamDto) {
+    return this.invitationsService.validateInvitation(params.token);
   }
 }

@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import { ForbiddenException, Inject, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -18,8 +18,8 @@ type RecordAuditInput = {
 
 type ListAuditLogsInput = {
   user: RequestUser;
-  page?: string;
-  limit?: string;
+  page?: number;
+  limit?: number;
   action?: string;
   entityType?: string;
   entityId?: string;
@@ -28,7 +28,10 @@ type ListAuditLogsInput = {
 
 @Injectable()
 export class AuditService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(PrismaService)
+    private readonly prisma: PrismaService,
+  ) {}
 
   async record(input: RecordAuditInput) {
     return this.prisma.auditLog.create({
@@ -48,8 +51,8 @@ export class AuditService {
   async list(input: ListAuditLogsInput) {
     this.assertCanReadAuditLogs(input.user);
 
-    const page = this.parsePositiveInteger(input.page, 1);
-    const limit = Math.min(this.parsePositiveInteger(input.limit, 25), 100);
+    const page = input.page ?? 1;
+    const limit = Math.min(input.limit ?? 25, 100);
     const skip = (page - 1) * limit;
 
     const where: Prisma.AuditLogWhereInput = {
@@ -88,20 +91,6 @@ export class AuditService {
     }
 
     throw new ForbiddenException('You cannot access audit logs');
-  }
-
-  private parsePositiveInteger(value: string | undefined, fallback: number) {
-    if (!value) {
-      return fallback;
-    }
-
-    const parsed = Number(value);
-
-    if (!Number.isInteger(parsed) || parsed < 1) {
-      return fallback;
-    }
-
-    return parsed;
   }
 
   private toJsonValue(value: unknown): Prisma.InputJsonValue {

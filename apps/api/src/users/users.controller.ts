@@ -1,8 +1,26 @@
-import { Controller, Get, Param, Patch, Body, Req, UseGuards } from '@nestjs/common';
-import { UsersService } from './users.service';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { DevAuthGuard } from '../auth/dev-auth.guard';
-import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
+import { RolesGuard } from '../auth/roles.guard';
+import { ListUsersQueryDto } from './dto/list-users-query.dto';
+import { UpdateUserNameDto } from './dto/update-user-name.dto';
+import { OrganisationIdParamDto } from './dto/user-route-params.dto';
+import { UsersService } from './users.service';
+
+type RequestUser = {
+  id: string;
+  role: string;
+  organisationId?: string | null;
+};
 
 @Controller('users')
 @UseGuards(DevAuthGuard, RolesGuard)
@@ -10,20 +28,26 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get('me')
-  getMe(@Req() req: { user: { id: string } }) {
+  getMe(@Req() req: { user: RequestUser }) {
     return this.usersService.getCurrentUser(req.user.id);
   }
 
   @Roles('PLATFORM_ADMIN')
   @Get('organisation/:organisationId')
-  getByOrganisation(@Param('organisationId') organisationId: string) {
-    return this.usersService.getUsersByOrganisation(organisationId);
+  getByOrganisation(
+    @Param() params: OrganisationIdParamDto,
+    @Query() query: ListUsersQueryDto,
+  ) {
+    return this.usersService.getUsersByOrganisation(
+      params.organisationId,
+      query,
+    );
   }
 
   @Patch('me')
   updateMe(
-    @Req() req: { user: { id: string } },
-    @Body() body: { name: string },
+    @Req() req: { user: RequestUser },
+    @Body() body: UpdateUserNameDto,
   ) {
     return this.usersService.updateUserName(req.user.id, body.name);
   }

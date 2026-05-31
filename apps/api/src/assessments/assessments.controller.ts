@@ -5,13 +5,29 @@ import {
   Param,
   Patch,
   Post,
+  Req,
   UseGuards,
 } from '@nestjs/common';
-import { AssessmentDomain, AssessmentSectionType } from '@prisma/client';
 import { DevAuthGuard } from '../auth/dev-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
+import {
+  AssessmentFormIdParamDto,
+  AssessmentFormRouteParamDto,
+  FormItemMappingIdParamDto,
+} from './dto/assessment-route-params.dto';
+import { AttachItemToFormDto } from './dto/attach-item-to-form.dto';
+import { CreateAssessmentFormDto } from './dto/create-assessment-form.dto';
+import { CreateAssessmentSectionDto } from './dto/create-assessment-section.dto';
+import { SetFormActiveDto } from './dto/set-form-active.dto';
+import { UpdateFormItemMappingStatusDto } from './dto/update-form-item-mapping-status.dto';
 import { AssessmentsService } from './assessments.service';
+
+type RequestUser = {
+  id: string;
+  role: string;
+  organisationId?: string | null;
+};
 
 @Controller('assessments/forms')
 @UseGuards(DevAuthGuard, RolesGuard)
@@ -21,21 +37,10 @@ export class AssessmentsController {
   @Roles('PLATFORM_ADMIN', 'RESEARCHER')
   @Post()
   createForm(
-    @Body()
-    body: {
-      name: string;
-      version?: number;
-      isActive?: boolean;
-      sections?: {
-        type: AssessmentSectionType;
-        domain: AssessmentDomain;
-        title: string;
-        timeLimitSec: number;
-        orderIndex: number;
-      }[];
-    },
+    @Body() body: CreateAssessmentFormDto,
+    @Req() req: { user: RequestUser },
   ) {
-    return this.assessmentsService.createForm(body);
+    return this.assessmentsService.createForm(body, req.user.id);
   }
 
   @Roles('PLATFORM_ADMIN', 'RESEARCHER', 'EMPLOYER_ADMIN')
@@ -46,68 +51,80 @@ export class AssessmentsController {
 
   @Roles('PLATFORM_ADMIN', 'RESEARCHER', 'EMPLOYER_ADMIN')
   @Get(':id')
-  findFormById(@Param('id') id: string) {
-    return this.assessmentsService.findFormById(id);
+  findFormById(@Param() params: AssessmentFormIdParamDto) {
+    return this.assessmentsService.findFormById(params.id);
   }
 
   @Roles('PLATFORM_ADMIN', 'RESEARCHER')
   @Patch(':id/active')
-  setFormActive(@Param('id') id: string, @Body() body: { isActive: boolean }) {
-    return this.assessmentsService.setFormActive(id, body.isActive);
+  setFormActive(
+    @Param() params: AssessmentFormIdParamDto,
+    @Body() body: SetFormActiveDto,
+    @Req() req: { user: RequestUser },
+  ) {
+    return this.assessmentsService.setFormActive(
+      params.id,
+      body.isActive,
+      req.user.id,
+    );
   }
 
   @Roles('PLATFORM_ADMIN', 'RESEARCHER')
   @Post(':id/versions')
-  createNextVersion(@Param('id') id: string) {
-    return this.assessmentsService.createNextVersion(id);
+  createNextVersion(
+    @Param() params: AssessmentFormIdParamDto,
+    @Req() req: { user: RequestUser },
+  ) {
+    return this.assessmentsService.createNextVersion(params.id, req.user.id);
   }
+
   @Roles('PLATFORM_ADMIN', 'RESEARCHER')
-@Post(':formId/sections')
-createSection(
-  @Param('formId') formId: string,
-  @Body()
-  body: {
-    type: AssessmentSectionType;
-    domain: AssessmentDomain;
-    title: string;
-    timeLimitSec: number;
-    orderIndex: number;
-  },
-) {
-  return this.assessmentsService.createSection(formId, body);
-}
+  @Post(':formId/sections')
+  createSection(
+    @Param() params: AssessmentFormRouteParamDto,
+    @Body() body: CreateAssessmentSectionDto,
+    @Req() req: { user: RequestUser },
+  ) {
+    return this.assessmentsService.createSection(
+      params.formId,
+      body,
+      req.user.id,
+    );
+  }
 
-@Roles('PLATFORM_ADMIN', 'RESEARCHER', 'EMPLOYER_ADMIN')
-@Get(':formId/sections')
-listSectionsForForm(@Param('formId') formId: string) {
-  return this.assessmentsService.listSectionsForForm(formId);
-}
-@Roles('PLATFORM_ADMIN', 'RESEARCHER')
-@Post(':formId/items')
-attachItemToForm(
-  @Param('formId') formId: string,
-  @Body()
-  body: {
-    sectionId: string;
-    itemId: string;
-    orderIndex: number;
-  },
-) {
-  return this.assessmentsService.attachItemToForm({
-    formId,
-    ...body,
-  });
-}
+  @Roles('PLATFORM_ADMIN', 'RESEARCHER', 'EMPLOYER_ADMIN')
+  @Get(':formId/sections')
+  listSectionsForForm(@Param() params: AssessmentFormRouteParamDto) {
+    return this.assessmentsService.listSectionsForForm(params.formId);
+  }
 
-@Roles('PLATFORM_ADMIN', 'RESEARCHER')
-@Patch('form-items/:mappingId/status')
-updateFormItemMappingStatus(
-  @Param('mappingId') mappingId: string,
-  @Body() body: { status: 'ACTIVE' | 'INACTIVE' },
-) {
-  return this.assessmentsService.updateFormItemMappingStatus(
-    mappingId,
-    body.status,
-  );
-}
+  @Roles('PLATFORM_ADMIN', 'RESEARCHER')
+  @Post(':formId/items')
+  attachItemToForm(
+    @Param() params: AssessmentFormRouteParamDto,
+    @Body() body: AttachItemToFormDto,
+    @Req() req: { user: RequestUser },
+  ) {
+    return this.assessmentsService.attachItemToForm(
+      {
+        formId: params.formId,
+        ...body,
+      },
+      req.user.id,
+    );
+  }
+
+  @Roles('PLATFORM_ADMIN', 'RESEARCHER')
+  @Patch('form-items/:mappingId/status')
+  updateFormItemMappingStatus(
+    @Param() params: FormItemMappingIdParamDto,
+    @Body() body: UpdateFormItemMappingStatusDto,
+    @Req() req: { user: RequestUser },
+  ) {
+    return this.assessmentsService.updateFormItemMappingStatus(
+      params.mappingId,
+      body.status,
+      req.user.id,
+    );
+  }
 }
