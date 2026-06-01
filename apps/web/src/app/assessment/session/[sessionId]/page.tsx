@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { LiveAssessmentShell } from "@/features/assessment/components/live-assessment-shell";
 import { guardLiveAssessmentRoute } from "@/features/assessment/guards/assessment-route-guards";
 
 type LiveAssessmentPageProps = {
@@ -17,11 +18,5 @@ export default async function LiveAssessmentPage({
     redirect(guard.redirectTo);
   }
 
-  const session = guard.data;
-
-  return (
-    <main>
-      <pre>{JSON.stringify(session, null, 2)}</pre>
-    </main>
-  );
+  return <LiveAssessmentShell session={guard.data} />;
 }
