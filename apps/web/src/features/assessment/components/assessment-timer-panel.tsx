@@ -7,6 +7,8 @@ type AssessmentTimerPanelProps = {
   onExpired?: () => void;
 };
 
+type TimerUrgency = "normal" | "low" | "critical" | "expired" | "unknown";
+
 const formatRemainingTime = (totalSeconds: number): string => {
   const safeSeconds = Math.max(0, totalSeconds);
   const hours = Math.floor(safeSeconds / 3600);
@@ -39,6 +41,72 @@ const calculateRemainingSeconds = (
   return Math.max(0, Math.ceil((expiryTime - currentTime) / 1000));
 };
 
+const getTimerUrgency = (remainingSeconds: number | null): TimerUrgency => {
+  if (remainingSeconds === null) {
+    return "unknown";
+  }
+
+  if (remainingSeconds === 0) {
+    return "expired";
+  }
+
+  if (remainingSeconds <= 60) {
+    return "critical";
+  }
+
+  if (remainingSeconds <= 300) {
+    return "low";
+  }
+
+  return "normal";
+};
+
+const getTimerStatusText = (urgency: TimerUrgency): string => {
+  switch (urgency) {
+    case "expired":
+      return "Time has expired.";
+    case "critical":
+      return "Less than one minute remaining.";
+    case "low":
+      return "Less than five minutes remaining.";
+    case "unknown":
+      return "Awaiting confirmed session timing.";
+    case "normal":
+    default:
+      return "Assessment time is active.";
+  }
+};
+
+const getTimerTextClassName = (urgency: TimerUrgency): string => {
+  switch (urgency) {
+    case "expired":
+    case "critical":
+      return "text-red-700";
+    case "low":
+      return "text-amber-700";
+    case "unknown":
+      return "text-slate-500";
+    case "normal":
+    default:
+      return "text-slate-950";
+  }
+};
+
+const getTimerContainerClassName = (urgency: TimerUrgency): string => {
+  switch (urgency) {
+    case "expired":
+    case "critical":
+      return "border-red-200 bg-red-50";
+    case "low":
+      return "border-amber-200 bg-amber-50";
+    case "unknown":
+      return "border-slate-200 bg-white";
+    case "normal":
+    default:
+      return "border-slate-200 bg-white";
+  }
+};
+
 export const AssessmentTimerPanel = ({
   expiresAt,
   onExpired,
@@ -49,6 +117,9 @@ export const AssessmentTimerPanel = ({
   const remainingSeconds = useMemo(() => {
     return calculateRemainingSeconds(expiresAt, currentTime);
   }, [expiresAt, currentTime]);
+
+  const urgency = getTimerUrgency(remainingSeconds);
+  const statusText = getTimerStatusText(urgency);
 
   useEffect(() => {
     hasNotifiedExpiryRef.current = false;
@@ -77,23 +148,45 @@ export const AssessmentTimerPanel = ({
     onExpired?.();
   }, [remainingSeconds, onExpired]);
 
-  const isLowTime =
-    typeof remainingSeconds === "number" && remainingSeconds <= 300;
-
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-        Time remaining
-      </p>
+    <section
+      className={`rounded-2xl border px-5 py-4 shadow-sm ${getTimerContainerClassName(
+        urgency,
+      )}`}
+      aria-label="Assessment timer"
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Time remaining
+          </p>
 
-      <p
-        className={`mt-1 text-2xl font-bold tabular-nums ${
-          isLowTime ? "text-red-700" : "text-slate-950"
-        }`}
-      >
-        {remainingSeconds === null
-          ? "Pending"
-          : formatRemainingTime(remainingSeconds)}
+          <p
+            className={`mt-1 text-3xl font-bold tabular-nums ${getTimerTextClassName(
+              urgency,
+            )}`}
+            aria-live="polite"
+          >
+            {remainingSeconds === null
+              ? "--:--"
+              : formatRemainingTime(remainingSeconds)}
+          </p>
+        </div>
+
+        <span
+          className={`mt-1 h-3 w-3 rounded-full ${
+            urgency === "expired" || urgency === "critical"
+              ? "bg-red-700"
+              : urgency === "low"
+                ? "bg-amber-600"
+                : "bg-slate-400"
+          }`}
+          aria-hidden="true"
+        />
+      </div>
+
+      <p className={`mt-2 text-xs font-medium ${getTimerTextClassName(urgency)}`}>
+        {statusText}
       </p>
     </section>
   );

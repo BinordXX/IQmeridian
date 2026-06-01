@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useReducer, useState } from "react";
+import { useCallback, useMemo, useReducer, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   finaliseAssessmentSession,
@@ -62,6 +62,10 @@ export const LiveAssessmentShell = ({ session }: LiveAssessmentShellProps) => {
     currentItemId: session.currentItemId ?? findFirstItem(session)?.itemId,
     expiresAt: session.expiresAt,
   });
+
+  const handleTimerExpired = useCallback((): void => {
+  dispatch({ type: "EXPIRED" });
+}, []);
 
   const items = useMemo(() => flattenItems(session), [session]);
   const initialItem = useMemo(() => getInitialItem(session), [session]);
@@ -225,8 +229,8 @@ export const LiveAssessmentShell = ({ session }: LiveAssessmentShellProps) => {
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <AssessmentTimerPanel
-              expiresAt={session.expiresAt}
-              onExpired={() => dispatch({ type: "EXPIRED" })}
+            expiresAt={session.expiresAt}
+            onExpired={handleTimerExpired}
             />
 
             <AssessmentSaveStatus
