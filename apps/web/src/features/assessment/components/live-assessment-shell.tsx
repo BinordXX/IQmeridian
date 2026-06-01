@@ -1,6 +1,9 @@
 "use client";
 
-import { useMemo, useReducer, useState } from "react";
+import { useCallback, useMemo, useReducer, useState } from "react";
+import { useBackendSyncedTimer } from "../hooks/use-backend-synced-timer";
+import { AssessmentProgressIndicator } from "./assessment-progress-indicator";
+
 import { useRouter } from "next/navigation";
 import {
   finaliseAssessmentSession,
@@ -15,11 +18,10 @@ import {
   initialAssessmentFlowState,
   reduceAssessmentFlowState,
 } from "../state/assessment-flow-state";
-import { AbstractReasoningSectionScreen } from "./abstract-reasoning-section-screen";
+import { AssessmentItemRenderer } from "./assessment-item-renderer";
 import { AssessmentProgressPanel } from "./assessment-progress-panel";
 import { AssessmentSaveStatus } from "./assessment-save-status";
 import { AssessmentTimerPanel } from "./assessment-timer-panel";
-import { CandidateItemCard } from "./candidate-item-card";
 
 type LiveAssessmentShellProps = {
   session: AssessmentSessionPayload;
@@ -64,6 +66,21 @@ export const LiveAssessmentShell = ({ session }: LiveAssessmentShellProps) => {
     expiresAt: session.expiresAt,
   });
 
+  
+  const handleTimerExpired = useCallback((): void => {
+    dispatch({ type: "EXPIRED" });
+  }, []);
+
+  const timer = useBackendSyncedTimer({
+    sessionId: session.sessionId,
+    initialExpiresAt: session.timing?.sectionExpiresAt ?? session.expiresAt,
+    initialServerNow: session.timing?.serverNow ?? session.serverNow,
+    initialRemainingSeconds:
+      session.timing?.sectionRemainingSeconds ??
+      session.timing?.remainingSeconds,
+    onExpired: handleTimerExpired,
+  });
+
   const items = useMemo(() => flattenItems(session), [session]);
   const initialItem = useMemo(() => getInitialItem(session), [session]);
 
@@ -87,6 +104,25 @@ export const LiveAssessmentShell = ({ session }: LiveAssessmentShellProps) => {
         (section) => section.sectionId === currentItem.sectionId,
       )
     : undefined;
+
+    const currentSectionIndex = currentSection
+  ? session.sections.findIndex(
+      (section) => section.sectionId === currentSection.sectionId,
+    )
+  : -1;
+
+const sectionItems = currentItem
+  ? items.filter((item) => item.sectionId === currentItem.sectionId)
+  : [];
+
+const currentSectionItemIndex = currentItem
+  ? sectionItems.findIndex((item) => item.itemId === currentItem.itemId)
+  : -1;
+
+  const answeredItemsCount = sectionItems.filter(
+    (item) =>
+      responses[item.itemId] !== undefined && responses[item.itemId] !== null,
+  ).length;
 
   const currentResponse = currentItem
     ? responses[currentItem.itemId] ?? null
@@ -201,58 +237,6 @@ export const LiveAssessmentShell = ({ session }: LiveAssessmentShellProps) => {
   const isSubmitting = flowState.status === "submitting";
   const isSaving = flowState.status === "saving";
 
-  const genericItemScreen = (
-    <section>
-      <CandidateItemCard
-        item={currentItem}
-        responseValue={currentResponse}
-        onResponseChange={(value) => saveResponse(currentItem, value)}
-        disabled={isSubmitting}
-      />
-
-      <div className="mt-6 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-        <button
-          type="button"
-          onClick={goToPrevious}
-          disabled={currentItemIndex <= 0 || isSubmitting || isSaving}
-          className="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          Previous
-        </button>
-
-        <p className="text-center text-sm font-medium text-slate-500">
-          Question {currentItemIndex + 1} of {items.length}
-        </p>
-
-        {currentItemIndex === items.length - 1 ? (
-          <button
-            type="button"
-            onClick={submitAssessment}
-            disabled={isSubmitting || isSaving}
-            className="rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
-          >
-            {isSubmitting ? "Submitting..." : "Submit assessment"}
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={goToNext}
-            disabled={isSubmitting || isSaving}
-            className="rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
-          >
-            Next
-          </button>
-        )}
-      </div>
-
-      {flowState.error ? (
-        <p className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
-          {flowState.error.message}
-        </p>
-      ) : null}
-    </section>
-  );
-
   return (
     <main className="min-h-screen bg-slate-50 px-6 py-8">
       <div className="mx-auto max-w-7xl">
@@ -277,10 +261,12 @@ export const LiveAssessmentShell = ({ session }: LiveAssessmentShellProps) => {
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <AssessmentTimerPanel
-              expiresAt={session.expiresAt}
-              onExpired={() => dispatch({ type: "EXPIRED" })}
-            />
+<AssessmentTimerPanel
+  remainingSeconds={timer.remainingSeconds}
+  syncStatus={timer.syncStatus}
+  timingSource={timer.timingSource}
+  lastSyncedAt={timer.lastSyncedAt}
+/>
 
             <AssessmentSaveStatus
               status={flowState.status}
@@ -289,34 +275,43 @@ export const LiveAssessmentShell = ({ session }: LiveAssessmentShellProps) => {
           </div>
         </header>
 
-        <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-          {currentItem.itemType === "abstract_reasoning" ? (
-            <AbstractReasoningSectionScreen
-              sectionTitle={currentSection?.title}
-              sectionInstructions={currentSection?.instructions}
-              item={currentItem}
-              responseValue={currentResponse}
-              currentItemIndex={currentItemIndex}
-              totalItems={items.length}
-              isSaving={isSaving}
-              isSubmitting={isSubmitting}
-              errorMessage={flowState.error?.message}
-              onResponseChange={(value) => saveResponse(currentItem, value)}
-              onPrevious={goToPrevious}
-              onNext={goToNext}
-              onSubmit={submitAssessment}
-            />
-          ) : (
-            genericItemScreen
-          )}
+       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+  <div className="space-y-4">
+    <AssessmentProgressIndicator
+      sectionTitle={currentSection?.title}
+      sectionPosition={{
+        current: currentSectionIndex + 1,
+        total: session.sections.length,
+      }}
+      currentItemNumber={currentSectionItemIndex + 1}
+      totalItems={sectionItems.length}
+      answeredItems={answeredItemsCount}
+    />
 
-          <AssessmentProgressPanel
-            sections={session.sections}
-            currentItemId={currentItem.itemId}
-            responses={responses}
-            onSelectItem={selectItem}
-          />
-        </div>
+    <AssessmentItemRenderer
+      sectionTitle={currentSection?.title}
+      sectionInstructions={currentSection?.instructions}
+      item={currentItem}
+      responseValue={currentResponse}
+      currentItemIndex={currentItemIndex}
+      totalItems={items.length}
+      isSaving={isSaving}
+      isSubmitting={isSubmitting}
+      errorMessage={flowState.error?.message}
+      onResponseChange={(value) => saveResponse(currentItem, value)}
+      onPrevious={goToPrevious}
+      onNext={goToNext}
+      onSubmit={submitAssessment}
+    />
+  </div>
+
+  <AssessmentProgressPanel
+    sections={session.sections}
+    currentItemId={currentItem.itemId}
+    responses={responses}
+    onSelectItem={selectItem}
+  />
+</div>
       </div>
     </main>
   );
