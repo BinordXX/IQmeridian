@@ -1,12 +1,12 @@
-"use client";
+'use client';
 
 import type {
   AssessmentResponseValue,
   CandidateSafeAssessmentItem,
-} from "../contracts/assessment-contracts";
-import { AbstractReasoningSectionScreen } from "./abstract-reasoning-section-screen";
-import { CandidateItemCard } from "./candidate-item-card";
-import { NumericalReasoningSectionScreen } from "./numerical-reasoning-section-screen";
+} from '../contracts/assessment-contracts';
+import { AbstractReasoningSectionScreen } from './abstract-reasoning-section-screen';
+import { CandidateItemCard } from './candidate-item-card';
+import { NumericalReasoningSectionScreen } from './numerical-reasoning-section-screen';
 
 type AssessmentItemRendererProps = {
   sectionTitle?: string | undefined;
@@ -39,7 +39,7 @@ export const AssessmentItemRenderer = ({
   onNext,
   onSubmit,
 }: AssessmentItemRendererProps) => {
-  if (item.itemType === "abstract_reasoning") {
+  if (item.itemType === 'abstract_reasoning') {
     return (
       <AbstractReasoningSectionScreen
         sectionTitle={sectionTitle}
@@ -59,7 +59,7 @@ export const AssessmentItemRenderer = ({
     );
   }
 
-  if (item.itemType === "numerical_reasoning") {
+  if (item.itemType === 'numerical_reasoning') {
     return (
       <NumericalReasoningSectionScreen
         sectionTitle={sectionTitle}
@@ -91,7 +91,7 @@ export const AssessmentItemRenderer = ({
         </p>
 
         <h2 className="mt-2 text-lg font-semibold text-slate-950">
-          {sectionTitle ?? "Assessment section"}
+          {sectionTitle ?? 'Assessment section'}
         </h2>
 
         {sectionInstructions ? (
@@ -137,7 +137,7 @@ export const AssessmentItemRenderer = ({
             disabled={controlsDisabled}
             className="rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
           >
-            {isSubmitting ? "Submitting..." : "Submit assessment"}
+            {isSubmitting ? 'Submitting...' : 'Submit assessment'}
           </button>
         ) : (
           <button

@@ -1,22 +1,18 @@
-"use client";
+'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { syncAssessmentSessionState } from "../api/assessment-api";
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { syncAssessmentSessionState } from '../api/assessment-api';
 import type {
   AssessmentSessionPayload,
   AssessmentSessionStatus,
-} from "../contracts/assessment-contracts";
+} from '../contracts/assessment-contracts';
 
-export type BackendTimerSyncStatus =
-  | "idle"
-  | "syncing"
-  | "synced"
-  | "failed";
+export type BackendTimerSyncStatus = 'idle' | 'syncing' | 'synced' | 'failed';
 
 export type BackendTimerSource =
-  | "backend_remaining_seconds"
-  | "backend_server_time"
-  | "client_fallback";
+  | 'backend_remaining_seconds'
+  | 'backend_server_time'
+  | 'client_fallback';
 
 type TimerSnapshot = {
   remainingSecondsAtSync: number | null;
@@ -42,7 +38,7 @@ type UseBackendSyncedTimerInput = {
 };
 
 const getMonotonicTime = (): number => {
-  if (typeof performance !== "undefined") {
+  if (typeof performance !== 'undefined') {
     return performance.now();
   }
 
@@ -55,7 +51,7 @@ const normaliseRemainingSeconds = (value: number): number => {
 
 const calculateRemainingFromDates = (
   expiresAt: string | undefined,
-  now: string | undefined,
+  now: string | undefined
 ): number | null => {
   if (!expiresAt || !now) {
     return null;
@@ -72,7 +68,7 @@ const calculateRemainingFromDates = (
 };
 
 const calculateRemainingFromClientClock = (
-  expiresAt: string | undefined,
+  expiresAt: string | undefined
 ): number | null => {
   if (!expiresAt) {
     return null;
@@ -88,7 +84,7 @@ const calculateRemainingFromClientClock = (
 };
 
 const buildSnapshotFromSession = (
-  session: AssessmentSessionPayload,
+  session: AssessmentSessionPayload
 ): TimerSnapshot => {
   const expiresAt =
     session.timing?.sectionExpiresAt ??
@@ -100,21 +96,21 @@ const buildSnapshotFromSession = (
   const backendRemainingSeconds =
     session.timing?.sectionRemainingSeconds ?? session.timing?.remainingSeconds;
 
-  if (typeof backendRemainingSeconds === "number") {
+  if (typeof backendRemainingSeconds === 'number') {
     return {
       remainingSecondsAtSync: normaliseRemainingSeconds(
-        backendRemainingSeconds,
+        backendRemainingSeconds
       ),
       syncedClientTimeMs: getMonotonicTime(),
       expiresAt,
       serverNow,
-      source: "backend_remaining_seconds",
+      source: 'backend_remaining_seconds',
     };
   }
 
   const serverBasedRemainingSeconds = calculateRemainingFromDates(
     expiresAt,
-    serverNow,
+    serverNow
   );
 
   if (serverBasedRemainingSeconds !== null) {
@@ -123,7 +119,7 @@ const buildSnapshotFromSession = (
       syncedClientTimeMs: getMonotonicTime(),
       expiresAt,
       serverNow,
-      source: "backend_server_time",
+      source: 'backend_server_time',
     };
   }
 
@@ -132,7 +128,7 @@ const buildSnapshotFromSession = (
     syncedClientTimeMs: getMonotonicTime(),
     expiresAt,
     serverNow,
-    source: "client_fallback",
+    source: 'client_fallback',
   };
 };
 
@@ -145,21 +141,21 @@ const buildInitialSnapshot = ({
   initialServerNow?: string;
   initialRemainingSeconds?: number;
 }): TimerSnapshot => {
-  if (typeof initialRemainingSeconds === "number") {
+  if (typeof initialRemainingSeconds === 'number') {
     return {
       remainingSecondsAtSync: normaliseRemainingSeconds(
-        initialRemainingSeconds,
+        initialRemainingSeconds
       ),
       syncedClientTimeMs: getMonotonicTime(),
       expiresAt: initialExpiresAt,
       serverNow: initialServerNow,
-      source: "backend_remaining_seconds",
+      source: 'backend_remaining_seconds',
     };
   }
 
   const serverBasedRemainingSeconds = calculateRemainingFromDates(
     initialExpiresAt,
-    initialServerNow,
+    initialServerNow
   );
 
   if (serverBasedRemainingSeconds !== null) {
@@ -168,7 +164,7 @@ const buildInitialSnapshot = ({
       syncedClientTimeMs: getMonotonicTime(),
       expiresAt: initialExpiresAt,
       serverNow: initialServerNow,
-      source: "backend_server_time",
+      source: 'backend_server_time',
     };
   }
 
@@ -177,7 +173,7 @@ const buildInitialSnapshot = ({
     syncedClientTimeMs: getMonotonicTime(),
     expiresAt: initialExpiresAt,
     serverNow: initialServerNow,
-    source: "client_fallback",
+    source: 'client_fallback',
   };
 };
 
@@ -199,7 +195,7 @@ export const useBackendSyncedTimer = ({
       initialServerNow,
       initialRemainingSeconds,
     }),
-    syncStatus: "idle",
+    syncStatus: 'idle',
   }));
 
   const remainingSeconds = useMemo(() => {
@@ -208,7 +204,7 @@ export const useBackendSyncedTimer = ({
     }
 
     const elapsedSeconds = Math.floor(
-      (tickTimeMs - timerState.syncedClientTimeMs) / 1000,
+      (tickTimeMs - timerState.syncedClientTimeMs) / 1000
     );
 
     return Math.max(0, timerState.remainingSecondsAtSync - elapsedSeconds);
@@ -221,7 +217,7 @@ export const useBackendSyncedTimer = ({
   const syncNow = useCallback(async (): Promise<void> => {
     setTimerState((previous) => ({
       ...previous,
-      syncStatus: "syncing",
+      syncStatus: 'syncing',
     }));
 
     try {
@@ -230,13 +226,13 @@ export const useBackendSyncedTimer = ({
 
       setTimerState({
         ...snapshot,
-        syncStatus: "synced",
+        syncStatus: 'synced',
         lastSyncedAt: new Date().toISOString(),
         sessionStatus: session.status,
       });
 
       if (
-        session.status === "expired" ||
+        session.status === 'expired' ||
         snapshot.remainingSecondsAtSync === 0
       ) {
         hasNotifiedExpiryRef.current = true;
@@ -245,7 +241,7 @@ export const useBackendSyncedTimer = ({
     } catch {
       setTimerState((previous) => ({
         ...previous,
-        syncStatus: "failed",
+        syncStatus: 'failed',
       }));
     }
   }, [onExpired, sessionId]);
@@ -260,32 +256,32 @@ export const useBackendSyncedTimer = ({
     };
   }, []);
 
-useEffect(() => {
-  const initialSyncId = window.setTimeout(() => {
-    void syncNow();
-  }, 0);
+  useEffect(() => {
+    const initialSyncId = window.setTimeout(() => {
+      void syncNow();
+    }, 0);
 
-  const intervalId = window.setInterval(() => {
-    void syncNow();
-  }, syncIntervalMs);
+    const intervalId = window.setInterval(() => {
+      void syncNow();
+    }, syncIntervalMs);
 
-  return () => {
-    window.clearTimeout(initialSyncId);
-    window.clearInterval(intervalId);
-  };
-}, [syncIntervalMs, syncNow]);
+    return () => {
+      window.clearTimeout(initialSyncId);
+      window.clearInterval(intervalId);
+    };
+  }, [syncIntervalMs, syncNow]);
 
   useEffect(() => {
     const handleVisibilityChange = (): void => {
-      if (document.visibilityState === "visible") {
+      if (document.visibilityState === 'visible') {
         void syncNow();
       }
     };
 
-    document.addEventListener("visibilitychange", handleVisibilityChange);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [syncNow]);
 

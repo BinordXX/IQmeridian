@@ -1,46 +1,46 @@
-"use client";
+'use client';
 
-import { useCallback, useMemo, useReducer, useState } from "react";
-import { useBackendSyncedTimer } from "../hooks/use-backend-synced-timer";
-import { AssessmentProgressIndicator } from "./assessment-progress-indicator";
+import { useCallback, useMemo, useReducer, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
-import { useRouter } from "next/navigation";
 import {
   finaliseAssessmentSession,
   saveAssessmentResponse,
-} from "../api/assessment-api";
+} from '../api/assessment-api';
 import type {
   AssessmentResponseValue,
   AssessmentSessionPayload,
   CandidateSafeAssessmentItem,
-} from "../contracts/assessment-contracts";
+} from '../contracts/assessment-contracts';
+import { useBackendSyncedTimer } from '../hooks/use-backend-synced-timer';
 import {
   initialAssessmentFlowState,
   reduceAssessmentFlowState,
-} from "../state/assessment-flow-state";
-import { AssessmentItemRenderer } from "./assessment-item-renderer";
-import { AssessmentProgressPanel } from "./assessment-progress-panel";
-import { AssessmentSaveStatus } from "./assessment-save-status";
-import { AssessmentTimerPanel } from "./assessment-timer-panel";
+} from '../state/assessment-flow-state';
+import { AssessmentItemRenderer } from './assessment-item-renderer';
+import { AssessmentProgressIndicator } from './assessment-progress-indicator';
+import { AssessmentProgressPanel } from './assessment-progress-panel';
+import { AssessmentSaveStatus } from './assessment-save-status';
+import { AssessmentTimerPanel } from './assessment-timer-panel';
 
 type LiveAssessmentShellProps = {
   session: AssessmentSessionPayload;
 };
 
 const flattenItems = (
-  session: AssessmentSessionPayload,
+  session: AssessmentSessionPayload
 ): CandidateSafeAssessmentItem[] => {
   return session.sections.flatMap((section) => section.items);
 };
 
 const findFirstItem = (
-  session: AssessmentSessionPayload,
+  session: AssessmentSessionPayload
 ): CandidateSafeAssessmentItem | undefined => {
   return flattenItems(session)[0];
 };
 
 const getInitialItem = (
-  session: AssessmentSessionPayload,
+  session: AssessmentSessionPayload
 ): CandidateSafeAssessmentItem | undefined => {
   const items = flattenItems(session);
 
@@ -58,7 +58,7 @@ export const LiveAssessmentShell = ({ session }: LiveAssessmentShellProps) => {
 
   const [flowState, dispatch] = useReducer(reduceAssessmentFlowState, {
     ...initialAssessmentFlowState,
-    status: "active",
+    status: 'active',
     sessionId: session.sessionId,
     assessmentId: session.assessmentId,
     currentSectionId: session.currentSectionId,
@@ -66,9 +66,8 @@ export const LiveAssessmentShell = ({ session }: LiveAssessmentShellProps) => {
     expiresAt: session.expiresAt,
   });
 
-  
   const handleTimerExpired = useCallback((): void => {
-    dispatch({ type: "EXPIRED" });
+    dispatch({ type: 'EXPIRED' });
   }, []);
 
   const timer = useBackendSyncedTimer({
@@ -85,12 +84,15 @@ export const LiveAssessmentShell = ({ session }: LiveAssessmentShellProps) => {
   const initialItem = useMemo(() => getInitialItem(session), [session]);
 
   const [currentItemId, setCurrentItemId] = useState<string | undefined>(
-    initialItem?.itemId,
+    initialItem?.itemId
   );
 
   const [responses, setResponses] = useState<
     Record<string, AssessmentResponseValue>
   >({});
+
+  const saveSequenceRef = useRef(0);
+  const latestSaveSequenceByItemRef = useRef<Record<string, number>>({});
 
   const currentItem =
     items.find((item) => item.itemId === currentItemId) ?? items[0];
@@ -101,38 +103,38 @@ export const LiveAssessmentShell = ({ session }: LiveAssessmentShellProps) => {
 
   const currentSection = currentItem
     ? session.sections.find(
-        (section) => section.sectionId === currentItem.sectionId,
+        (section) => section.sectionId === currentItem.sectionId
       )
     : undefined;
 
-    const currentSectionIndex = currentSection
-  ? session.sections.findIndex(
-      (section) => section.sectionId === currentSection.sectionId,
-    )
-  : -1;
+  const currentSectionIndex = currentSection
+    ? session.sections.findIndex(
+        (section) => section.sectionId === currentSection.sectionId
+      )
+    : -1;
 
-const sectionItems = currentItem
-  ? items.filter((item) => item.sectionId === currentItem.sectionId)
-  : [];
+  const sectionItems = currentItem
+    ? items.filter((item) => item.sectionId === currentItem.sectionId)
+    : [];
 
-const currentSectionItemIndex = currentItem
-  ? sectionItems.findIndex((item) => item.itemId === currentItem.itemId)
-  : -1;
+  const currentSectionItemIndex = currentItem
+    ? sectionItems.findIndex((item) => item.itemId === currentItem.itemId)
+    : -1;
 
   const answeredItemsCount = sectionItems.filter(
     (item) =>
-      responses[item.itemId] !== undefined && responses[item.itemId] !== null,
+      responses[item.itemId] !== undefined && responses[item.itemId] !== null
   ).length;
 
   const currentResponse = currentItem
-    ? responses[currentItem.itemId] ?? null
+    ? (responses[currentItem.itemId] ?? null)
     : null;
 
   const selectItem = (sectionId: string, itemId: string): void => {
     setCurrentItemId(itemId);
 
     dispatch({
-      type: "STARTED",
+      type: 'STARTED',
       sessionId: session.sessionId,
       assessmentId: session.assessmentId,
       currentSectionId: sectionId,
@@ -143,14 +145,19 @@ const currentSectionItemIndex = currentItem
 
   const saveResponse = async (
     item: CandidateSafeAssessmentItem,
-    value: AssessmentResponseValue,
+    value: AssessmentResponseValue
   ): Promise<void> => {
+    saveSequenceRef.current += 1;
+
+    const saveSequence = saveSequenceRef.current;
+    latestSaveSequenceByItemRef.current[item.itemId] = saveSequence;
+
     setResponses((previous) => ({
       ...previous,
       [item.itemId]: value,
     }));
 
-    dispatch({ type: "SAVE_STARTED" });
+    dispatch({ type: 'SAVE_STARTED' });
 
     try {
       const saved = await saveAssessmentResponse(session.sessionId, {
@@ -160,15 +167,24 @@ const currentSectionItemIndex = currentItem
         clientSavedAt: new Date().toISOString(),
       });
 
+      if (latestSaveSequenceByItemRef.current[item.itemId] !== saveSequence) {
+        return;
+      }
+
       dispatch({
-        type: "SAVE_SUCCEEDED",
+        type: 'SAVE_SUCCEEDED',
         savedAt: saved.response.savedAt,
       });
     } catch {
+      if (latestSaveSequenceByItemRef.current[item.itemId] !== saveSequence) {
+        return;
+      }
+
       dispatch({
-        type: "FAILED",
-        message: "The response could not be saved.",
-        code: "SAVE_FAILED",
+        type: 'FAILED',
+        message:
+          'The answer is selected locally, but it could not be saved. Please try again before submitting.',
+        code: 'SAVE_FAILED',
       });
     }
   };
@@ -202,17 +218,17 @@ const currentSectionItemIndex = currentItem
   };
 
   const submitAssessment = async (): Promise<void> => {
-    dispatch({ type: "SUBMIT_STARTED" });
+    dispatch({ type: 'SUBMIT_STARTED' });
 
     try {
       await finaliseAssessmentSession(session.sessionId);
-      dispatch({ type: "COMPLETED" });
-      router.replace("/assessment/status?reason=completed");
+      dispatch({ type: 'COMPLETED' });
+      router.replace('/assessment/status?reason=completed');
     } catch {
       dispatch({
-        type: "FAILED",
-        message: "The assessment could not be submitted.",
-        code: "SUBMIT_FAILED",
+        type: 'FAILED',
+        message: 'The assessment could not be submitted.',
+        code: 'SUBMIT_FAILED',
       });
     }
   };
@@ -226,16 +242,16 @@ const currentSectionItemIndex = currentItem
           </h1>
 
           <p className="mt-4 text-slate-600">
-            This session was validated, but no candidate-safe items were returned
-            for display.
+            This session was validated, but no candidate-safe items were
+            returned for display.
           </p>
         </section>
       </main>
     );
   }
 
-  const isSubmitting = flowState.status === "submitting";
-  const isSaving = flowState.status === "saving";
+  const isSubmitting = flowState.status === 'submitting';
+  const isSaving = flowState.status === 'saving';
 
   return (
     <main className="min-h-screen bg-slate-50 px-6 py-8">
@@ -252,7 +268,7 @@ const currentSectionItemIndex = currentItem
 
             {session.candidateName ? (
               <p className="mt-2 text-sm text-slate-600">
-                Candidate:{" "}
+                Candidate:{' '}
                 <span className="font-medium text-slate-900">
                   {session.candidateName}
                 </span>
@@ -261,12 +277,12 @@ const currentSectionItemIndex = currentItem
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-<AssessmentTimerPanel
-  remainingSeconds={timer.remainingSeconds}
-  syncStatus={timer.syncStatus}
-  timingSource={timer.timingSource}
-  lastSyncedAt={timer.lastSyncedAt}
-/>
+            <AssessmentTimerPanel
+              remainingSeconds={timer.remainingSeconds}
+              syncStatus={timer.syncStatus}
+              timingSource={timer.timingSource}
+              lastSyncedAt={timer.lastSyncedAt}
+            />
 
             <AssessmentSaveStatus
               status={flowState.status}
@@ -275,43 +291,45 @@ const currentSectionItemIndex = currentItem
           </div>
         </header>
 
-       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-  <div className="space-y-4">
-    <AssessmentProgressIndicator
-      sectionTitle={currentSection?.title}
-      sectionPosition={{
-        current: currentSectionIndex + 1,
-        total: session.sections.length,
-      }}
-      currentItemNumber={currentSectionItemIndex + 1}
-      totalItems={sectionItems.length}
-      answeredItems={answeredItemsCount}
-    />
+        <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+          <div className="space-y-4">
+            <AssessmentProgressIndicator
+              sectionTitle={currentSection?.title}
+              sectionPosition={{
+                current: currentSectionIndex + 1,
+                total: session.sections.length,
+              }}
+              currentItemNumber={currentSectionItemIndex + 1}
+              totalItems={sectionItems.length}
+              answeredItems={answeredItemsCount}
+            />
 
-    <AssessmentItemRenderer
-      sectionTitle={currentSection?.title}
-      sectionInstructions={currentSection?.instructions}
-      item={currentItem}
-      responseValue={currentResponse}
-      currentItemIndex={currentItemIndex}
-      totalItems={items.length}
-      isSaving={isSaving}
-      isSubmitting={isSubmitting}
-      errorMessage={flowState.error?.message}
-      onResponseChange={(value) => saveResponse(currentItem, value)}
-      onPrevious={goToPrevious}
-      onNext={goToNext}
-      onSubmit={submitAssessment}
-    />
-  </div>
+            <AssessmentItemRenderer
+              sectionTitle={currentSection?.title}
+              sectionInstructions={currentSection?.instructions}
+              item={currentItem}
+              responseValue={currentResponse}
+              currentItemIndex={currentItemIndex}
+              totalItems={items.length}
+              isSaving={isSaving}
+              isSubmitting={isSubmitting}
+              errorMessage={flowState.error?.message}
+              onResponseChange={(value) => {
+                void saveResponse(currentItem, value);
+              }}
+              onPrevious={goToPrevious}
+              onNext={goToNext}
+              onSubmit={submitAssessment}
+            />
+          </div>
 
-  <AssessmentProgressPanel
-    sections={session.sections}
-    currentItemId={currentItem.itemId}
-    responses={responses}
-    onSelectItem={selectItem}
-  />
-</div>
+          <AssessmentProgressPanel
+            sections={session.sections}
+            currentItemId={currentItem.itemId}
+            responses={responses}
+            onSelectItem={selectItem}
+          />
+        </div>
       </div>
     </main>
   );

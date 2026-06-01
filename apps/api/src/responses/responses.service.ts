@@ -162,7 +162,9 @@ export class ResponsesService {
     }
 
     if (session.userId !== user.id) {
-      throw new ForbiddenException('You cannot write responses for this session');
+      throw new ForbiddenException(
+        'You cannot write responses for this session',
+      );
     }
   }
 
@@ -191,7 +193,9 @@ export class ResponsesService {
       return;
     }
 
-    throw new ForbiddenException('You cannot access responses for this session');
+    throw new ForbiddenException(
+      'You cannot access responses for this session',
+    );
   }
 
   private assertSessionOpenForResponseWrite(status: SessionStatus) {

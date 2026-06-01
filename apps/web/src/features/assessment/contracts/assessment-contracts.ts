@@ -1,33 +1,33 @@
 export type InvitationStatus =
-  | "valid"
-  | "invalid"
-  | "expired"
-  | "used"
-  | "cancelled";
+  | 'valid'
+  | 'invalid'
+  | 'expired'
+  | 'used'
+  | 'cancelled';
 
 export type AssessmentSessionStatus =
-  | "not_started"
-  | "ready"
-  | "active"
-  | "paused"
-  | "section_ended"
-  | "submitted"
-  | "completed"
-  | "expired"
-  | "cancelled";
+  | 'not_started'
+  | 'ready'
+  | 'active'
+  | 'paused'
+  | 'section_ended'
+  | 'submitted'
+  | 'completed'
+  | 'expired'
+  | 'cancelled';
 
 export type AssessmentItemType =
-  | "abstract_reasoning"
-  | "numerical_reasoning"
-  | "verbal_reasoning"
-  | "situational_judgement";
+  | 'abstract_reasoning'
+  | 'numerical_reasoning'
+  | 'verbal_reasoning'
+  | 'situational_judgement';
 
 export type CandidateStimulusKind =
-  | "text"
-  | "image"
-  | "table"
-  | "sequence"
-  | "pattern";
+  | 'text'
+  | 'image'
+  | 'table'
+  | 'sequence'
+  | 'pattern';
 
 export type CandidateItemOption = {
   optionId: string;
@@ -113,7 +113,12 @@ export type AssessmentSessionPayload = {
   sections: CandidateAssessmentSection[];
 };
 
-export type AssessmentResponseValue = string | string[] | number | boolean | null;
+export type AssessmentResponseValue =
+  | string
+  | string[]
+  | number
+  | boolean
+  | null;
 
 export type SaveAssessmentResponseInput = {
   sectionId: string;
@@ -133,7 +138,7 @@ export type SavedAssessmentResponse = {
 export type SaveAssessmentResponseResult = {
   sessionId: string;
   response: SavedAssessmentResponse;
-  status: "saved";
+  status: 'saved';
 };
 
 export type AssessmentResponsesResult = {
@@ -143,7 +148,7 @@ export type AssessmentResponsesResult = {
 
 export type FinaliseAssessmentSessionResult = {
   sessionId: string;
-  status: "submitted" | "completed";
+  status: 'submitted' | 'completed';
   submittedAt: string;
 };
 
@@ -180,30 +185,30 @@ export type AssessmentReportResult = {
 };
 
 const forbiddenCandidateItemFields = new Set([
-  "correctAnswer",
-  "correctOptionId",
-  "answerKey",
-  "scoringKey",
-  "scoringMetadata",
-  "scoreWeight",
-  "difficulty",
-  "discrimination",
-  "guessing",
-  "irtA",
-  "irtB",
-  "irtC",
-  "rationale",
-  "explanation",
+  'correctAnswer',
+  'correctOptionId',
+  'answerKey',
+  'scoringKey',
+  'scoringMetadata',
+  'scoreWeight',
+  'difficulty',
+  'discrimination',
+  'guessing',
+  'irtA',
+  'irtB',
+  'irtC',
+  'rationale',
+  'explanation',
 ]);
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 };
 
 const collectUnsafeFields = (
   value: unknown,
   path: string,
-  unsafeFields: string[],
+  unsafeFields: string[]
 ): void => {
   if (Array.isArray(value)) {
     value.forEach((entry, index) => {
@@ -228,17 +233,17 @@ const collectUnsafeFields = (
 };
 
 export const assertCandidateSafeAssessmentPayload = (
-  payload: AssessmentSessionPayload,
+  payload: AssessmentSessionPayload
 ): void => {
   const unsafeFields: string[] = [];
 
-  collectUnsafeFields(payload.sections, "sections", unsafeFields);
+  collectUnsafeFields(payload.sections, 'sections', unsafeFields);
 
   if (unsafeFields.length > 0) {
     throw new Error(
       `Unsafe candidate assessment payload. Forbidden fields detected: ${unsafeFields.join(
-        ", ",
-      )}`,
+        ', '
+      )}`
     );
   }
 };

@@ -286,7 +286,10 @@ export class ScoringService {
     throw new ForbiddenException('You cannot access scoring for this session');
   }
 
-  private answersMatch(answer: Prisma.JsonValue, correctAnswer: Prisma.JsonValue) {
+  private answersMatch(
+    answer: Prisma.JsonValue,
+    correctAnswer: Prisma.JsonValue,
+  ) {
     return this.stableStringify(answer) === this.stableStringify(correctAnswer);
   }
 

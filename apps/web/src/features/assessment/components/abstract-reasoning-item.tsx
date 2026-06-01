@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 /* eslint-disable @next/next/no-img-element */
 
@@ -6,7 +6,7 @@ import type {
   AssessmentResponseValue,
   CandidateItemStimulus,
   CandidateSafeAssessmentItem,
-} from "../contracts/assessment-contracts";
+} from '../contracts/assessment-contracts';
 
 type AbstractReasoningItemProps = {
   item: CandidateSafeAssessmentItem;
@@ -17,19 +17,19 @@ type AbstractReasoningItemProps = {
 
 const isImageSource = (value: string): boolean => {
   return (
-    value.startsWith("http://") ||
-    value.startsWith("https://") ||
-    value.startsWith("/") ||
-    value.startsWith("data:image/")
+    value.startsWith('http://') ||
+    value.startsWith('https://') ||
+    value.startsWith('/') ||
+    value.startsWith('data:image/')
   );
 };
 
-const stimulusLabel: Record<CandidateItemStimulus["kind"], string> = {
-  text: "Information",
-  image: "Pattern",
-  table: "Table",
-  sequence: "Sequence",
-  pattern: "Pattern",
+const stimulusLabel: Record<CandidateItemStimulus['kind'], string> = {
+  text: 'Information',
+  image: 'Pattern',
+  table: 'Table',
+  sequence: 'Sequence',
+  pattern: 'Pattern',
 };
 
 const AbstractStimulus = ({
@@ -39,7 +39,7 @@ const AbstractStimulus = ({
 }) => {
   const label = stimulusLabel[stimulus.kind];
 
-  if (stimulus.kind === "image" || isImageSource(stimulus.content)) {
+  if (stimulus.kind === 'image' || isImageSource(stimulus.content)) {
     return (
       <section className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-5">
         <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -49,7 +49,7 @@ const AbstractStimulus = ({
         <div className="mt-4 flex justify-center rounded-xl bg-white p-4">
           <img
             src={stimulus.content}
-            alt={stimulus.altText ?? "Abstract reasoning pattern"}
+            alt={stimulus.altText ?? 'Abstract reasoning pattern'}
             className="max-h-[420px] max-w-full object-contain"
           />
         </div>
@@ -77,7 +77,7 @@ export const AbstractReasoningItem = ({
   disabled = false,
 }: AbstractReasoningItemProps) => {
   const selectedOptionId =
-    typeof responseValue === "string" ? responseValue : undefined;
+    typeof responseValue === 'string' ? responseValue : undefined;
 
   const hasVisualOptions = item.options.some((option) => option.imageUrl);
 
@@ -122,8 +122,8 @@ export const AbstractReasoningItem = ({
           <div
             className={
               hasVisualOptions
-                ? "mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3"
-                : "mt-4 space-y-3"
+                ? 'mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3'
+                : 'mt-4 space-y-3'
             }
           >
             {item.options.map((option) => {
@@ -134,9 +134,9 @@ export const AbstractReasoningItem = ({
                   key={option.optionId}
                   className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition ${
                     isSelected
-                      ? "border-slate-950 bg-slate-50"
-                      : "border-slate-200 bg-white hover:bg-slate-50"
-                  } ${disabled ? "cursor-not-allowed opacity-70" : ""}`}
+                      ? 'border-slate-950 bg-slate-50'
+                      : 'border-slate-200 bg-white hover:bg-slate-50'
+                  } ${disabled ? 'cursor-not-allowed opacity-70' : ''}`}
                 >
                   <input
                     type="radio"

@@ -31,10 +31,7 @@ export class ItemBankController {
 
   @Roles('PLATFORM_ADMIN', 'RESEARCHER')
   @Post()
-  createItem(
-    @Req() req: { user: RequestUser },
-    @Body() body: CreateItemDto,
-  ) {
+  createItem(@Req() req: { user: RequestUser }, @Body() body: CreateItemDto) {
     return this.itemBankService.createItem(body, req.user.id);
   }
 

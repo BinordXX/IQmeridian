@@ -22,8 +22,8 @@
     "seed": "prisma db seed"
   },
   "prisma": {
-  "seed": "tsx prisma/seed.ts"
-},
+    "seed": "tsx prisma/seed.ts"
+  },
   "dependencies": {
     "@iqmeridian/config": "workspace:*",
     "@nestjs/common": "^11.0.1",

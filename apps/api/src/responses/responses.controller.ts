@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { DevAuthGuard } from '../auth/dev-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
@@ -41,7 +49,10 @@ export class ResponsesController {
     @Param() params: SessionIdParamDto,
     @Req() req: { user: RequestUser },
   ) {
-    return this.responsesService.getSessionResponses(params.sessionId, req.user);
+    return this.responsesService.getSessionResponses(
+      params.sessionId,
+      req.user,
+    );
   }
 
   @Roles('CANDIDATE', 'CONSUMER', 'PLATFORM_ADMIN')

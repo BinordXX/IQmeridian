@@ -1,12 +1,12 @@
-import Link from "next/link";
+import Link from 'next/link';
 
 type AssessmentStatusReason =
-  | "invalid"
-  | "expired"
-  | "completed"
-  | "unauthorised"
-  | "cancelled"
-  | "server_error";
+  | 'invalid'
+  | 'expired'
+  | 'completed'
+  | 'unauthorised'
+  | 'cancelled'
+  | 'server_error';
 
 type AssessmentStatusCopy = {
   title: string;
@@ -22,41 +22,41 @@ type AssessmentStatusPageProps = {
 
 const statusCopy: Record<AssessmentStatusReason, AssessmentStatusCopy> = {
   invalid: {
-    title: "Assessment unavailable",
-    body: "This assessment link or session could not be validated.",
+    title: 'Assessment unavailable',
+    body: 'This assessment link or session could not be validated.',
   },
   expired: {
-    title: "Assessment expired",
-    body: "This assessment is no longer available because the permitted access window has expired.",
+    title: 'Assessment expired',
+    body: 'This assessment is no longer available because the permitted access window has expired.',
   },
   completed: {
-    title: "Assessment already completed",
-    body: "This assessment session has already been submitted or completed.",
+    title: 'Assessment already completed',
+    body: 'This assessment session has already been submitted or completed.',
   },
   unauthorised: {
-    title: "Access not authorised",
-    body: "You are not authorised to access this assessment session.",
+    title: 'Access not authorised',
+    body: 'You are not authorised to access this assessment session.',
   },
   cancelled: {
-    title: "Assessment cancelled",
-    body: "This assessment invitation or session has been cancelled.",
+    title: 'Assessment cancelled',
+    body: 'This assessment invitation or session has been cancelled.',
   },
   server_error: {
-    title: "Assessment temporarily unavailable",
-    body: "The assessment service could not complete the validation request.",
+    title: 'Assessment temporarily unavailable',
+    body: 'The assessment service could not complete the validation request.',
   },
 };
 
 const isAssessmentStatusReason = (
-  value: string | undefined,
+  value: string | undefined
 ): value is AssessmentStatusReason => {
   return (
-    value === "invalid" ||
-    value === "expired" ||
-    value === "completed" ||
-    value === "unauthorised" ||
-    value === "cancelled" ||
-    value === "server_error"
+    value === 'invalid' ||
+    value === 'expired' ||
+    value === 'completed' ||
+    value === 'unauthorised' ||
+    value === 'cancelled' ||
+    value === 'server_error'
   );
 };
 
@@ -66,7 +66,7 @@ export default async function AssessmentStatusPage({
   const params = await searchParams;
   const reason: AssessmentStatusReason = isAssessmentStatusReason(params.reason)
     ? params.reason
-    : "invalid";
+    : 'invalid';
 
   const copy = statusCopy[reason];
 
@@ -77,9 +77,7 @@ export default async function AssessmentStatusPage({
           IQMeridian Assessment
         </p>
 
-        <h1 className="mt-3 text-2xl font-bold text-slate-950">
-          {copy.title}
-        </h1>
+        <h1 className="mt-3 text-2xl font-bold text-slate-950">{copy.title}</h1>
 
         <p className="mt-4 leading-7 text-slate-600">
           {params.message ?? copy.body}

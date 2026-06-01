@@ -45,11 +45,11 @@ export class AssessmentsController {
     return this.assessmentsService.createForm(body, req.user.id);
   }
 
-@Roles('PLATFORM_ADMIN', 'RESEARCHER', 'EMPLOYER_ADMIN')
-@Get('active')
-findActiveForms(@Query() query: ListActiveFormsQueryDto) {
-  return this.assessmentsService.findActiveForms(query);
-}
+  @Roles('PLATFORM_ADMIN', 'RESEARCHER', 'EMPLOYER_ADMIN')
+  @Get('active')
+  findActiveForms(@Query() query: ListActiveFormsQueryDto) {
+    return this.assessmentsService.findActiveForms(query);
+  }
 
   @Roles('PLATFORM_ADMIN', 'RESEARCHER', 'EMPLOYER_ADMIN')
   @Get(':id')

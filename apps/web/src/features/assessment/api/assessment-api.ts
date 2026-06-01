@@ -11,9 +11,9 @@ import {
   type InvitationValidationResult,
   type SaveAssessmentResponseInput,
   type SaveAssessmentResponseResult,
-} from "../contracts/assessment-contracts";
+} from '../contracts/assessment-contracts';
 
-type HttpMethod = "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
+type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
 
 type AssessmentRequestOptions = {
   method?: HttpMethod;
@@ -27,27 +27,27 @@ export class AssessmentApiError extends Error {
 
   constructor(message: string, status: number, payload: unknown) {
     super(message);
-    this.name = "AssessmentApiError";
+    this.name = 'AssessmentApiError';
     this.status = status;
     this.payload = payload;
   }
 }
 
 const normaliseBaseUrl = (baseUrl: string): string => {
-  return baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
+  return baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
 };
 
 const assessmentApiBaseUrl = normaliseBaseUrl(
   process.env.NEXT_PUBLIC_API_BASE_URL ??
     process.env.NEXT_PUBLIC_API_URL ??
-    "http://localhost:3001",
+    'http://localhost:3001'
 );
 
 const assessmentEndpoints = {
   validateInvitation: (token: string) =>
     `/assessment/invitations/${encodeURIComponent(token)}/validate`,
 
-  createSession: "/assessment/sessions",
+  createSession: '/assessment/sessions',
 
   startSession: (sessionId: string) =>
     `/assessment/sessions/${encodeURIComponent(sessionId)}/start`,
@@ -55,7 +55,7 @@ const assessmentEndpoints = {
   resumeSession: (sessionId: string) =>
     `/assessment/sessions/${encodeURIComponent(sessionId)}/resume`,
 
-    syncSessionState: (sessionId: string) =>
+  syncSessionState: (sessionId: string) =>
     `/assessment/sessions/${encodeURIComponent(sessionId)}/state`,
 
   saveResponse: (sessionId: string) =>
@@ -93,16 +93,16 @@ const readResponsePayload = async (response: Response): Promise<unknown> => {
 
 const assessmentRequest = async <T>(
   path: string,
-  options: AssessmentRequestOptions = {},
+  options: AssessmentRequestOptions = {}
 ): Promise<T> => {
   const response = await fetch(`${assessmentApiBaseUrl}${path}`, {
-    method: options.method ?? "GET",
+    method: options.method ?? 'GET',
     headers: {
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
     },
     body: options.body === undefined ? undefined : JSON.stringify(options.body),
-    credentials: "include",
-    cache: "no-store",
+    credentials: 'include',
+    cache: 'no-store',
     signal: options.signal,
   });
 
@@ -112,7 +112,7 @@ const assessmentRequest = async <T>(
     throw new AssessmentApiError(
       `Assessment API request failed with status ${response.status}.`,
       response.status,
-      payload,
+      payload
     );
   }
 
@@ -121,38 +121,38 @@ const assessmentRequest = async <T>(
 
 export const validateInvitation = async (
   token: string,
-  signal?: AbortSignal,
+  signal?: AbortSignal
 ): Promise<InvitationValidationResult> => {
   return assessmentRequest<InvitationValidationResult>(
     assessmentEndpoints.validateInvitation(token),
-    { signal },
+    { signal }
   );
 };
 
 export const createAssessmentSession = async (
   input: CreateAssessmentSessionInput,
-  signal?: AbortSignal,
+  signal?: AbortSignal
 ): Promise<CreateAssessmentSessionResult> => {
   return assessmentRequest<CreateAssessmentSessionResult>(
     assessmentEndpoints.createSession,
     {
-      method: "POST",
+      method: 'POST',
       body: input,
       signal,
-    },
+    }
   );
 };
 
 export const startAssessmentSession = async (
   sessionId: string,
-  signal?: AbortSignal,
+  signal?: AbortSignal
 ): Promise<AssessmentSessionPayload> => {
   const payload = await assessmentRequest<AssessmentSessionPayload>(
     assessmentEndpoints.startSession(sessionId),
     {
-      method: "POST",
+      method: 'POST',
       signal,
-    },
+    }
   );
 
   assertCandidateSafeAssessmentPayload(payload);
@@ -162,14 +162,14 @@ export const startAssessmentSession = async (
 
 export const resumeAssessmentSession = async (
   sessionId: string,
-  signal?: AbortSignal,
+  signal?: AbortSignal
 ): Promise<AssessmentSessionPayload> => {
   const payload = await assessmentRequest<AssessmentSessionPayload>(
     assessmentEndpoints.resumeSession(sessionId),
     {
-      method: "POST",
+      method: 'POST',
       signal,
-    },
+    }
   );
 
   assertCandidateSafeAssessmentPayload(payload);
@@ -179,13 +179,13 @@ export const resumeAssessmentSession = async (
 
 export const syncAssessmentSessionState = async (
   sessionId: string,
-  signal?: AbortSignal,
+  signal?: AbortSignal
 ): Promise<AssessmentSessionPayload> => {
   const payload = await assessmentRequest<AssessmentSessionPayload>(
     assessmentEndpoints.syncSessionState(sessionId),
     {
       signal,
-    },
+    }
   );
 
   assertCandidateSafeAssessmentPayload(payload);
@@ -196,73 +196,73 @@ export const syncAssessmentSessionState = async (
 export const saveAssessmentResponse = async (
   sessionId: string,
   input: SaveAssessmentResponseInput,
-  signal?: AbortSignal,
+  signal?: AbortSignal
 ): Promise<SaveAssessmentResponseResult> => {
   return assessmentRequest<SaveAssessmentResponseResult>(
     assessmentEndpoints.saveResponse(sessionId),
     {
-      method: "PUT",
+      method: 'PUT',
       body: input,
       signal,
-    },
+    }
   );
 };
 
 export const getAssessmentResponses = async (
   sessionId: string,
-  signal?: AbortSignal,
+  signal?: AbortSignal
 ): Promise<AssessmentResponsesResult> => {
   return assessmentRequest<AssessmentResponsesResult>(
     assessmentEndpoints.getResponses(sessionId),
-    { signal },
+    { signal }
   );
 };
 
 export const finaliseAssessmentSession = async (
   sessionId: string,
-  signal?: AbortSignal,
+  signal?: AbortSignal
 ): Promise<FinaliseAssessmentSessionResult> => {
   return assessmentRequest<FinaliseAssessmentSessionResult>(
     assessmentEndpoints.finaliseSession(sessionId),
     {
-      method: "POST",
+      method: 'POST',
       signal,
-    },
+    }
   );
 };
 
 export const scoreAssessmentSession = async (
   sessionId: string,
-  signal?: AbortSignal,
+  signal?: AbortSignal
 ): Promise<AssessmentScoreResult> => {
   return assessmentRequest<AssessmentScoreResult>(
     assessmentEndpoints.scoreSession(sessionId),
     {
-      method: "POST",
+      method: 'POST',
       signal,
-    },
+    }
   );
 };
 
 export const generateAssessmentReport = async (
   sessionId: string,
-  signal?: AbortSignal,
+  signal?: AbortSignal
 ): Promise<GenerateAssessmentReportResult> => {
   return assessmentRequest<GenerateAssessmentReportResult>(
     assessmentEndpoints.generateReport(sessionId),
     {
-      method: "POST",
+      method: 'POST',
       signal,
-    },
+    }
   );
 };
 
 export const getAssessmentReport = async (
   reportId: string,
-  signal?: AbortSignal,
+  signal?: AbortSignal
 ): Promise<AssessmentReportResult> => {
   return assessmentRequest<AssessmentReportResult>(
     assessmentEndpoints.getReport(reportId),
-    { signal },
+    { signal }
   );
 };

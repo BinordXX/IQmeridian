@@ -16,76 +16,78 @@ export class SessionsService {
   ) {}
 
   async listSessions(
-  user: {
-    id: string;
-    role: string;
-    organisationId?: string | null;
-  },
-  filters: {
-    page?: number;
-    limit?: number;
-    status?: SessionStatus;
-    campaignId?: string;
-    assessmentFormId?: string;
-    userId?: string;
-  } = {},
-) {
-  const page = filters.page ?? 1;
-  const limit = Math.min(filters.limit ?? 25, 100);
-  const skip = (page - 1) * limit;
+    user: {
+      id: string;
+      role: string;
+      organisationId?: string | null;
+    },
+    filters: {
+      page?: number;
+      limit?: number;
+      status?: SessionStatus;
+      campaignId?: string;
+      assessmentFormId?: string;
+      userId?: string;
+    } = {},
+  ) {
+    const page = filters.page ?? 1;
+    const limit = Math.min(filters.limit ?? 25, 100);
+    const skip = (page - 1) * limit;
 
-  const where: Prisma.SessionWhereInput = {
-    ...(filters.status ? { status: filters.status } : {}),
-    ...(filters.campaignId ? { campaignId: filters.campaignId } : {}),
-    ...(filters.assessmentFormId
-      ? { assessmentFormId: filters.assessmentFormId }
-      : {}),
-    ...(filters.userId ? { userId: filters.userId } : {}),
-  };
+    const where: Prisma.SessionWhereInput = {
+      ...(filters.status ? { status: filters.status } : {}),
+      ...(filters.campaignId ? { campaignId: filters.campaignId } : {}),
+      ...(filters.assessmentFormId
+        ? { assessmentFormId: filters.assessmentFormId }
+        : {}),
+      ...(filters.userId ? { userId: filters.userId } : {}),
+    };
 
-  if (user.role === UserRole.CANDIDATE || user.role === UserRole.CONSUMER) {
-    where.userId = user.id;
-  }
-
-  if (user.role === UserRole.EMPLOYER_ADMIN) {
-    if (!user.organisationId) {
-      throw new BadRequestException('User is not attached to an organisation');
+    if (user.role === UserRole.CANDIDATE || user.role === UserRole.CONSUMER) {
+      where.userId = user.id;
     }
 
-    where.campaign = {
-      organisationId: user.organisationId,
+    if (user.role === UserRole.EMPLOYER_ADMIN) {
+      if (!user.organisationId) {
+        throw new BadRequestException(
+          'User is not attached to an organisation',
+        );
+      }
+
+      where.campaign = {
+        organisationId: user.organisationId,
+      };
+    }
+
+    const [total, data] = await this.prisma.$transaction([
+      this.prisma.session.count({ where }),
+      this.prisma.session.findMany({
+        where,
+        orderBy: {
+          createdAt: 'desc',
+        },
+        skip,
+        take: limit,
+        include: {
+          campaign: true,
+          assessmentForm: true,
+          currentSection: true,
+          responses: true,
+          score: true,
+        },
+      }),
+    ]);
+
+    return {
+      data,
+      meta: {
+        page,
+        limit,
+        total,
+        pageCount: Math.ceil(total / limit),
+      },
     };
   }
-
-  const [total, data] = await this.prisma.$transaction([
-    this.prisma.session.count({ where }),
-    this.prisma.session.findMany({
-      where,
-      orderBy: {
-        createdAt: 'desc',
-      },
-      skip,
-      take: limit,
-      include: {
-        campaign: true,
-        assessmentForm: true,
-        currentSection: true,
-        responses: true,
-        score: true,
-      },
-    }),
-  ]);
-
-  return {
-    data,
-    meta: {
-      page,
-      limit,
-      total,
-      pageCount: Math.ceil(total / limit),
-    },
-  };
-}
 
   async createConsumerSession(input: {
     userId: string;

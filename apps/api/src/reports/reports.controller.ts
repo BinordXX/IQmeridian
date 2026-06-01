@@ -1,4 +1,12 @@
-import { Controller, Get, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { ListReportsQueryDto } from './dto/list-reports-query.dto';
 import { ReportVisibility } from '@prisma/client';
 import { DevAuthGuard } from '../auth/dev-auth.guard';
@@ -16,8 +24,6 @@ type RequestUser = {
   role: string;
   organisationId?: string | null;
 };
-
-
 
 @Controller('reports')
 @UseGuards(DevAuthGuard, RolesGuard)
@@ -51,19 +57,19 @@ export class ReportsController {
   }
 
   @Roles(
-  'CANDIDATE',
-  'CONSUMER',
-  'EMPLOYER_ADMIN',
-  'PLATFORM_ADMIN',
-  'RESEARCHER',
-)
-@Get()
-listReports(
-  @Query() query: ListReportsQueryDto,
-  @Req() req: { user: RequestUser },
-) {
-  return this.reportsService.listReports(query, req.user);
-}
+    'CANDIDATE',
+    'CONSUMER',
+    'EMPLOYER_ADMIN',
+    'PLATFORM_ADMIN',
+    'RESEARCHER',
+  )
+  @Get()
+  listReports(
+    @Query() query: ListReportsQueryDto,
+    @Req() req: { user: RequestUser },
+  ) {
+    return this.reportsService.listReports(query, req.user);
+  }
 
   @Roles(
     'CANDIDATE',

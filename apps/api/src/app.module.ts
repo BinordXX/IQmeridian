@@ -16,7 +16,6 @@ import { ReportsModule } from './reports/reports.module';
 import { AuditModule } from './audit/audit.module';
 import { DiagnosticsModule } from './diagnostics/diagnostics.module';
 
-
 @Module({
   imports: [
     PrismaModule,

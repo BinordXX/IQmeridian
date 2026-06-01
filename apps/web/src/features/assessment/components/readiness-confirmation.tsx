@@ -1,25 +1,25 @@
-"use client";
+'use client';
 
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import {
   createAssessmentSession,
   resumeAssessmentSession,
   startAssessmentSession,
-} from "../api/assessment-api";
+} from '../api/assessment-api';
 
 type ReadinessConfirmationProps = {
   invitationToken?: string;
   sessionId?: string;
-  mode?: "start" | "resume";
+  mode?: 'start' | 'resume';
   buttonLabel?: string;
 };
 
 export const ReadinessConfirmation = ({
   invitationToken,
   sessionId,
-  mode = "start",
-  buttonLabel = "I confirm I am ready to begin",
+  mode = 'start',
+  buttonLabel = 'I confirm I am ready to begin',
 }: ReadinessConfirmationProps) => {
   const router = useRouter();
   const [hasConfirmedReadiness, setHasConfirmedReadiness] = useState(false);
@@ -46,21 +46,21 @@ export const ReadinessConfirmation = ({
       }
 
       if (!activeSessionId) {
-        throw new Error("No assessment session could be resolved.");
+        throw new Error('No assessment session could be resolved.');
       }
 
-      if (mode === "resume") {
+      if (mode === 'resume') {
         await resumeAssessmentSession(activeSessionId);
       } else {
         await startAssessmentSession(activeSessionId);
       }
 
       router.replace(
-        `/assessment/session/${encodeURIComponent(activeSessionId)}`,
+        `/assessment/session/${encodeURIComponent(activeSessionId)}`
       );
     } catch {
       setErrorMessage(
-        "The assessment could not be started. Please refresh the page and try again.",
+        'The assessment could not be started. Please refresh the page and try again.'
       );
       setIsStarting(false);
     }
@@ -101,7 +101,7 @@ export const ReadinessConfirmation = ({
         disabled={!hasConfirmedReadiness || isStarting}
         className="mt-6 rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
       >
-        {isStarting ? "Preparing assessment..." : buttonLabel}
+        {isStarting ? 'Preparing assessment...' : buttonLabel}
       </button>
     </section>
   );

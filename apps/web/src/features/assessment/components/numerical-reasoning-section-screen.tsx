@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
 import type {
   AssessmentResponseValue,
   CandidateSafeAssessmentItem,
-} from "../contracts/assessment-contracts";
-import { NumericalReasoningItem } from "./numerical-reasoning-item";
+} from '../contracts/assessment-contracts';
+import { NumericalReasoningItem } from './numerical-reasoning-item';
 
 type NumericalReasoningSectionScreenProps = {
   sectionTitle?: string | undefined;
@@ -49,7 +49,7 @@ export const NumericalReasoningSectionScreen = ({
         </p>
 
         <h2 className="mt-2 text-lg font-semibold text-slate-950">
-          {sectionTitle ?? "Numerical reasoning"}
+          {sectionTitle ?? 'Numerical reasoning'}
         </h2>
 
         {sectionInstructions ? (
@@ -93,7 +93,7 @@ export const NumericalReasoningSectionScreen = ({
             disabled={controlsDisabled}
             className="rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
           >
-            {isSubmitting ? "Submitting..." : "Submit assessment"}
+            {isSubmitting ? 'Submitting...' : 'Submit assessment'}
           </button>
         ) : (
           <button

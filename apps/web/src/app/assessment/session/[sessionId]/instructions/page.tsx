@@ -1,6 +1,6 @@
-import { redirect } from "next/navigation";
-import { ReadinessConfirmation } from "@/features/assessment/components/readiness-confirmation";
-import { guardSessionInstructionsRoute } from "@/features/assessment/guards/assessment-route-guards";
+import { redirect } from 'next/navigation';
+import { ReadinessConfirmation } from '@/features/assessment/components/readiness-confirmation';
+import { guardSessionInstructionsRoute } from '@/features/assessment/guards/assessment-route-guards';
 
 type SessionInstructionsPageProps = {
   params: Promise<{
@@ -19,7 +19,8 @@ export default async function SessionInstructionsPage({
   }
 
   const session = guard.data;
-  const isResumable = session.status === "active" || session.status === "paused";
+  const isResumable =
+    session.status === 'active' || session.status === 'paused';
 
   return (
     <main className="mx-auto max-w-4xl px-6 py-10">
@@ -34,7 +35,7 @@ export default async function SessionInstructionsPage({
 
         {session.candidateName ? (
           <p className="mt-3 text-slate-600">
-            Candidate:{" "}
+            Candidate:{' '}
             <span className="font-medium text-slate-900">
               {session.candidateName}
             </span>
@@ -66,7 +67,7 @@ export default async function SessionInstructionsPage({
                   {section.itemCount} items
                   {section.timeLimitSeconds
                     ? ` · ${Math.round(section.timeLimitSeconds / 60)} minutes`
-                    : ""}
+                    : ''}
                 </p>
                 <p className="mt-2 text-sm leading-6 text-slate-600">
                   {section.instructions}
@@ -78,11 +79,9 @@ export default async function SessionInstructionsPage({
 
         <ReadinessConfirmation
           sessionId={sessionId}
-          mode={isResumable ? "resume" : "start"}
+          mode={isResumable ? 'resume' : 'start'}
           buttonLabel={
-            isResumable
-              ? "Resume assessment"
-              : "I confirm I am ready to begin"
+            isResumable ? 'Resume assessment' : 'I confirm I am ready to begin'
           }
         />
       </section>
