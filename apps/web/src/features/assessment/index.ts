@@ -11,3 +11,5 @@ export * from "./components/assessment-timer-panel";
 export * from "./components/candidate-item-card";
 export * from "./components/live-assessment-shell";
 export * from "./components/readiness-confirmation";
+export * from "./components/numerical-reasoning-item";
+export * from "./components/numerical-reasoning-section-screen";

@@ -16,6 +16,7 @@ import {
   reduceAssessmentFlowState,
 } from "../state/assessment-flow-state";
 import { AbstractReasoningSectionScreen } from "./abstract-reasoning-section-screen";
+import { NumericalReasoningSectionScreen } from "./numerical-reasoning-section-screen";
 import { AssessmentProgressPanel } from "./assessment-progress-panel";
 import { AssessmentSaveStatus } from "./assessment-save-status";
 import { AssessmentTimerPanel } from "./assessment-timer-panel";
@@ -291,25 +292,40 @@ export const LiveAssessmentShell = ({ session }: LiveAssessmentShellProps) => {
 
         <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
           {currentItem.itemType === "abstract_reasoning" ? (
-            <AbstractReasoningSectionScreen
-              sectionTitle={currentSection?.title}
-              sectionInstructions={currentSection?.instructions}
-              item={currentItem}
-              responseValue={currentResponse}
-              currentItemIndex={currentItemIndex}
-              totalItems={items.length}
-              isSaving={isSaving}
-              isSubmitting={isSubmitting}
-              errorMessage={flowState.error?.message}
-              onResponseChange={(value) => saveResponse(currentItem, value)}
-              onPrevious={goToPrevious}
-              onNext={goToNext}
-              onSubmit={submitAssessment}
-            />
-          ) : (
-            genericItemScreen
-          )}
-
+  <AbstractReasoningSectionScreen
+    sectionTitle={currentSection?.title}
+    sectionInstructions={currentSection?.instructions}
+    item={currentItem}
+    responseValue={currentResponse}
+    currentItemIndex={currentItemIndex}
+    totalItems={items.length}
+    isSaving={isSaving}
+    isSubmitting={isSubmitting}
+    errorMessage={flowState.error?.message}
+    onResponseChange={(value) => saveResponse(currentItem, value)}
+    onPrevious={goToPrevious}
+    onNext={goToNext}
+    onSubmit={submitAssessment}
+  />
+) : currentItem.itemType === "numerical_reasoning" ? (
+  <NumericalReasoningSectionScreen
+    sectionTitle={currentSection?.title}
+    sectionInstructions={currentSection?.instructions}
+    item={currentItem}
+    responseValue={currentResponse}
+    currentItemIndex={currentItemIndex}
+    totalItems={items.length}
+    isSaving={isSaving}
+    isSubmitting={isSubmitting}
+    errorMessage={flowState.error?.message}
+    onResponseChange={(value) => saveResponse(currentItem, value)}
+    onPrevious={goToPrevious}
+    onNext={goToNext}
+    onSubmit={submitAssessment}
+  />
+) : (
+  genericItemScreen
+)}
           <AssessmentProgressPanel
             sections={session.sections}
             currentItemId={currentItem.itemId}
