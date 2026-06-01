@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useReducer, useState } from "react";
+import { useBackendSyncedTimer } from "../hooks/use-backend-synced-timer";
 import { useRouter } from "next/navigation";
 import {
   finaliseAssessmentSession,
@@ -63,9 +64,19 @@ export const LiveAssessmentShell = ({ session }: LiveAssessmentShellProps) => {
     expiresAt: session.expiresAt,
   });
 
+  
   const handleTimerExpired = useCallback((): void => {
   dispatch({ type: "EXPIRED" });
 }, []);
+
+const timer = useBackendSyncedTimer({
+  sessionId: session.sessionId,
+  initialExpiresAt: session.timing?.sectionExpiresAt ?? session.expiresAt,
+  initialServerNow: session.timing?.serverNow ?? session.serverNow,
+  initialRemainingSeconds:
+    session.timing?.sectionRemainingSeconds ?? session.timing?.remainingSeconds,
+  onExpired: handleTimerExpired,
+});
 
   const items = useMemo(() => flattenItems(session), [session]);
   const initialItem = useMemo(() => getInitialItem(session), [session]);
@@ -228,10 +239,12 @@ export const LiveAssessmentShell = ({ session }: LiveAssessmentShellProps) => {
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <AssessmentTimerPanel
-            expiresAt={session.expiresAt}
-            onExpired={handleTimerExpired}
-            />
+<AssessmentTimerPanel
+  remainingSeconds={timer.remainingSeconds}
+  syncStatus={timer.syncStatus}
+  timingSource={timer.timingSource}
+  lastSyncedAt={timer.lastSyncedAt}
+/>
 
             <AssessmentSaveStatus
               status={flowState.status}

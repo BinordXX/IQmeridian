@@ -55,6 +55,9 @@ const assessmentEndpoints = {
   resumeSession: (sessionId: string) =>
     `/assessment/sessions/${encodeURIComponent(sessionId)}/resume`,
 
+    syncSessionState: (sessionId: string) =>
+    `/assessment/sessions/${encodeURIComponent(sessionId)}/state`,
+
   saveResponse: (sessionId: string) =>
     `/assessment/sessions/${encodeURIComponent(sessionId)}/responses`,
 
@@ -165,6 +168,22 @@ export const resumeAssessmentSession = async (
     assessmentEndpoints.resumeSession(sessionId),
     {
       method: "POST",
+      signal,
+    },
+  );
+
+  assertCandidateSafeAssessmentPayload(payload);
+
+  return payload;
+};
+
+export const syncAssessmentSessionState = async (
+  sessionId: string,
+  signal?: AbortSignal,
+): Promise<AssessmentSessionPayload> => {
+  const payload = await assessmentRequest<AssessmentSessionPayload>(
+    assessmentEndpoints.syncSessionState(sessionId),
+    {
       signal,
     },
   );

@@ -1,10 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import type {
+  BackendTimerSource,
+  BackendTimerSyncStatus,
+} from "../hooks/use-backend-synced-timer";
 
 type AssessmentTimerPanelProps = {
-  expiresAt?: string;
-  onExpired?: () => void;
+  remainingSeconds: number | null;
+  syncStatus: BackendTimerSyncStatus;
+  timingSource: BackendTimerSource;
+  lastSyncedAt?: string;
 };
 
 type TimerUrgency = "normal" | "low" | "critical" | "expired" | "unknown";
@@ -22,23 +27,6 @@ const formatRemainingTime = (totalSeconds: number): string => {
   }
 
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
-};
-
-const calculateRemainingSeconds = (
-  expiresAt: string | undefined,
-  currentTime: number,
-): number | null => {
-  if (!expiresAt) {
-    return null;
-  }
-
-  const expiryTime = new Date(expiresAt).getTime();
-
-  if (Number.isNaN(expiryTime)) {
-    return null;
-  }
-
-  return Math.max(0, Math.ceil((expiryTime - currentTime) / 1000));
 };
 
 const getTimerUrgency = (remainingSeconds: number | null): TimerUrgency => {
@@ -61,20 +49,40 @@ const getTimerUrgency = (remainingSeconds: number | null): TimerUrgency => {
   return "normal";
 };
 
-const getTimerStatusText = (urgency: TimerUrgency): string => {
-  switch (urgency) {
-    case "expired":
-      return "Time has expired.";
-    case "critical":
-      return "Less than one minute remaining.";
-    case "low":
-      return "Less than five minutes remaining.";
-    case "unknown":
-      return "Awaiting confirmed session timing.";
-    case "normal":
-    default:
-      return "Assessment time is active.";
+const getTimerStatusText = ({
+  urgency,
+  syncStatus,
+  timingSource,
+}: {
+  urgency: TimerUrgency;
+  syncStatus: BackendTimerSyncStatus;
+  timingSource: BackendTimerSource;
+}): string => {
+  if (urgency === "expired") {
+    return "Time has expired.";
   }
+
+  if (syncStatus === "syncing") {
+    return "Checking session time...";
+  }
+
+  if (syncStatus === "failed") {
+    return "Using last known session time.";
+  }
+
+  if (timingSource === "client_fallback") {
+    return "Awaiting confirmed session timing.";
+  }
+
+  if (urgency === "critical") {
+    return "Less than one minute remaining.";
+  }
+
+  if (urgency === "low") {
+    return "Less than five minutes remaining.";
+  }
+
+  return "Synced with session timing.";
 };
 
 const getTimerTextClassName = (urgency: TimerUrgency): string => {
@@ -92,7 +100,14 @@ const getTimerTextClassName = (urgency: TimerUrgency): string => {
   }
 };
 
-const getTimerContainerClassName = (urgency: TimerUrgency): string => {
+const getTimerContainerClassName = (
+  urgency: TimerUrgency,
+  syncStatus: BackendTimerSyncStatus,
+): string => {
+  if (syncStatus === "failed" && urgency !== "expired") {
+    return "border-amber-200 bg-amber-50";
+  }
+
   switch (urgency) {
     case "expired":
     case "critical":
@@ -100,58 +115,46 @@ const getTimerContainerClassName = (urgency: TimerUrgency): string => {
     case "low":
       return "border-amber-200 bg-amber-50";
     case "unknown":
-      return "border-slate-200 bg-white";
     case "normal":
     default:
       return "border-slate-200 bg-white";
   }
 };
 
+const formatLastSyncedAt = (lastSyncedAt?: string): string | null => {
+  if (!lastSyncedAt) {
+    return null;
+  }
+
+  const parsed = new Date(lastSyncedAt);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  return parsed.toLocaleTimeString();
+};
+
 export const AssessmentTimerPanel = ({
-  expiresAt,
-  onExpired,
+  remainingSeconds,
+  syncStatus,
+  timingSource,
+  lastSyncedAt,
 }: AssessmentTimerPanelProps) => {
-  const [currentTime, setCurrentTime] = useState(() => Date.now());
-  const hasNotifiedExpiryRef = useRef(false);
-
-  const remainingSeconds = useMemo(() => {
-    return calculateRemainingSeconds(expiresAt, currentTime);
-  }, [expiresAt, currentTime]);
-
   const urgency = getTimerUrgency(remainingSeconds);
-  const statusText = getTimerStatusText(urgency);
+  const statusText = getTimerStatusText({
+    urgency,
+    syncStatus,
+    timingSource,
+  });
 
-  useEffect(() => {
-    hasNotifiedExpiryRef.current = false;
-  }, [expiresAt]);
-
-  useEffect(() => {
-    if (!expiresAt) {
-      return;
-    }
-
-    const intervalId = window.setInterval(() => {
-      setCurrentTime(Date.now());
-    }, 1000);
-
-    return () => {
-      window.clearInterval(intervalId);
-    };
-  }, [expiresAt]);
-
-  useEffect(() => {
-    if (remainingSeconds !== 0 || hasNotifiedExpiryRef.current) {
-      return;
-    }
-
-    hasNotifiedExpiryRef.current = true;
-    onExpired?.();
-  }, [remainingSeconds, onExpired]);
+  const syncedAtText = formatLastSyncedAt(lastSyncedAt);
 
   return (
     <section
       className={`rounded-2xl border px-5 py-4 shadow-sm ${getTimerContainerClassName(
         urgency,
+        syncStatus,
       )}`}
       aria-label="Assessment timer"
     >
@@ -177,7 +180,7 @@ export const AssessmentTimerPanel = ({
           className={`mt-1 h-3 w-3 rounded-full ${
             urgency === "expired" || urgency === "critical"
               ? "bg-red-700"
-              : urgency === "low"
+              : urgency === "low" || syncStatus === "failed"
                 ? "bg-amber-600"
                 : "bg-slate-400"
           }`}
@@ -188,6 +191,12 @@ export const AssessmentTimerPanel = ({
       <p className={`mt-2 text-xs font-medium ${getTimerTextClassName(urgency)}`}>
         {statusText}
       </p>
+
+      {syncedAtText ? (
+        <p className="mt-1 text-[11px] font-medium text-slate-500">
+          Last checked {syncedAtText}
+        </p>
+      ) : null}
     </section>
   );
 };

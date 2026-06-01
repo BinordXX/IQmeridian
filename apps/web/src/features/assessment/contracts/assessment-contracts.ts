@@ -90,6 +90,14 @@ export type CreateAssessmentSessionResult = {
   expiresAt?: string;
 };
 
+export type AssessmentSessionTiming = {
+  serverNow?: string;
+  expiresAt?: string;
+  sectionExpiresAt?: string;
+  remainingSeconds?: number;
+  sectionRemainingSeconds?: number;
+};
+
 export type AssessmentSessionPayload = {
   sessionId: string;
   assessmentId: string;
@@ -98,6 +106,8 @@ export type AssessmentSessionPayload = {
   status: AssessmentSessionStatus;
   startedAt?: string;
   expiresAt?: string;
+  serverNow?: string;
+  timing?: AssessmentSessionTiming;
   currentSectionId?: string;
   currentItemId?: string;
   sections: CandidateAssessmentSection[];
