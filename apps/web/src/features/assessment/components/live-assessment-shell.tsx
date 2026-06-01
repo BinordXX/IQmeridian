@@ -2,6 +2,8 @@
 
 import { useCallback, useMemo, useReducer, useState } from "react";
 import { useBackendSyncedTimer } from "../hooks/use-backend-synced-timer";
+import { AssessmentProgressIndicator } from "./assessment-progress-indicator";
+
 import { useRouter } from "next/navigation";
 import {
   finaliseAssessmentSession,
@@ -66,17 +68,18 @@ export const LiveAssessmentShell = ({ session }: LiveAssessmentShellProps) => {
 
   
   const handleTimerExpired = useCallback((): void => {
-  dispatch({ type: "EXPIRED" });
-}, []);
+    dispatch({ type: "EXPIRED" });
+  }, []);
 
-const timer = useBackendSyncedTimer({
-  sessionId: session.sessionId,
-  initialExpiresAt: session.timing?.sectionExpiresAt ?? session.expiresAt,
-  initialServerNow: session.timing?.serverNow ?? session.serverNow,
-  initialRemainingSeconds:
-    session.timing?.sectionRemainingSeconds ?? session.timing?.remainingSeconds,
-  onExpired: handleTimerExpired,
-});
+  const timer = useBackendSyncedTimer({
+    sessionId: session.sessionId,
+    initialExpiresAt: session.timing?.sectionExpiresAt ?? session.expiresAt,
+    initialServerNow: session.timing?.serverNow ?? session.serverNow,
+    initialRemainingSeconds:
+      session.timing?.sectionRemainingSeconds ??
+      session.timing?.remainingSeconds,
+    onExpired: handleTimerExpired,
+  });
 
   const items = useMemo(() => flattenItems(session), [session]);
   const initialItem = useMemo(() => getInitialItem(session), [session]);
@@ -101,6 +104,25 @@ const timer = useBackendSyncedTimer({
         (section) => section.sectionId === currentItem.sectionId,
       )
     : undefined;
+
+    const currentSectionIndex = currentSection
+  ? session.sections.findIndex(
+      (section) => section.sectionId === currentSection.sectionId,
+    )
+  : -1;
+
+const sectionItems = currentItem
+  ? items.filter((item) => item.sectionId === currentItem.sectionId)
+  : [];
+
+const currentSectionItemIndex = currentItem
+  ? sectionItems.findIndex((item) => item.itemId === currentItem.itemId)
+  : -1;
+
+  const answeredItemsCount = sectionItems.filter(
+    (item) =>
+      responses[item.itemId] !== undefined && responses[item.itemId] !== null,
+  ).length;
 
   const currentResponse = currentItem
     ? responses[currentItem.itemId] ?? null
@@ -253,30 +275,43 @@ const timer = useBackendSyncedTimer({
           </div>
         </header>
 
-        <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-          <AssessmentItemRenderer
-            sectionTitle={currentSection?.title}
-            sectionInstructions={currentSection?.instructions}
-            item={currentItem}
-            responseValue={currentResponse}
-            currentItemIndex={currentItemIndex}
-            totalItems={items.length}
-            isSaving={isSaving}
-            isSubmitting={isSubmitting}
-            errorMessage={flowState.error?.message}
-            onResponseChange={(value) => saveResponse(currentItem, value)}
-            onPrevious={goToPrevious}
-            onNext={goToNext}
-            onSubmit={submitAssessment}
-          />
+       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+  <div className="space-y-4">
+    <AssessmentProgressIndicator
+      sectionTitle={currentSection?.title}
+      sectionPosition={{
+        current: currentSectionIndex + 1,
+        total: session.sections.length,
+      }}
+      currentItemNumber={currentSectionItemIndex + 1}
+      totalItems={sectionItems.length}
+      answeredItems={answeredItemsCount}
+    />
 
-          <AssessmentProgressPanel
-            sections={session.sections}
-            currentItemId={currentItem.itemId}
-            responses={responses}
-            onSelectItem={selectItem}
-          />
-        </div>
+    <AssessmentItemRenderer
+      sectionTitle={currentSection?.title}
+      sectionInstructions={currentSection?.instructions}
+      item={currentItem}
+      responseValue={currentResponse}
+      currentItemIndex={currentItemIndex}
+      totalItems={items.length}
+      isSaving={isSaving}
+      isSubmitting={isSubmitting}
+      errorMessage={flowState.error?.message}
+      onResponseChange={(value) => saveResponse(currentItem, value)}
+      onPrevious={goToPrevious}
+      onNext={goToNext}
+      onSubmit={submitAssessment}
+    />
+  </div>
+
+  <AssessmentProgressPanel
+    sections={session.sections}
+    currentItemId={currentItem.itemId}
+    responses={responses}
+    onSelectItem={selectItem}
+  />
+</div>
       </div>
     </main>
   );
