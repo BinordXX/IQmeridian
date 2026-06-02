@@ -9,6 +9,7 @@ import {
   useState,
 } from 'react';
 import { useRouter } from 'next/navigation';
+import { AssessmentStatePanel } from './assessment-state-panel';
 
 import {
   finaliseAssessmentSession,
@@ -117,7 +118,7 @@ export const LiveAssessmentShell = ({ session }: LiveAssessmentShellProps) => {
 
   const handleTimerExpired = useCallback((): void => {
     setSectionEndMessage(
-      'This timed section has ended. The system is restoring the valid session state from the server.'
+      'This timed section has ended. The item interface is now locked while the system restores the valid session state from the server.'
     );
 
     dispatch({ type: 'EXPIRED' });
@@ -323,7 +324,7 @@ export const LiveAssessmentShell = ({ session }: LiveAssessmentShellProps) => {
       dispatch({
         type: 'FAILED',
         message:
-          'The answer is selected locally, but it could not be saved. Please try again before submitting.',
+          'The answer is selected locally, but the system could not confirm autosave. Check your connection before continuing.',
         code: 'SAVE_FAILED',
       });
     }
@@ -516,17 +517,22 @@ export const LiveAssessmentShell = ({ session }: LiveAssessmentShellProps) => {
 
   if (!currentItem) {
     return (
-      <main className="mx-auto max-w-3xl px-6 py-12">
-        <section className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-          <h1 className="text-2xl font-bold text-slate-950">
-            No assessment items available
-          </h1>
-
-          <p className="mt-4 text-slate-600">
-            This session was validated, but no candidate-safe items were
-            returned for display.
-          </p>
-        </section>
+      <main className="min-h-screen bg-slate-50 px-6 py-12">
+        <AssessmentStatePanel
+          eyebrow="Missing session state"
+          title="No assessment items are available"
+          body="The session was reached, but the system could not resolve a valid item sequence. This state is handled deliberately so the candidate is not shown a broken test interface."
+          tone="warning"
+          action={
+            <button
+              type="button"
+              onClick={() => router.refresh()}
+              className="rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800"
+            >
+              Restore session state
+            </button>
+          }
+        />
       </main>
     );
   }

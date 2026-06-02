@@ -7,6 +7,12 @@ type AssessmentStatusReason =
   | 'unauthorised'
   | 'not-found'
   | 'already-submitted'
+  | 'invalid-invitation'
+  | 'expired-invitation'
+  | 'lost-session'
+  | 'save-failed'
+  | 'section-timeout'
+  | 'submit-failed'
   | 'error';
 
 type CandidateResultVisibility = 'summary' | 'hidden';
@@ -29,6 +35,12 @@ const normaliseReason = (reason?: string): AssessmentStatusReason => {
     case 'unauthorised':
     case 'not-found':
     case 'already-submitted':
+    case 'invalid-invitation':
+    case 'expired-invitation':
+    case 'lost-session':
+    case 'save-failed':
+    case 'section-timeout':
+    case 'submit-failed':
     case 'error':
       return reason;
     default:
@@ -52,7 +64,7 @@ const getStatusCopy = (
   eyebrow: string;
   title: string;
   body: string;
-  tone: 'success' | 'warning' | 'neutral';
+  tone: 'success' | 'warning' | 'error' | 'neutral';
 } => {
   switch (reason) {
     case 'completed':
@@ -103,6 +115,54 @@ const getStatusCopy = (
         tone: 'warning',
       };
 
+    case 'invalid-invitation':
+      return {
+        eyebrow: 'Invalid invitation',
+        title: 'This assessment invitation is not valid',
+        body: 'The invitation link could not be verified. It may have been copied incorrectly or may no longer be linked to an available assessment.',
+        tone: 'warning',
+      };
+
+    case 'expired-invitation':
+      return {
+        eyebrow: 'Expired invitation',
+        title: 'This invitation has expired',
+        body: 'The assessment invitation is outside its valid access window. A new invitation is required before this assessment can be started.',
+        tone: 'warning',
+      };
+
+    case 'lost-session':
+      return {
+        eyebrow: 'Session recovery failed',
+        title: 'The active session could not be restored',
+        body: 'The system could not recover a valid active session. This may happen after a long interruption, expired timing window, or invalid session state.',
+        tone: 'error',
+      };
+
+    case 'save-failed':
+      return {
+        eyebrow: 'Autosave issue',
+        title: 'Your response could not be saved',
+        body: 'The selected answer may still be visible locally, but the system could not confirm that it was saved. Reopen the assessment only through the valid session link.',
+        tone: 'error',
+      };
+
+    case 'section-timeout':
+      return {
+        eyebrow: 'Section timeout',
+        title: 'This section has ended',
+        body: 'The section timing window has ended. The system must now use the backend-defined session state before any further assessment action is allowed.',
+        tone: 'warning',
+      };
+
+    case 'submit-failed':
+      return {
+        eyebrow: 'Submission issue',
+        title: 'The assessment could not be submitted',
+        body: 'The system could not confirm final submission. If this persists, use the original assessment link so the system can recover the latest valid session state.',
+        tone: 'error',
+      };
+
     case 'error':
     default:
       return {
@@ -114,14 +174,16 @@ const getStatusCopy = (
   }
 };
 
-const getToneClasses = (tone: 'success' | 'warning' | 'neutral'): string => {
+const getToneClasses = (
+  tone: 'success' | 'warning' | 'error' | 'neutral'
+): string => {
   switch (tone) {
     case 'success':
       return 'border-emerald-200 bg-emerald-50 text-emerald-900';
-
     case 'warning':
       return 'border-amber-200 bg-amber-50 text-amber-900';
-
+    case 'error':
+      return 'border-red-200 bg-red-50 text-red-900';
     case 'neutral':
     default:
       return 'border-slate-200 bg-slate-50 text-slate-800';
@@ -214,13 +276,14 @@ export default async function AssessmentStatusPage({
         {reason !== 'completed' ? (
           <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-5">
             <h2 className="text-lg font-semibold text-slate-950">
-              What this means
+              Controlled assessment state
             </h2>
 
             <p className="mt-2 text-sm leading-6 text-slate-600">
-              This page is shown deliberately so that invalid, expired,
-              completed, or inaccessible sessions do not fail silently or show a
-              generic application error.
+              This page is shown deliberately so that invalid invitations,
+              expired access, failed saves, lost sessions, timed-out sections,
+              completed attempts, and inaccessible sessions do not fall through
+              into a generic application error or live test screen.
             </p>
           </div>
         ) : null}
