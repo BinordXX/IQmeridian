@@ -10,12 +10,14 @@ type AssessmentStatusReason =
   | 'error';
 
 type CandidateResultVisibility = 'summary' | 'hidden';
+type CandidateAudience = 'employer-invited' | 'consumer';
 
 type AssessmentStatusPageProps = {
   searchParams?: Promise<{
     reason?: string;
     sessionId?: string;
     resultVisibility?: string;
+    audience?: string;
   }>;
 };
 
@@ -38,6 +40,10 @@ const normaliseResultVisibility = (
   visibility?: string
 ): CandidateResultVisibility => {
   return visibility === 'summary' ? 'summary' : 'hidden';
+};
+
+const normaliseAudience = (audience?: string): CandidateAudience => {
+  return audience === 'consumer' ? 'consumer' : 'employer-invited';
 };
 
 const getStatusCopy = (
@@ -128,6 +134,7 @@ export default async function AssessmentStatusPage({
   const params = searchParams ? await searchParams : {};
   const reason = normaliseReason(params.reason);
   const resultVisibility = normaliseResultVisibility(params.resultVisibility);
+  const audience = normaliseAudience(params.audience);
   const copy = getStatusCopy(reason);
 
   const canShowResultSummary =
@@ -197,9 +204,9 @@ export default async function AssessmentStatusPage({
             </h2>
 
             <p className="mt-2 text-sm leading-6 text-slate-600">
-              Immediate candidate results are not enabled for this assessment.
-              If results or feedback are released, they will be communicated
-              through the process defined by the assessment administrator.
+              {audience === 'consumer'
+                ? 'Immediate result release is not enabled for this assessment attempt. If a summary becomes available, it will be shown through the candidate result page.'
+                : 'Immediate candidate results are not enabled for this employer-invited assessment. If results or feedback are released, they will be communicated through the process defined by the assessment administrator.'}
             </p>
           </div>
         ) : null}

@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+
 import { LiveAssessmentShell } from '@/features/assessment/components/live-assessment-shell';
 import { guardLiveAssessmentRoute } from '@/features/assessment/guards/assessment-route-guards';
 

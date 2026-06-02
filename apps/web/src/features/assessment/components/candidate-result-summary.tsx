@@ -1,0 +1,103 @@
+type CandidateAudience = 'employer-invited' | 'consumer';
+
+type CandidateResultSummaryProps = {
+  overallBand: string;
+  abstractReasoningBand: string;
+  numericalReasoningBand: string;
+  audience: CandidateAudience;
+};
+
+const normaliseBandLabel = (band: string): string => {
+  const normalised = band.trim().toLowerCase();
+
+  switch (normalised) {
+    case 'high':
+    case 'strong':
+    case 'above-average':
+    case 'above_average':
+      return 'Strong';
+
+    case 'moderate':
+    case 'average':
+    case 'expected':
+      return 'Expected range';
+
+    case 'low':
+    case 'developing':
+    case 'below-average':
+    case 'below_average':
+      return 'Developing';
+
+    default:
+      return band || 'Not available';
+  }
+};
+
+const getAudienceCopy = (audience: CandidateAudience): string => {
+  if (audience === 'consumer') {
+    return 'This summary is provided for personal orientation only. It is not a diagnostic judgement, a clinical interpretation, or a fixed statement of cognitive potential.';
+  }
+
+  return 'This summary is a limited candidate-facing view. It avoids item-level disclosure and should be interpreted only within the assessment context set by the inviting organisation.';
+};
+
+const BandCard = ({ title, band }: { title: string; band: string }) => {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-5">
+      <p className="text-sm font-medium text-slate-500">{title}</p>
+
+      <p className="mt-3 text-xl font-bold text-slate-950">
+        {normaliseBandLabel(band)}
+      </p>
+    </div>
+  );
+};
+
+export const CandidateResultSummary = ({
+  overallBand,
+  abstractReasoningBand,
+  numericalReasoningBand,
+  audience,
+}: CandidateResultSummaryProps) => {
+  return (
+    <section className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+      <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+        Limited result summary
+      </p>
+
+      <h1 className="mt-3 text-3xl font-bold text-slate-950">
+        Assessment summary
+      </h1>
+
+      <p className="mt-4 text-base leading-7 text-slate-600">
+        {getAudienceCopy(audience)}
+      </p>
+
+      <div className="mt-8 grid gap-4 md:grid-cols-3">
+        <BandCard title="Overall performance band" band={overallBand} />
+        <BandCard
+          title="Abstract reasoning band"
+          band={abstractReasoningBand}
+        />
+        <BandCard
+          title="Numerical reasoning band"
+          band={numericalReasoningBand}
+        />
+      </div>
+
+      <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-5">
+        <h2 className="text-lg font-semibold text-slate-950">
+          How to read this summary
+        </h2>
+
+        <p className="mt-3 text-sm leading-6 text-slate-600">
+          These bands are restrained indicators of performance within this
+          assessment attempt. They should not be read as a complete measure of
+          intelligence, employability, learning capacity, or future performance.
+          The summary is intentionally limited so that it supports feedback
+          without overstating what the assessment can validly claim.
+        </p>
+      </div>
+    </section>
+  );
+};

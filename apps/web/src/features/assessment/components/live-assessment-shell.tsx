@@ -214,7 +214,6 @@ export const LiveAssessmentShell = ({ session }: LiveAssessmentShellProps) => {
     currentSectionItemIndex === sectionItems.length - 1;
 
   const hasNextSection = Boolean(nextSection && nextSectionFirstItem);
-  const isFinalAssessmentItem = isLastItemInSection && !hasNextSection;
   const isSubmitting = flowState.status === 'submitting';
   const isSaving = flowState.status === 'saving';
   const isExpired = flowState.status === 'expired';
