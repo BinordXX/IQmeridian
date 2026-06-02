@@ -1,11 +1,15 @@
+import type { ReactNode } from 'react';
+
+import { AssessmentDeviceGate } from '@/features/assessment/components/assessment-device-gate';
+
 type AssessmentLayoutProps = {
-  children: React.ReactNode;
+  children: ReactNode;
 };
 
 export default function AssessmentLayout({ children }: AssessmentLayoutProps) {
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-950">
-      <div className="mx-auto w-full">{children}</div>
-    </div>
+    <AssessmentDeviceGate>
+      <div className="min-h-screen bg-slate-50 text-slate-950">{children}</div>
+    </AssessmentDeviceGate>
   );
 }

@@ -10,6 +10,7 @@ import {
 } from 'react';
 import { useRouter } from 'next/navigation';
 import { AssessmentStatePanel } from './assessment-state-panel';
+import { trackAssessmentEvent } from '../telemetry/assessment-telemetry';
 
 import {
   finaliseAssessmentSession,
@@ -160,6 +161,7 @@ export const LiveAssessmentShell = ({ session }: LiveAssessmentShellProps) => {
   const saveSequenceRef = useRef(0);
   const latestSaveSequenceByItemRef = useRef<Record<string, number>>({});
   const finaliseInFlightRef = useRef(false);
+  const lastTrackedSectionIdRef = useRef<string | null>(null);
 
   const currentItem =
     items.find((item) => item.itemId === currentItemId) ?? items[0];
@@ -226,6 +228,38 @@ export const LiveAssessmentShell = ({ session }: LiveAssessmentShellProps) => {
     Boolean(sectionEndMessage) ||
     Boolean(pendingSectionTransition) ||
     Boolean(pendingSubmissionConfirmation);
+
+  useEffect(() => {
+    void trackAssessmentEvent('assessment_started', {
+      sessionId: session.sessionId,
+      assessmentId: session.assessmentId,
+    });
+  }, [session.assessmentId, session.sessionId]);
+
+  useEffect(() => {
+    if (!currentSection) {
+      return;
+    }
+
+    if (lastTrackedSectionIdRef.current === currentSection.sectionId) {
+      return;
+    }
+
+    lastTrackedSectionIdRef.current = currentSection.sectionId;
+
+    void trackAssessmentEvent('section_entered', {
+      sessionId: session.sessionId,
+      assessmentId: session.assessmentId,
+      sectionId: currentSection.sectionId,
+      sectionTitle: currentSection.title,
+      sectionPosition: currentSectionIndex + 1,
+    });
+  }, [
+    currentSection,
+    currentSectionIndex,
+    session.assessmentId,
+    session.sessionId,
+  ]);
 
   const selectItem = useCallback(
     (sectionId: string, itemId: string): void => {
@@ -298,6 +332,12 @@ export const LiveAssessmentShell = ({ session }: LiveAssessmentShellProps) => {
       [item.itemId]: value,
     }));
 
+    void trackAssessmentEvent('autosave_triggered', {
+      sessionId: session.sessionId,
+      assessmentId: session.assessmentId,
+      sectionId: item.sectionId,
+      itemId: item.itemId,
+    });
     dispatch({ type: 'SAVE_STARTED' });
 
     try {
@@ -368,19 +408,45 @@ export const LiveAssessmentShell = ({ session }: LiveAssessmentShellProps) => {
     }
 
     if (nextSection && nextSectionFirstItem) {
+      void trackAssessmentEvent('section_completed', {
+        sessionId: session.sessionId,
+        assessmentId: session.assessmentId,
+        sectionId: currentItem.sectionId,
+        sectionTitle: currentSection?.title ?? 'Current section',
+        hasNextSection: true,
+      });
+
       setPendingSectionTransition({
         fromSectionTitle: currentSection?.title ?? 'Current section',
         toSectionTitle: nextSection.title,
         nextSectionId: nextSection.sectionId,
         nextItemId: nextSectionFirstItem.itemId,
       });
+
       setNavigationNotice(null);
       return;
     }
 
+    void trackAssessmentEvent('section_completed', {
+      sessionId: session.sessionId,
+      assessmentId: session.assessmentId,
+      sectionId: currentItem.sectionId,
+      sectionTitle: currentSection?.title ?? 'Final section',
+      hasNextSection: false,
+    });
+
+    void trackAssessmentEvent('section_completed', {
+      sessionId: session.sessionId,
+      assessmentId: session.assessmentId,
+      sectionId: currentItem.sectionId,
+      sectionTitle: currentSection?.title ?? 'Final section',
+      hasNextSection: false,
+    });
+
     setPendingSubmissionConfirmation({
       reachedFromSectionTitle: currentSection?.title ?? 'Final section',
     });
+
     setNavigationNotice(null);
   };
 
@@ -406,10 +472,18 @@ export const LiveAssessmentShell = ({ session }: LiveAssessmentShellProps) => {
     }
 
     finaliseInFlightRef.current = true;
+    void trackAssessmentEvent('submission_initiated', {
+      sessionId: session.sessionId,
+      assessmentId: session.assessmentId,
+    });
     dispatch({ type: 'SUBMIT_STARTED' });
 
     try {
       const finaliseResult = await finaliseAssessmentSession(session.sessionId);
+      void trackAssessmentEvent('submission_completed', {
+        sessionId: session.sessionId,
+        assessmentId: session.assessmentId,
+      });
 
       const resultVisibility = resolveCandidateResultVisibility(finaliseResult);
 
@@ -492,7 +566,11 @@ export const LiveAssessmentShell = ({ session }: LiveAssessmentShellProps) => {
       if (!isLiveSessionStatus(flowState.status)) {
         return;
       }
-
+      void trackAssessmentEvent('resume_flow_triggered', {
+        sessionId: session.sessionId,
+        assessmentId: session.assessmentId,
+        status: flowState.status,
+      });
       router.refresh();
     };
 
