@@ -143,3 +143,84 @@ export const getEmployerDashboardData =
       },
     };
   };
+
+export type EmployerAssessmentFormSummary = {
+  id: string;
+  name: string;
+  version?: number;
+  isActive?: boolean;
+};
+
+export type CreateEmployerCampaignInput = {
+  name: string;
+  organisationId: string;
+  assessmentFormId?: string;
+};
+
+export type UpdateEmployerCampaignStatusInput = {
+  status: 'DRAFT' | 'ACTIVE' | 'CLOSED' | 'ARCHIVED';
+};
+
+export const getActiveAssessmentForms = async (): Promise<
+  EmployerAssessmentFormSummary[]
+> => {
+  const payload = await employerRequest<
+    CollectionResponse<EmployerAssessmentFormSummary>
+  >('/assessments/forms/active');
+
+  return getCollection(payload);
+};
+
+export const getEmployerCampaignById = async (
+  campaignId: string
+): Promise<EmployerCampaignSummary> => {
+  return employerRequest<EmployerCampaignSummary>(
+    `/campaigns/${encodeURIComponent(campaignId)}`
+  );
+};
+
+export const createEmployerCampaign = async (
+  input: CreateEmployerCampaignInput
+): Promise<EmployerCampaignSummary> => {
+  const response = await fetch(`${getApiBaseUrl()}/campaigns`, {
+    method: 'POST',
+    headers: {
+      Authorization: getEmployerAuthHeader(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(input),
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    throw new Error(`Campaign creation failed with status ${response.status}`);
+  }
+
+  return (await response.json()) as EmployerCampaignSummary;
+};
+
+export const updateEmployerCampaignStatus = async (
+  campaignId: string,
+  input: UpdateEmployerCampaignStatusInput
+): Promise<EmployerCampaignSummary> => {
+  const response = await fetch(
+    `${getApiBaseUrl()}/campaigns/${encodeURIComponent(campaignId)}/status`,
+    {
+      method: 'PATCH',
+      headers: {
+        Authorization: getEmployerAuthHeader(),
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(input),
+      cache: 'no-store',
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      `Campaign status update failed with status ${response.status}`
+    );
+  }
+
+  return (await response.json()) as EmployerCampaignSummary;
+};
