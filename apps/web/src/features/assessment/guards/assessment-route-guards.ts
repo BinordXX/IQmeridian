@@ -31,8 +31,10 @@ const statusPath = (
   reason: AssessmentGuardReason,
   message?: string
 ): string => {
+  const safeReason = reason === 'server_error' ? 'error' : reason;
+
   const params = new URLSearchParams({
-    reason,
+    reason: safeReason,
   });
 
   if (message) {
@@ -40,6 +42,34 @@ const statusPath = (
   }
 
   return `/assessment/status?${params.toString()}`;
+};
+
+const normaliseSessionStatus = (status?: string): string => {
+  return status?.toLowerCase() ?? 'unknown';
+};
+
+const isCompletedStatus = (status: string): boolean => {
+  return status === 'completed' || status === 'submitted';
+};
+
+const isExpiredStatus = (status: string): boolean => {
+  return status === 'expired';
+};
+
+const isCancelledStatus = (status: string): boolean => {
+  return status === 'cancelled';
+};
+
+const isInstructionStatus = (status: string): boolean => {
+  return status === 'not_started' || status === 'ready';
+};
+
+const isLiveStatus = (status: string): boolean => {
+  return (
+    status === 'active' ||
+    status === 'in_progress' ||
+    status === 'section_ended'
+  );
 };
 
 const apiErrorToGuardDecision = <T>(
@@ -122,8 +152,9 @@ export const guardSessionInstructionsRoute = async (
 ): Promise<AssessmentGuardDecision<AssessmentSessionPayload>> => {
   try {
     const session = await resumeAssessmentSession(sessionId);
+    const status = normaliseSessionStatus(session.status);
 
-    if (session.status === 'completed' || session.status === 'submitted') {
+    if (isCompletedStatus(status)) {
       return {
         allowed: false,
         reason: 'completed',
@@ -131,7 +162,7 @@ export const guardSessionInstructionsRoute = async (
       };
     }
 
-    if (session.status === 'expired') {
+    if (isExpiredStatus(status)) {
       return {
         allowed: false,
         reason: 'expired',
@@ -139,7 +170,7 @@ export const guardSessionInstructionsRoute = async (
       };
     }
 
-    if (session.status === 'cancelled') {
+    if (isCancelledStatus(status)) {
       return {
         allowed: false,
         reason: 'cancelled',
@@ -161,15 +192,16 @@ export const guardLiveAssessmentRoute = async (
 ): Promise<AssessmentGuardDecision<AssessmentSessionPayload>> => {
   try {
     const session = await resumeAssessmentSession(sessionId);
+    const status = normaliseSessionStatus(session.status);
 
-    if (session.status === 'active' || session.status === 'section_ended') {
+    if (isLiveStatus(status)) {
       return {
         allowed: true,
         data: session,
       };
     }
 
-    if (session.status === 'not_started' || session.status === 'ready') {
+    if (isInstructionStatus(status)) {
       return {
         allowed: false,
         reason: 'invalid',
@@ -179,7 +211,7 @@ export const guardLiveAssessmentRoute = async (
       };
     }
 
-    if (session.status === 'completed' || session.status === 'submitted') {
+    if (isCompletedStatus(status)) {
       return {
         allowed: false,
         reason: 'completed',
@@ -187,7 +219,7 @@ export const guardLiveAssessmentRoute = async (
       };
     }
 
-    if (session.status === 'expired') {
+    if (isExpiredStatus(status)) {
       return {
         allowed: false,
         reason: 'expired',
@@ -195,7 +227,7 @@ export const guardLiveAssessmentRoute = async (
       };
     }
 
-    if (session.status === 'cancelled') {
+    if (isCancelledStatus(status)) {
       return {
         allowed: false,
         reason: 'cancelled',

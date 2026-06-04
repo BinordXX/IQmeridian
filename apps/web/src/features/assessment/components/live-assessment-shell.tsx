@@ -216,7 +216,6 @@ export const LiveAssessmentShell = ({ session }: LiveAssessmentShellProps) => {
     currentSectionItemIndex >= 0 &&
     currentSectionItemIndex === sectionItems.length - 1;
 
-  const hasNextSection = Boolean(nextSection && nextSectionFirstItem);
   const isSubmitting = flowState.status === 'submitting';
   const isSaving = flowState.status === 'saving';
   const isExpired = flowState.status === 'expired';
@@ -591,7 +590,7 @@ export const LiveAssessmentShell = ({ session }: LiveAssessmentShellProps) => {
       window.removeEventListener('online', handleOnline);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [flowState.status, router]);
+  }, [flowState.status, router, session.assessmentId, session.sessionId]);
 
   if (!currentItem) {
     return (
