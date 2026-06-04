@@ -55,6 +55,16 @@ type BackendInvitationValidationResult = {
   } | null;
 };
 
+type BackendSavedAssessmentResponse = {
+  id: string;
+  sessionId: string;
+  itemId: string;
+  answer: unknown;
+  submittedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 type BackendCreateAssessmentSessionResult = {
   id?: string;
   sessionId?: string;
@@ -103,11 +113,13 @@ const assessmentEndpoints = {
   syncSessionState: (sessionId: string) =>
     `/sessions/${encodeURIComponent(sessionId)}/state`,
 
-  saveResponse: (sessionId: string) =>
-    `/sessions/${encodeURIComponent(sessionId)}/responses`,
+  saveResponse: (sessionId: string, itemId: string) =>
+    `/responses/sessions/${encodeURIComponent(
+      sessionId
+    )}/items/${encodeURIComponent(itemId)}`,
 
   getResponses: (sessionId: string) =>
-    `/sessions/${encodeURIComponent(sessionId)}/responses`,
+    `/responses/sessions/${encodeURIComponent(sessionId)}`,
 
   finaliseSession: (sessionId: string) =>
     `/sessions/${encodeURIComponent(sessionId)}/finalise`,
@@ -322,24 +334,49 @@ export const saveAssessmentResponse = async (
   input: SaveAssessmentResponseInput,
   signal?: AbortSignal
 ): Promise<SaveAssessmentResponseResult> => {
-  return assessmentRequest<SaveAssessmentResponseResult>(
-    assessmentEndpoints.saveResponse(sessionId),
+  const saved = await assessmentRequest<BackendSavedAssessmentResponse>(
+    assessmentEndpoints.saveResponse(sessionId, input.itemId),
     {
-      method: 'PUT',
-      body: input,
+      method: 'POST',
+      body: {
+        answer: input.responseValue,
+      },
       signal,
     }
   );
+
+  return {
+    sessionId: saved.sessionId,
+    status: 'saved',
+    response: {
+      sectionId: input.sectionId,
+      itemId: saved.itemId,
+      responseValue:
+        saved.answer as SaveAssessmentResponseResult['response']['responseValue'],
+      savedAt: saved.updatedAt ?? saved.createdAt,
+    },
+  };
 };
 
 export const getAssessmentResponses = async (
   sessionId: string,
   signal?: AbortSignal
 ): Promise<AssessmentResponsesResult> => {
-  return assessmentRequest<AssessmentResponsesResult>(
+  const responses = await assessmentRequest<BackendSavedAssessmentResponse[]>(
     assessmentEndpoints.getResponses(sessionId),
     { signal }
   );
+
+  return {
+    sessionId,
+    responses: responses.map((response) => ({
+      sectionId: '',
+      itemId: response.itemId,
+      responseValue:
+        response.answer as AssessmentResponsesResult['responses'][number]['responseValue'],
+      savedAt: response.updatedAt ?? response.createdAt,
+    })),
+  };
 };
 
 export const finaliseAssessmentSession = async (
