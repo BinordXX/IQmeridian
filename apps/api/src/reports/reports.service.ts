@@ -113,80 +113,82 @@ export class ReportsService {
   }
 
   async listReports(
-  filters: {
-    page?: number;
-    limit?: number;
-    visibility?: ReportVisibility;
-    sessionId?: string;
-    subjectUserId?: string;
-    scoreId?: string;
-  },
-  user: RequestUser,
-) {
-  const page = filters.page ?? 1;
-  const limit = Math.min(filters.limit ?? 25, 100);
-  const skip = (page - 1) * limit;
+    filters: {
+      page?: number;
+      limit?: number;
+      visibility?: ReportVisibility;
+      sessionId?: string;
+      subjectUserId?: string;
+      scoreId?: string;
+    },
+    user: RequestUser,
+  ) {
+    const page = filters.page ?? 1;
+    const limit = Math.min(filters.limit ?? 25, 100);
+    const skip = (page - 1) * limit;
 
-  const where: Prisma.ReportWhereInput = {
-    ...(filters.visibility ? { visibility: filters.visibility } : {}),
-    ...(filters.sessionId ? { sessionId: filters.sessionId } : {}),
-    ...(filters.subjectUserId ? { subjectUserId: filters.subjectUserId } : {}),
-    ...(filters.scoreId ? { scoreId: filters.scoreId } : {}),
-  };
-
-  if (user.role === 'CANDIDATE' || user.role === 'CONSUMER') {
-    where.session = {
-      userId: user.id,
+    const where: Prisma.ReportWhereInput = {
+      ...(filters.visibility ? { visibility: filters.visibility } : {}),
+      ...(filters.sessionId ? { sessionId: filters.sessionId } : {}),
+      ...(filters.subjectUserId
+        ? { subjectUserId: filters.subjectUserId }
+        : {}),
+      ...(filters.scoreId ? { scoreId: filters.scoreId } : {}),
     };
-  }
 
-  if (user.role === 'EMPLOYER_ADMIN') {
-    if (!user.organisationId) {
-      throw new ForbiddenException('User is not attached to an organisation');
+    if (user.role === 'CANDIDATE' || user.role === 'CONSUMER') {
+      where.session = {
+        userId: user.id,
+      };
     }
 
-    where.visibility = ReportVisibility.EMPLOYER;
-    where.session = {
-      campaign: {
-        organisationId: user.organisationId,
+    if (user.role === 'EMPLOYER_ADMIN') {
+      if (!user.organisationId) {
+        throw new ForbiddenException('User is not attached to an organisation');
+      }
+
+      where.visibility = ReportVisibility.EMPLOYER;
+      where.session = {
+        campaign: {
+          organisationId: user.organisationId,
+        },
+      };
+    }
+
+    if (user.role === 'RESEARCHER') {
+      where.visibility = ReportVisibility.INTERNAL;
+    }
+
+    const [total, data] = await this.prisma.$transaction([
+      this.prisma.report.count({ where }),
+      this.prisma.report.findMany({
+        where,
+        orderBy: {
+          createdAt: 'desc',
+        },
+        skip,
+        take: limit,
+        include: {
+          session: {
+            include: {
+              user: true,
+              campaign: true,
+            },
+          },
+        },
+      }),
+    ]);
+
+    return {
+      data,
+      meta: {
+        page,
+        limit,
+        total,
+        pageCount: Math.ceil(total / limit),
       },
     };
   }
-
-  if (user.role === 'RESEARCHER') {
-    where.visibility = ReportVisibility.INTERNAL;
-  }
-
-  const [total, data] = await this.prisma.$transaction([
-    this.prisma.report.count({ where }),
-    this.prisma.report.findMany({
-      where,
-      orderBy: {
-        createdAt: 'desc',
-      },
-      skip,
-      take: limit,
-      include: {
-        session: {
-          include: {
-            user: true,
-            campaign: true,
-          },
-        },
-      },
-    }),
-  ]);
-
-  return {
-    data,
-    meta: {
-      page,
-      limit,
-      total,
-      pageCount: Math.ceil(total / limit),
-    },
-  };
-}
 
   async getReportById(id: string, user: RequestUser) {
     const report = await this.prisma.report.findUnique({
@@ -286,8 +288,7 @@ export class ReportsService {
       interpretation: {
         summary:
           'This report presents the candidate-facing interpretation of completed assessment performance.',
-        note:
-          'Scores are presented as performance bands and domain indicators rather than as an IQ diagnosis.',
+        note: 'Scores are presented as performance bands and domain indicators rather than as an IQ diagnosis.',
       },
       nextSteps: [
         'Review domain-level strengths and weaknesses.',

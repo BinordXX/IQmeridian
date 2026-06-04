@@ -22,7 +22,7 @@ export function AssessmentProgressIndicator({
   sectionTitle,
   sectionPosition,
   answeredItems,
-  className = "",
+  className = '',
 }: AssessmentProgressIndicatorProps) {
   const safeTotalItems = Math.max(totalItems, 0);
   const safeCurrentItem =
@@ -34,7 +34,7 @@ export function AssessmentProgressIndicator({
       : Math.round((safeCurrentItem / safeTotalItems) * 100);
 
   const safeAnsweredItems =
-    typeof answeredItems === "number"
+    typeof answeredItems === 'number'
       ? clamp(answeredItems, 0, safeTotalItems)
       : undefined;
 
@@ -52,7 +52,7 @@ export function AssessmentProgressIndicator({
           ) : null}
 
           <h2 className="mt-1 text-sm font-semibold text-slate-900">
-            {sectionTitle ?? "Current section"}
+            {sectionTitle ?? 'Current section'}
           </h2>
         </div>
 
@@ -61,7 +61,7 @@ export function AssessmentProgressIndicator({
             Item {safeCurrentItem} of {safeTotalItems}
           </p>
 
-          {typeof safeAnsweredItems === "number" ? (
+          {typeof safeAnsweredItems === 'number' ? (
             <p className="text-xs text-slate-500">
               {safeAnsweredItems} answered
             </p>

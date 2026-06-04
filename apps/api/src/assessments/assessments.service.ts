@@ -66,52 +66,54 @@ export class AssessmentsService {
     return form;
   }
 
-async findActiveForms(filters: { page?: number; limit?: number; name?: string } = {}) {
-  const page = filters.page ?? 1;
-  const limit = Math.min(filters.limit ?? 25, 100);
-  const skip = (page - 1) * limit;
+  async findActiveForms(
+    filters: { page?: number; limit?: number; name?: string } = {},
+  ) {
+    const page = filters.page ?? 1;
+    const limit = Math.min(filters.limit ?? 25, 100);
+    const skip = (page - 1) * limit;
 
-  const where: Prisma.AssessmentFormWhereInput = {
-    isActive: true,
-    ...(filters.name
-      ? {
-          name: {
-            contains: filters.name,
-            mode: 'insensitive',
-          },
-        }
-      : {}),
-  };
+    const where: Prisma.AssessmentFormWhereInput = {
+      isActive: true,
+      ...(filters.name
+        ? {
+            name: {
+              contains: filters.name,
+              mode: 'insensitive',
+            },
+          }
+        : {}),
+    };
 
-  const [total, data] = await this.prisma.$transaction([
-    this.prisma.assessmentForm.count({ where }),
-    this.prisma.assessmentForm.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      skip,
-      take: limit,
-      include: {
-        sections: true,
-        items: {
-          include: {
-            item: true,
-            section: true,
+    const [total, data] = await this.prisma.$transaction([
+      this.prisma.assessmentForm.count({ where }),
+      this.prisma.assessmentForm.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+        include: {
+          sections: true,
+          items: {
+            include: {
+              item: true,
+              section: true,
+            },
           },
         },
-      },
-    }),
-  ]);
+      }),
+    ]);
 
-  return {
-    data,
-    meta: {
-      page,
-      limit,
-      total,
-      pageCount: Math.ceil(total / limit),
-    },
-  };
-}
+    return {
+      data,
+      meta: {
+        page,
+        limit,
+        total,
+        pageCount: Math.ceil(total / limit),
+      },
+    };
+  }
 
   async findFormById(id: string) {
     const form = await this.prisma.assessmentForm.findUnique({
@@ -283,7 +285,9 @@ async findActiveForms(filters: { page?: number; limit?: number; name?: string } 
     }
 
     if (item.status !== 'ACTIVE') {
-      throw new BadRequestException('Only active items can be attached to a form');
+      throw new BadRequestException(
+        'Only active items can be attached to a form',
+      );
     }
 
     const mapping = await this.prisma.formItemMapping.create({

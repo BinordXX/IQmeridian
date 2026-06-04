@@ -1,14 +1,14 @@
 export type AssessmentFlowStatus =
-  | "loading"
-  | "ready"
-  | "active"
-  | "saving"
-  | "saved"
-  | "section-ended"
-  | "submitting"
-  | "completed"
-  | "expired"
-  | "error";
+  | 'loading'
+  | 'ready'
+  | 'active'
+  | 'saving'
+  | 'saved'
+  | 'section-ended'
+  | 'submitting'
+  | 'completed'
+  | 'expired'
+  | 'error';
 
 export type AssessmentFlowError = {
   message: string;
@@ -29,16 +29,16 @@ export type AssessmentFlowState = {
 
 export type AssessmentFlowEvent =
   | {
-      type: "LOAD_STARTED";
+      type: 'LOAD_STARTED';
     }
   | {
-      type: "READY";
+      type: 'READY';
       sessionId?: string;
       assessmentId?: string;
       expiresAt?: string;
     }
   | {
-      type: "STARTED";
+      type: 'STARTED';
       sessionId: string;
       assessmentId: string;
       currentSectionId?: string;
@@ -46,64 +46,64 @@ export type AssessmentFlowEvent =
       expiresAt?: string;
     }
   | {
-      type: "SAVE_STARTED";
+      type: 'SAVE_STARTED';
     }
   | {
-      type: "SAVE_SUCCEEDED";
+      type: 'SAVE_SUCCEEDED';
       savedAt: string;
     }
   | {
-      type: "SECTION_ENDED";
+      type: 'SECTION_ENDED';
       sectionId: string;
     }
   | {
-      type: "SUBMIT_STARTED";
+      type: 'SUBMIT_STARTED';
     }
   | {
-      type: "COMPLETED";
+      type: 'COMPLETED';
     }
   | {
-      type: "EXPIRED";
+      type: 'EXPIRED';
     }
   | {
-      type: "FAILED";
+      type: 'FAILED';
       message: string;
       code?: string;
     }
   | {
-      type: "RESET_ERROR";
+      type: 'RESET_ERROR';
     };
 
 export const initialAssessmentFlowState: AssessmentFlowState = {
-  status: "loading",
+  status: 'loading',
 };
 
 export const reduceAssessmentFlowState = (
   state: AssessmentFlowState,
-  event: AssessmentFlowEvent,
+  event: AssessmentFlowEvent
 ): AssessmentFlowState => {
   switch (event.type) {
-    case "LOAD_STARTED":
+    case 'LOAD_STARTED':
       return {
         ...state,
-        status: "loading",
+        status: 'loading',
         error: undefined,
       };
 
-    case "READY":
+    case 'READY':
       return {
         ...state,
-        status: "ready",
+        status: 'ready',
         sessionId: event.sessionId,
         assessmentId: event.assessmentId,
         expiresAt: event.expiresAt,
         error: undefined,
       };
 
-    case "STARTED":
+    case 'STARTED':
       return {
         ...state,
-        status: "active",
+        status: 'active',
         sessionId: event.sessionId,
         assessmentId: event.assessmentId,
         currentSectionId: event.currentSectionId,
@@ -112,66 +112,66 @@ export const reduceAssessmentFlowState = (
         error: undefined,
       };
 
-    case "SAVE_STARTED":
+    case 'SAVE_STARTED':
       return {
         ...state,
-        status: "saving",
+        status: 'saving',
         previousStatus: state.status,
         error: undefined,
       };
 
-    case "SAVE_SUCCEEDED":
+    case 'SAVE_SUCCEEDED':
       return {
         ...state,
-        status: "saved",
-        previousStatus: "active",
+        status: 'saved',
+        previousStatus: 'active',
         lastSavedAt: event.savedAt,
         error: undefined,
       };
 
-    case "SECTION_ENDED":
+    case 'SECTION_ENDED':
       return {
         ...state,
-        status: "section-ended",
+        status: 'section-ended',
         currentSectionId: event.sectionId,
         error: undefined,
       };
 
-    case "SUBMIT_STARTED":
+    case 'SUBMIT_STARTED':
       return {
         ...state,
-        status: "submitting",
+        status: 'submitting',
         error: undefined,
       };
 
-    case "COMPLETED":
+    case 'COMPLETED':
       return {
         ...state,
-        status: "completed",
+        status: 'completed',
         error: undefined,
       };
 
-    case "EXPIRED":
+    case 'EXPIRED':
       return {
         ...state,
-        status: "expired",
+        status: 'expired',
         error: undefined,
       };
 
-    case "FAILED":
+    case 'FAILED':
       return {
         ...state,
-        status: "error",
+        status: 'error',
         error: {
           message: event.message,
           code: event.code,
         },
       };
 
-    case "RESET_ERROR":
+    case 'RESET_ERROR':
       return {
         ...state,
-        status: state.previousStatus ?? "ready",
+        status: state.previousStatus ?? 'ready',
         error: undefined,
       };
 
@@ -181,19 +181,19 @@ export const reduceAssessmentFlowState = (
 };
 
 export const isAssessmentTerminalState = (
-  status: AssessmentFlowStatus,
+  status: AssessmentFlowStatus
 ): boolean => {
-  return status === "completed" || status === "expired";
+  return status === 'completed' || status === 'expired';
 };
 
 export const canSaveAssessmentResponse = (
-  status: AssessmentFlowStatus,
+  status: AssessmentFlowStatus
 ): boolean => {
-  return status === "active" || status === "saved";
+  return status === 'active' || status === 'saved';
 };
 
-export const canSubmitAssessment = (
-  status: AssessmentFlowStatus,
-): boolean => {
-  return status === "active" || status === "saved" || status === "section-ended";
+export const canSubmitAssessment = (status: AssessmentFlowStatus): boolean => {
+  return (
+    status === 'active' || status === 'saved' || status === 'section-ended'
+  );
 };

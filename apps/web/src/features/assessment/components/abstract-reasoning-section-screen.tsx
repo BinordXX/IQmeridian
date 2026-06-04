@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
 import type {
   AssessmentResponseValue,
   CandidateSafeAssessmentItem,
-} from "../contracts/assessment-contracts";
-import { AbstractReasoningItem } from "./abstract-reasoning-item";
+} from '../contracts/assessment-contracts';
+import { AbstractReasoningItem } from './abstract-reasoning-item';
 
 type AbstractReasoningSectionScreenProps = {
   sectionTitle?: string | undefined;
@@ -49,7 +49,7 @@ export const AbstractReasoningSectionScreen = ({
         </p>
 
         <h2 className="mt-2 text-lg font-semibold text-slate-950">
-          {sectionTitle ?? "Abstract reasoning"}
+          {sectionTitle ?? 'Abstract reasoning'}
         </h2>
 
         {sectionInstructions ? (
@@ -92,7 +92,7 @@ export const AbstractReasoningSectionScreen = ({
             disabled={controlsDisabled}
             className="rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
           >
-            {isSubmitting ? "Submitting..." : "Submit assessment"}
+            {isSubmitting ? 'Submitting...' : 'Submit assessment'}
           </button>
         ) : (
           <button

@@ -2,19 +2,19 @@ import {
   AssessmentApiError,
   resumeAssessmentSession,
   validateInvitation,
-} from "../api/assessment-api";
+} from '../api/assessment-api';
 import type {
   AssessmentSessionPayload,
   InvitationValidationResult,
-} from "../contracts/assessment-contracts";
+} from '../contracts/assessment-contracts';
 
 export type AssessmentGuardReason =
-  | "invalid"
-  | "expired"
-  | "completed"
-  | "unauthorised"
-  | "cancelled"
-  | "server_error";
+  | 'invalid'
+  | 'expired'
+  | 'completed'
+  | 'unauthorised'
+  | 'cancelled'
+  | 'server_error';
 
 export type AssessmentGuardDecision<T> =
   | {
@@ -29,88 +29,118 @@ export type AssessmentGuardDecision<T> =
 
 const statusPath = (
   reason: AssessmentGuardReason,
-  message?: string,
+  message?: string
 ): string => {
+  const safeReason = reason === 'server_error' ? 'error' : reason;
+
   const params = new URLSearchParams({
-    reason,
+    reason: safeReason,
   });
 
   if (message) {
-    params.set("message", message);
+    params.set('message', message);
   }
 
   return `/assessment/status?${params.toString()}`;
 };
 
+const normaliseSessionStatus = (status?: string): string => {
+  return status?.toLowerCase() ?? 'unknown';
+};
+
+const isCompletedStatus = (status: string): boolean => {
+  return status === 'completed' || status === 'submitted';
+};
+
+const isExpiredStatus = (status: string): boolean => {
+  return status === 'expired';
+};
+
+const isCancelledStatus = (status: string): boolean => {
+  return status === 'cancelled';
+};
+
+const isInstructionStatus = (status: string): boolean => {
+  return status === 'not_started' || status === 'ready';
+};
+
+const isLiveStatus = (status: string): boolean => {
+  return (
+    status === 'active' ||
+    status === 'in_progress' ||
+    status === 'section_ended'
+  );
+};
+
 const apiErrorToGuardDecision = <T>(
-  error: unknown,
+  error: unknown
 ): AssessmentGuardDecision<T> => {
   if (error instanceof AssessmentApiError) {
     if (error.status === 401 || error.status === 403) {
       return {
         allowed: false,
-        reason: "unauthorised",
-        redirectTo: statusPath("unauthorised"),
+        reason: 'unauthorised',
+        redirectTo: statusPath('unauthorised'),
       };
     }
 
     if (error.status === 404) {
       return {
         allowed: false,
-        reason: "invalid",
-        redirectTo: statusPath("invalid"),
+        reason: 'invalid',
+        redirectTo: statusPath('invalid'),
       };
     }
   }
 
   return {
     allowed: false,
-    reason: "server_error",
-    redirectTo: statusPath("server_error"),
+    reason: 'server_error',
+    redirectTo: statusPath('server_error'),
   };
 };
 
 export const guardInvitationInstructionsRoute = async (
-  token: string,
+  token: string
 ): Promise<AssessmentGuardDecision<InvitationValidationResult>> => {
   try {
     const validation = await validateInvitation(token);
 
-    if (validation.status === "valid") {
+    if (validation.status === 'valid') {
       return {
         allowed: true,
         data: validation,
       };
     }
 
-    if (validation.status === "expired") {
+    if (validation.status === 'expired') {
       return {
         allowed: false,
-        reason: "expired",
-        redirectTo: statusPath("expired", validation.message),
+        reason: 'expired',
+        redirectTo: statusPath('expired', validation.message),
       };
     }
 
-    if (validation.status === "used") {
+    if (validation.status === 'used') {
       return {
         allowed: false,
-        reason: "completed",
-        redirectTo: statusPath("completed", validation.message),
+        reason: 'completed',
+        redirectTo: statusPath('completed', validation.message),
       };
     }
 
-    if (validation.status === "cancelled") {
+    if (validation.status === 'cancelled') {
       return {
         allowed: false,
-        reason: "cancelled",
-        redirectTo: statusPath("cancelled", validation.message),
+        reason: 'cancelled',
+        redirectTo: statusPath('cancelled', validation.message),
       };
     }
 
     return {
       allowed: false,
-      reason: "invalid",
-      redirectTo: statusPath("invalid", validation.message),
+      reason: 'invalid',
+      redirectTo: statusPath('invalid', validation.message),
     };
   } catch (error) {
     return apiErrorToGuardDecision(error);
@@ -118,32 +148,33 @@ export const guardInvitationInstructionsRoute = async (
 };
 
 export const guardSessionInstructionsRoute = async (
-  sessionId: string,
+  sessionId: string
 ): Promise<AssessmentGuardDecision<AssessmentSessionPayload>> => {
   try {
     const session = await resumeAssessmentSession(sessionId);
+    const status = normaliseSessionStatus(session.status);
 
-    if (session.status === "completed" || session.status === "submitted") {
+    if (isCompletedStatus(status)) {
       return {
         allowed: false,
-        reason: "completed",
-        redirectTo: statusPath("completed"),
+        reason: 'completed',
+        redirectTo: statusPath('completed'),
       };
     }
 
-    if (session.status === "expired") {
+    if (isExpiredStatus(status)) {
       return {
         allowed: false,
-        reason: "expired",
-        redirectTo: statusPath("expired"),
+        reason: 'expired',
+        redirectTo: statusPath('expired'),
       };
     }
 
-    if (session.status === "cancelled") {
+    if (isCancelledStatus(status)) {
       return {
         allowed: false,
-        reason: "cancelled",
-        redirectTo: statusPath("cancelled"),
+        reason: 'cancelled',
+        redirectTo: statusPath('cancelled'),
       };
     }
 
@@ -157,56 +188,57 @@ export const guardSessionInstructionsRoute = async (
 };
 
 export const guardLiveAssessmentRoute = async (
-  sessionId: string,
+  sessionId: string
 ): Promise<AssessmentGuardDecision<AssessmentSessionPayload>> => {
   try {
     const session = await resumeAssessmentSession(sessionId);
+    const status = normaliseSessionStatus(session.status);
 
-    if (session.status === "active" || session.status === "section_ended") {
+    if (isLiveStatus(status)) {
       return {
         allowed: true,
         data: session,
       };
     }
 
-    if (session.status === "not_started" || session.status === "ready") {
+    if (isInstructionStatus(status)) {
       return {
         allowed: false,
-        reason: "invalid",
+        reason: 'invalid',
         redirectTo: `/assessment/session/${encodeURIComponent(
-          sessionId,
+          sessionId
         )}/instructions`,
       };
     }
 
-    if (session.status === "completed" || session.status === "submitted") {
+    if (isCompletedStatus(status)) {
       return {
         allowed: false,
-        reason: "completed",
-        redirectTo: statusPath("completed"),
+        reason: 'completed',
+        redirectTo: statusPath('completed'),
       };
     }
 
-    if (session.status === "expired") {
+    if (isExpiredStatus(status)) {
       return {
         allowed: false,
-        reason: "expired",
-        redirectTo: statusPath("expired"),
+        reason: 'expired',
+        redirectTo: statusPath('expired'),
       };
     }
 
-    if (session.status === "cancelled") {
+    if (isCancelledStatus(status)) {
       return {
         allowed: false,
-        reason: "cancelled",
-        redirectTo: statusPath("cancelled"),
+        reason: 'cancelled',
+        redirectTo: statusPath('cancelled'),
       };
     }
 
     return {
       allowed: false,
-      reason: "invalid",
-      redirectTo: statusPath("invalid"),
+      reason: 'invalid',
+      redirectTo: statusPath('invalid'),
     };
   } catch (error) {
     return apiErrorToGuardDecision(error);

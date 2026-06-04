@@ -41,3 +41,4 @@ From the repository root:
 
 ```bash
 pnpm install
+```

@@ -1,6 +1,6 @@
-import { redirect } from "next/navigation";
-import { ReadinessConfirmation } from "@/features/assessment/components/readiness-confirmation";
-import { guardInvitationInstructionsRoute } from "@/features/assessment/guards/assessment-route-guards";
+import { redirect } from 'next/navigation';
+import { ReadinessConfirmation } from '@/features/assessment/components/readiness-confirmation';
+import { guardInvitationInstructionsRoute } from '@/features/assessment/guards/assessment-route-guards';
 
 type InvitationInstructionsPageProps = {
   params: Promise<{
@@ -28,12 +28,12 @@ export default async function InvitationInstructionsPage({
         </p>
 
         <h1 className="mt-3 text-3xl font-bold text-slate-950">
-          {invitation.assessmentTitle ?? "Candidate assessment"}
+          {invitation.assessmentTitle ?? 'Candidate assessment'}
         </h1>
 
         {invitation.candidateName ? (
           <p className="mt-3 text-slate-600">
-            Candidate:{" "}
+            Candidate:{' '}
             <span className="font-medium text-slate-900">
               {invitation.candidateName}
             </span>
@@ -66,7 +66,7 @@ export default async function InvitationInstructionsPage({
                     {section.itemCount} items
                     {section.timeLimitSeconds
                       ? ` · ${Math.round(section.timeLimitSeconds / 60)} minutes`
-                      : ""}
+                      : ''}
                   </p>
                   <p className="mt-2 text-sm leading-6 text-slate-600">
                     {section.instructions}

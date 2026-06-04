@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
 import type {
   AssessmentResponseValue,
   CandidateAssessmentSection,
-} from "../contracts/assessment-contracts";
+} from '../contracts/assessment-contracts';
 
 type AssessmentProgressPanelProps = {
   sections: CandidateAssessmentSection[];
@@ -20,13 +20,14 @@ export const AssessmentProgressPanel = ({
 }: AssessmentProgressPanelProps) => {
   const totalItems = sections.reduce(
     (count, section) => count + section.items.length,
-    0,
+    0
   );
 
   const answeredItems = sections.reduce((count, section) => {
     return (
       count +
-      section.items.filter((item) => responses[item.itemId] !== undefined).length
+      section.items.filter((item) => responses[item.itemId] !== undefined)
+        .length
     );
   }, 0);
 
@@ -44,7 +45,7 @@ export const AssessmentProgressPanel = ({
           style={{
             width:
               totalItems === 0
-                ? "0%"
+                ? '0%'
                 : `${Math.round((answeredItems / totalItems) * 100)}%`,
           }}
         />
@@ -69,10 +70,10 @@ export const AssessmentProgressPanel = ({
                     onClick={() => onSelectItem(section.sectionId, item.itemId)}
                     className={`rounded-lg border px-2 py-2 text-xs font-semibold ${
                       isCurrent
-                        ? "border-slate-950 bg-slate-950 text-white"
+                        ? 'border-slate-950 bg-slate-950 text-white'
                         : isAnswered
-                          ? "border-slate-300 bg-slate-100 text-slate-900"
-                          : "border-slate-200 bg-white text-slate-500"
+                          ? 'border-slate-300 bg-slate-100 text-slate-900'
+                          : 'border-slate-200 bg-white text-slate-500'
                     }`}
                   >
                     {item.position}

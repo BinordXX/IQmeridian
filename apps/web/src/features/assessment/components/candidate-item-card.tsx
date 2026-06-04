@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
 import type {
   AssessmentResponseValue,
   CandidateSafeAssessmentItem,
-} from "../contracts/assessment-contracts";
+} from '../contracts/assessment-contracts';
 
 type CandidateItemCardProps = {
   item: CandidateSafeAssessmentItem;
@@ -19,7 +19,7 @@ export const CandidateItemCard = ({
   disabled = false,
 }: CandidateItemCardProps) => {
   const selectedOptionId =
-    typeof responseValue === "string" ? responseValue : undefined;
+    typeof responseValue === 'string' ? responseValue : undefined;
 
   return (
     <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -53,10 +53,10 @@ export const CandidateItemCard = ({
             Stimulus
           </p>
 
-          {item.stimulus.kind === "image" ? (
+          {item.stimulus.kind === 'image' ? (
             <img
               src={item.stimulus.content}
-              alt={item.stimulus.altText ?? "Assessment stimulus"}
+              alt={item.stimulus.altText ?? 'Assessment stimulus'}
               className="mt-3 max-h-80 rounded-lg object-contain"
             />
           ) : (
@@ -78,9 +78,9 @@ export const CandidateItemCard = ({
               key={option.optionId}
               className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition ${
                 isSelected
-                  ? "border-slate-950 bg-slate-50"
-                  : "border-slate-200 bg-white hover:bg-slate-50"
-              } ${disabled ? "cursor-not-allowed opacity-70" : ""}`}
+                  ? 'border-slate-950 bg-slate-50'
+                  : 'border-slate-200 bg-white hover:bg-slate-50'
+              } ${disabled ? 'cursor-not-allowed opacity-70' : ''}`}
             >
               <input
                 type="radio"

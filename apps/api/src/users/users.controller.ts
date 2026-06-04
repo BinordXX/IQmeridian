@@ -45,10 +45,7 @@ export class UsersController {
   }
 
   @Patch('me')
-  updateMe(
-    @Req() req: { user: RequestUser },
-    @Body() body: UpdateUserNameDto,
-  ) {
+  updateMe(@Req() req: { user: RequestUser }, @Body() body: UpdateUserNameDto) {
     return this.usersService.updateUserName(req.user.id, body.name);
   }
 }

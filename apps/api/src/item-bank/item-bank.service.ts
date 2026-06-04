@@ -169,57 +169,57 @@ export class ItemBankService {
     return item;
   }
 
-async listItems(filters: {
-  domain?: AssessmentDomain;
-  status?: ItemStatus;
-  formId?: string;
-  page?: number;
-  limit?: number;
-}) {
-  const page = filters.page ?? 1;
-  const limit = Math.min(filters.limit ?? 25, 100);
-  const skip = (page - 1) * limit;
+  async listItems(filters: {
+    domain?: AssessmentDomain;
+    status?: ItemStatus;
+    formId?: string;
+    page?: number;
+    limit?: number;
+  }) {
+    const page = filters.page ?? 1;
+    const limit = Math.min(filters.limit ?? 25, 100);
+    const skip = (page - 1) * limit;
 
-  const where = {
-    domain: filters.domain,
-    status: filters.status,
-    formMappings: filters.formId
-      ? {
-          some: {
-            formId: filters.formId,
-          },
-        }
-      : undefined,
-  };
+    const where = {
+      domain: filters.domain,
+      status: filters.status,
+      formMappings: filters.formId
+        ? {
+            some: {
+              formId: filters.formId,
+            },
+          }
+        : undefined,
+    };
 
-  const [total, data] = await this.prisma.$transaction([
-    this.prisma.item.count({ where }),
-    this.prisma.item.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      skip,
-      take: limit,
-      include: {
-        formMappings: {
-          include: {
-            form: true,
-            section: true,
+    const [total, data] = await this.prisma.$transaction([
+      this.prisma.item.count({ where }),
+      this.prisma.item.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+        include: {
+          formMappings: {
+            include: {
+              form: true,
+              section: true,
+            },
           },
         },
-      },
-    }),
-  ]);
+      }),
+    ]);
 
-  return {
-    data,
-    meta: {
-      page,
-      limit,
-      total,
-      pageCount: Math.ceil(total / limit),
-    },
-  };
-}
+    return {
+      data,
+      meta: {
+        page,
+        limit,
+        total,
+        pageCount: Math.ceil(total / limit),
+      },
+    };
+  }
 
   private toOptionalJsonValue(
     value: unknown,

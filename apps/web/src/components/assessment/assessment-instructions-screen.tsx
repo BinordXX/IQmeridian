@@ -94,7 +94,9 @@ export function AssessmentInstructionsScreen({
 
             <div>
               <dt className="text-slate-500">Readiness status</dt>
-              <dd className="mt-1 text-slate-100">Instructions not yet confirmed</dd>
+              <dd className="mt-1 text-slate-100">
+                Instructions not yet confirmed
+              </dd>
             </div>
 
             {invitationToken ? (

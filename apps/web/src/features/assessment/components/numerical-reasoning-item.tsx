@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 /* eslint-disable @next/next/no-img-element */
 
@@ -6,7 +6,7 @@ import type {
   AssessmentResponseValue,
   CandidateItemStimulus,
   CandidateSafeAssessmentItem,
-} from "../contracts/assessment-contracts";
+} from '../contracts/assessment-contracts';
 
 type NumericalReasoningItemProps = {
   item: CandidateSafeAssessmentItem;
@@ -20,19 +20,19 @@ type NumericalTableRow = Record<string, NumericalTableCell>;
 
 const isImageSource = (value: string): boolean => {
   return (
-    value.startsWith("http://") ||
-    value.startsWith("https://") ||
-    value.startsWith("/") ||
-    value.startsWith("data:image/")
+    value.startsWith('http://') ||
+    value.startsWith('https://') ||
+    value.startsWith('/') ||
+    value.startsWith('data:image/')
   );
 };
 
 const isNumericalTableCell = (value: unknown): value is NumericalTableCell => {
-  return typeof value === "string" || typeof value === "number";
+  return typeof value === 'string' || typeof value === 'number';
 };
 
 const isNumericalTableRow = (value: unknown): value is NumericalTableRow => {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     return false;
   }
 
@@ -53,12 +53,12 @@ const parseTableRows = (content: string): NumericalTableRow[] | null => {
   }
 };
 
-const stimulusLabel: Record<CandidateItemStimulus["kind"], string> = {
-  text: "Information",
-  image: "Chart or figure",
-  table: "Data table",
-  sequence: "Sequence",
-  pattern: "Pattern",
+const stimulusLabel: Record<CandidateItemStimulus['kind'], string> = {
+  text: 'Information',
+  image: 'Chart or figure',
+  table: 'Data table',
+  sequence: 'Sequence',
+  pattern: 'Pattern',
 };
 
 const NumericalStimulus = ({
@@ -68,7 +68,7 @@ const NumericalStimulus = ({
 }) => {
   const label = stimulusLabel[stimulus.kind];
   const tableRows =
-    stimulus.kind === "table" ? parseTableRows(stimulus.content) : null;
+    stimulus.kind === 'table' ? parseTableRows(stimulus.content) : null;
 
   if (tableRows && tableRows.length > 0) {
     const columns = Object.keys(tableRows[0] ?? {});
@@ -112,7 +112,7 @@ const NumericalStimulus = ({
     );
   }
 
-  if (stimulus.kind === "image" || isImageSource(stimulus.content)) {
+  if (stimulus.kind === 'image' || isImageSource(stimulus.content)) {
     return (
       <section className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-5">
         <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -122,7 +122,7 @@ const NumericalStimulus = ({
         <div className="mt-4 flex justify-center rounded-xl bg-white p-4">
           <img
             src={stimulus.content}
-            alt={stimulus.altText ?? "Numerical reasoning stimulus"}
+            alt={stimulus.altText ?? 'Numerical reasoning stimulus'}
             className="max-h-[420px] max-w-full object-contain"
           />
         </div>
@@ -150,7 +150,7 @@ export const NumericalReasoningItem = ({
   disabled = false,
 }: NumericalReasoningItemProps) => {
   const selectedOptionId =
-    typeof responseValue === "string" ? responseValue : undefined;
+    typeof responseValue === 'string' ? responseValue : undefined;
 
   return (
     <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -199,9 +199,9 @@ export const NumericalReasoningItem = ({
                   key={option.optionId}
                   className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition ${
                     isSelected
-                      ? "border-slate-950 bg-slate-50"
-                      : "border-slate-200 bg-white hover:bg-slate-50"
-                  } ${disabled ? "cursor-not-allowed opacity-70" : ""}`}
+                      ? 'border-slate-950 bg-slate-50'
+                      : 'border-slate-200 bg-white hover:bg-slate-50'
+                  } ${disabled ? 'cursor-not-allowed opacity-70' : ''}`}
                 >
                   <input
                     type="radio"
