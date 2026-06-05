@@ -59,6 +59,34 @@ export type CreateEmployerInvitationInput = {
   expiresAt?: string;
 };
 
+export type EmployerScoreSummary = {
+  id: string;
+  sessionId: string;
+  abstractRawScore?: number;
+  abstractMaxScore?: number;
+  numericalRawScore?: number;
+  numericalMaxScore?: number;
+  overallRawScore?: number;
+  overallMaxScore?: number;
+  overallComposite?: number;
+  abstractBand?: string;
+  numericalBand?: string;
+  overallBand?: string;
+  domainScores?: unknown;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type EmployerResponseSummary = {
+  id: string;
+  sessionId: string;
+  itemId: string;
+  answer: unknown;
+  submittedAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
 export type EmployerSessionSummary = {
   id: string;
   userId: string;
@@ -76,6 +104,9 @@ export type EmployerSessionSummary = {
     name?: string | null;
     email?: string | null;
   };
+  invitation?: EmployerInvitationSummary | null;
+  responses?: EmployerResponseSummary[];
+  score?: EmployerScoreSummary | null;
 };
 
 export type EmployerDashboardData = {

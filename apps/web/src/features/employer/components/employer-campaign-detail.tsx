@@ -1,5 +1,5 @@
 import Link from 'next/link';
-
+import { EmployerCandidateStatusTable } from './employer-candidate-status-table';
 import type {
   EmployerCampaignDetail as EmployerCampaignDetailData,
   EmployerInvitationSummary,
@@ -251,78 +251,11 @@ export const EmployerCampaignDetail = ({
             </div>
           </section>
 
-          <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="border-b border-slate-100 px-5 py-4">
-              <h3 className="text-lg font-semibold text-slate-950">
-                Candidate sessions
-              </h3>
-
-              <p className="mt-1 text-sm text-slate-600">
-                Completion visibility for candidates who have entered the
-                assessment flow.
-              </p>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="text-sm text-slate-500">
-                    <th className="px-4 py-3 font-medium">Session</th>
-                    <th className="px-4 py-3 font-medium">Status</th>
-                    <th className="px-4 py-3 font-medium">Started</th>
-                    <th className="px-4 py-3 font-medium">Completed</th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {sessions.length > 0 ? (
-                    sessions.map((session) => (
-                      <tr
-                        key={session.id}
-                        className="border-t border-slate-100"
-                      >
-                        <td className="px-4 py-4 align-top">
-                          <p className="break-all font-medium text-slate-950">
-                            {session.id}
-                          </p>
-                          <p className="mt-1 text-xs text-slate-500">
-                            {session.user?.email ??
-                              session.invitationId ??
-                              'Candidate session'}
-                          </p>
-                        </td>
-
-                        <td className="px-4 py-4 align-top text-sm text-slate-700">
-                          {session.status}
-                        </td>
-
-                        <td className="px-4 py-4 align-top text-sm text-slate-700">
-                          {session.startedAt
-                            ? new Date(session.startedAt).toLocaleString()
-                            : 'Not started'}
-                        </td>
-
-                        <td className="px-4 py-4 align-top text-sm text-slate-700">
-                          {session.completedAt
-                            ? new Date(session.completedAt).toLocaleString()
-                            : 'Not completed'}
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td
-                        colSpan={4}
-                        className="px-4 py-10 text-center text-sm text-slate-500"
-                      >
-                        No candidate sessions have started for this campaign.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </section>
+          <EmployerCandidateStatusTable
+            campaignId={campaign.id}
+            invitations={invitations}
+            sessions={sessions}
+          />
         </div>
 
         <EmployerInvitationCreateForm
