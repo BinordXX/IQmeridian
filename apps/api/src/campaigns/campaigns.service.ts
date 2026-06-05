@@ -144,8 +144,22 @@ export class CampaignsService {
         organisation: true,
         owner: true,
         assessmentForm: true,
-        invitations: true,
-        sessions: true,
+        invitations: {
+          orderBy: {
+            createdAt: 'desc',
+          },
+        },
+        sessions: {
+          orderBy: {
+            createdAt: 'desc',
+          },
+          include: {
+            user: true,
+            invitation: true,
+            responses: true,
+            score: true,
+          },
+        },
       },
     });
 
