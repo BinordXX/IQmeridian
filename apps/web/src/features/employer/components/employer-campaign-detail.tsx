@@ -4,6 +4,7 @@ import type {
   EmployerCampaignDetail as EmployerCampaignDetailData,
   EmployerInvitationSummary,
 } from '../api/employer-dashboard-api';
+import { EmployerResultVisibilityControl } from './employer-result-visibility-control';
 import { EmployerCampaignCsvExport } from './employer-campaign-csv-export';
 import { EmployerCampaignResultOverview } from './employer-campaign-result-overview';
 import { EmployerCampaignSummaryCards } from './employer-campaign-summary-cards';
@@ -110,6 +111,8 @@ export const EmployerCampaignDetail = ({
           </div>
         </div>
       </section>
+
+      <EmployerResultVisibilityControl campaignStatus={campaign.status} />
 
       <section className="grid gap-6 xl:grid-cols-[1fr_380px]">
         <div className="space-y-6">
