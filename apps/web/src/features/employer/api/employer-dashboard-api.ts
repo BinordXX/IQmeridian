@@ -7,6 +7,18 @@ type CollectionResponse<T> =
       };
     };
 
+export type EmployerInvitationSummary = {
+  id: string;
+  campaignId: string;
+  email: string;
+  token: string;
+  status: string;
+  candidateUserId?: string | null;
+  createdAt?: string;
+  expiresAt?: string | null;
+  usedAt?: string | null;
+};
+
 export type EmployerCampaignSummary = {
   id: string;
   name: string;
@@ -18,12 +30,33 @@ export type EmployerCampaignSummary = {
     version?: number;
     isActive?: boolean;
   } | null;
-  invitations?: Array<{
-    id: string;
-    status: string;
-  }>;
+  invitations?: EmployerInvitationSummary[];
   createdAt?: string;
   updatedAt?: string;
+};
+
+export type EmployerCampaignDetail = Omit<
+  EmployerCampaignSummary,
+  'invitations'
+> & {
+  organisation?: {
+    id: string;
+    name: string;
+  };
+  owner?: {
+    id: string;
+    name?: string | null;
+    email?: string | null;
+  };
+  invitations?: EmployerInvitationSummary[];
+  sessions?: EmployerSessionSummary[];
+};
+
+export type CreateEmployerInvitationInput = {
+  campaignId: string;
+  email: string;
+  candidateUserId?: string;
+  expiresAt?: string;
 };
 
 export type EmployerSessionSummary = {
@@ -173,8 +206,8 @@ export const getActiveAssessmentForms = async (): Promise<
 
 export const getEmployerCampaignById = async (
   campaignId: string
-): Promise<EmployerCampaignSummary> => {
-  return employerRequest<EmployerCampaignSummary>(
+): Promise<EmployerCampaignDetail> => {
+  return employerRequest<EmployerCampaignDetail>(
     `/campaigns/${encodeURIComponent(campaignId)}`
   );
 };
@@ -223,4 +256,26 @@ export const updateEmployerCampaignStatus = async (
   }
 
   return (await response.json()) as EmployerCampaignSummary;
+};
+
+export const createEmployerInvitation = async (
+  input: CreateEmployerInvitationInput
+): Promise<EmployerInvitationSummary> => {
+  const response = await fetch(`${getApiBaseUrl()}/invitations`, {
+    method: 'POST',
+    headers: {
+      Authorization: getEmployerAuthHeader(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(input),
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      `Invitation creation failed with status ${response.status}`
+    );
+  }
+
+  return (await response.json()) as EmployerInvitationSummary;
 };
