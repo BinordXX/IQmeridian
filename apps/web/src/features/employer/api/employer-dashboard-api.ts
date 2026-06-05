@@ -119,6 +119,7 @@ export type EmployerDashboardData = {
     startedSessions: number;
     completedSessions: number;
     completionRate: number;
+    reportReadyResults: number;
   };
 };
 
@@ -188,6 +189,9 @@ export const getEmployerDashboardData =
     const completedSessions = sessions.filter((session) => {
       return session.status === 'COMPLETED';
     }).length;
+    const reportReadyResults = sessions.filter((session) => {
+      return Boolean(session.score);
+    }).length;
 
     return {
       campaigns,
@@ -204,6 +208,7 @@ export const getEmployerDashboardData =
           startedSessions > 0
             ? Math.round((completedSessions / startedSessions) * 100)
             : 0,
+        reportReadyResults,
       },
     };
   };

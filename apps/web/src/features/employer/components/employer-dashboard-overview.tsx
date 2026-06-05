@@ -86,7 +86,7 @@ export const EmployerDashboardOverview = ({
         </p>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
         <MetricCard
           label="Active campaigns"
           value={data.metrics.activeCampaigns}
@@ -111,6 +111,11 @@ export const EmployerDashboardOverview = ({
           label="Completion rate"
           value={`${data.metrics.completionRate}%`}
           helper="Completed out of started"
+        />
+        <MetricCard
+          label="Report-ready results"
+          value={data.metrics.reportReadyResults}
+          helper="Sessions with available scores"
         />
       </section>
 

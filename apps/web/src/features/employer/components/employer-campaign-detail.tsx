@@ -1,5 +1,8 @@
 import Link from 'next/link';
 import { EmployerCandidateStatusTable } from './employer-candidate-status-table';
+import { EmployerCampaignResultOverview } from './employer-campaign-result-overview';
+import { EmployerCampaignSummaryCards } from './employer-campaign-summary-cards';
+import { EmployerCandidateComparisonTable } from './employer-candidate-comparison-table';
 import type {
   EmployerCampaignDetail as EmployerCampaignDetailData,
   EmployerInvitationSummary,
@@ -97,38 +100,10 @@ export const EmployerCampaignDetail = ({
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-4">
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-sm font-medium text-slate-500">Status</p>
-          <p className="mt-3 text-2xl font-bold text-slate-950">
-            {campaign.status}
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-sm font-medium text-slate-500">Invitations</p>
-          <p className="mt-3 text-2xl font-bold text-slate-950">
-            {invitations.length}
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-sm font-medium text-slate-500">Started</p>
-          <p className="mt-3 text-2xl font-bold text-slate-950">
-            {progress.started}
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-sm font-medium text-slate-500">Completed</p>
-          <p className="mt-3 text-2xl font-bold text-slate-950">
-            {progress.completed}
-          </p>
-          <p className="mt-2 text-xs text-slate-500">
-            {progress.completionRate}% completion
-          </p>
-        </div>
-      </section>
+      <EmployerCampaignSummaryCards
+        invitations={invitations}
+        sessions={sessions}
+      />
 
       <section className="grid gap-6 xl:grid-cols-[1fr_380px]">
         <div className="space-y-6">
@@ -175,6 +150,13 @@ export const EmployerCampaignDetail = ({
               </div>
             </dl>
           </section>
+
+          <EmployerCampaignResultOverview sessions={sessions} />
+
+          <EmployerCandidateComparisonTable
+            campaignId={campaign.id}
+            sessions={sessions}
+          />
 
           <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div className="border-b border-slate-100 px-5 py-4">
