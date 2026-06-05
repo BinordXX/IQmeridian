@@ -19,12 +19,21 @@ export default function EmployerLayout({ children }: EmployerLayoutProps) {
             </h1>
           </div>
 
-          <nav className="flex items-center gap-4 text-sm font-medium text-slate-600">
+          <nav className="flex flex-wrap items-center gap-4 text-sm font-medium text-slate-600">
             <Link href="/employer/dashboard" className="hover:text-slate-950">
               Dashboard
             </Link>
             <Link href="/employer/campaigns" className="hover:text-slate-950">
               Campaigns
+            </Link>
+            <Link href="/employer/candidates" className="hover:text-slate-950">
+              Candidate statuses
+            </Link>
+            <Link href="/employer/results" className="hover:text-slate-950">
+              Results
+            </Link>
+            <Link href="/employer/exports" className="hover:text-slate-950">
+              Exports
             </Link>
           </nav>
         </div>
