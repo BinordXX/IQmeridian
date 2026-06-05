@@ -5,6 +5,7 @@ import type {
   EmployerInvitationSummary,
   EmployerSessionSummary,
 } from '../api/employer-dashboard-api';
+import { EmployerReportActions } from './employer-report-actions';
 
 type EmployerCandidateDetailProps = {
   campaign: EmployerCampaignDetail;
@@ -71,7 +72,8 @@ export const EmployerCandidateDetail = ({
 
   const answeredCount = session?.responses?.length ?? 0;
   const completedAt = session?.completedAt;
-
+  const canGenerateReport =
+    session?.status === 'COMPLETED' && Boolean(session.score);
   return (
     <div className="space-y-8">
       <section className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -98,6 +100,12 @@ export const EmployerCandidateDetail = ({
           Back to campaign
         </Link>
       </section>
+      <EmployerReportActions
+        campaignId={campaign.id}
+        candidateId={session?.id ?? invitation?.id ?? 'candidate'}
+        sessionId={session?.id}
+        canGenerateReport={canGenerateReport}
+      />
 
       <section className="grid gap-4 md:grid-cols-4">
         <BandCard label="Overall performance band" band={score?.overallBand} />

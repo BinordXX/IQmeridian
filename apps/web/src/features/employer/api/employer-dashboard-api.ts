@@ -226,6 +226,19 @@ export type CreateEmployerCampaignInput = {
   assessmentFormId?: string;
 };
 
+export type EmployerReportResult = {
+  id: string;
+  sessionId: string;
+  visibility: string;
+  subjectUserId?: string | null;
+  scoreId?: string | null;
+  reportVersion?: number;
+  payload?: unknown;
+  scoreSnapshot?: unknown;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
 export type UpdateEmployerCampaignStatusInput = {
   status: 'DRAFT' | 'ACTIVE' | 'CLOSED' | 'ARCHIVED';
 };
@@ -314,4 +327,60 @@ export const createEmployerInvitation = async (
   }
 
   return (await response.json()) as EmployerInvitationSummary;
+};
+
+export const generateEmployerReport = async (
+  sessionId: string
+): Promise<EmployerReportResult> => {
+  const response = await fetch(
+    `${getApiBaseUrl()}/reports/sessions/${encodeURIComponent(
+      sessionId
+    )}/employer`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: getEmployerAuthHeader(),
+        'Content-Type': 'application/json',
+      },
+      cache: 'no-store',
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      `Employer report generation failed with status ${response.status}`
+    );
+  }
+
+  return (await response.json()) as EmployerReportResult;
+};
+
+export const getEmployerReportBySession = async (
+  sessionId: string
+): Promise<EmployerReportResult | null> => {
+  const response = await fetch(
+    `${getApiBaseUrl()}/reports/sessions/${encodeURIComponent(
+      sessionId
+    )}/EMPLOYER`,
+    {
+      method: 'GET',
+      headers: {
+        Authorization: getEmployerAuthHeader(),
+        'Content-Type': 'application/json',
+      },
+      cache: 'no-store',
+    }
+  );
+
+  if (response.status === 404) {
+    return null;
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      `Employer report lookup failed with status ${response.status}`
+    );
+  }
+
+  return (await response.json()) as EmployerReportResult;
 };

@@ -50,8 +50,9 @@ export const EmployerCandidateComparisonTable = ({
         </h3>
 
         <p className="mt-1 text-sm text-slate-600">
-          Compare candidates within this campaign only. The table is structured
-          to support review, not to create a public leaderboard.
+          Compare candidates within this campaign only. The table supports
+          structured review and should be interpreted alongside wider hiring
+          evidence rather than as an automatic selection order.
         </p>
       </div>
 
