@@ -105,9 +105,12 @@ export const EmployerCampaignList = ({
                   return (
                     <tr key={campaign.id} className="border-t border-slate-100">
                       <td className="px-4 py-4 align-top">
-                        <p className="font-medium text-slate-950">
+                        <Link
+                          href={`/employer/campaigns/${encodeURIComponent(campaign.id)}`}
+                          className="font-medium text-slate-950 hover:underline"
+                        >
                           {campaign.name}
-                        </p>
+                        </Link>
                         <p className="mt-1 text-xs text-slate-500">
                           {campaign.id}
                         </p>
