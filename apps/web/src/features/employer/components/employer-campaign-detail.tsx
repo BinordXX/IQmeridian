@@ -1,39 +1,19 @@
 import Link from 'next/link';
-import { EmployerCandidateStatusTable } from './employer-candidate-status-table';
-import { EmployerCampaignResultOverview } from './employer-campaign-result-overview';
-import { EmployerCampaignSummaryCards } from './employer-campaign-summary-cards';
-import { EmployerCandidateComparisonTable } from './employer-candidate-comparison-table';
+
 import type {
   EmployerCampaignDetail as EmployerCampaignDetailData,
   EmployerInvitationSummary,
-  EmployerSessionSummary,
 } from '../api/employer-dashboard-api';
+import { EmployerCampaignCsvExport } from './employer-campaign-csv-export';
+import { EmployerCampaignResultOverview } from './employer-campaign-result-overview';
+import { EmployerCampaignSummaryCards } from './employer-campaign-summary-cards';
+import { EmployerCandidateComparisonTable } from './employer-candidate-comparison-table';
+import { EmployerCandidateStatusTable } from './employer-candidate-status-table';
 import { EmployerInvitationCreateForm } from './employer-invitation-create-form';
+import { EmployerCampaignPdfExport } from './employer-campaign-pdf-export';
 
 type EmployerCampaignDetailProps = {
   campaign: EmployerCampaignDetailData;
-};
-
-const getSessionProgress = (
-  sessions: EmployerSessionSummary[] = []
-): {
-  started: number;
-  completed: number;
-  completionRate: number;
-} => {
-  const started = sessions.filter((session) => {
-    return session.status !== 'NOT_STARTED';
-  }).length;
-
-  const completed = sessions.filter((session) => {
-    return session.status === 'COMPLETED';
-  }).length;
-
-  return {
-    started,
-    completed,
-    completionRate: started > 0 ? Math.round((completed / started) * 100) : 0,
-  };
 };
 
 const getInvitationDisplayStatus = (
@@ -43,12 +23,12 @@ const getInvitationDisplayStatus = (
     return invitation.status;
   }
 
-  if (invitation.expiresAt && new Date(invitation.expiresAt) < new Date()) {
-    return 'EXPIRED';
-  }
-
   if (invitation.usedAt) {
     return 'ACCEPTED';
+  }
+
+  if (invitation.expiresAt && new Date(invitation.expiresAt) < new Date()) {
+    return 'EXPIRED';
   }
 
   return invitation.status;
@@ -63,7 +43,6 @@ export const EmployerCampaignDetail = ({
 }: EmployerCampaignDetailProps) => {
   const invitations: EmployerInvitationSummary[] = campaign.invitations ?? [];
   const sessions = campaign.sessions ?? [];
-  const progress = getSessionProgress(sessions);
 
   return (
     <div className="space-y-8">
@@ -104,6 +83,33 @@ export const EmployerCampaignDetail = ({
         invitations={invitations}
         sessions={sessions}
       />
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h3 className="text-lg font-semibold text-slate-950">
+              Campaign exports
+            </h3>
+
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+              Campaign-level exports provide structured summaries for employer
+              review. CSV exports download the candidate result table, while PDF
+              export uses the browser print workflow for the current campaign
+              view.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-3">
+            <EmployerCampaignCsvExport
+              campaignName={campaign.name}
+              invitations={invitations}
+              sessions={sessions}
+            />
+
+            <EmployerCampaignPdfExport />
+          </div>
+        </div>
+      </section>
 
       <section className="grid gap-6 xl:grid-cols-[1fr_380px]">
         <div className="space-y-6">
@@ -244,6 +250,28 @@ export const EmployerCampaignDetail = ({
           campaignId={campaign.id}
           campaignStatus={campaign.status}
         />
+      </section>
+
+      <section className="rounded-2xl border border-slate-200 bg-slate-50 p-6">
+        <h3 className="text-lg font-semibold text-slate-950">
+          Interpretation guidance
+        </h3>
+
+        <p className="mt-3 max-w-4xl text-sm leading-6 text-slate-600">
+          These results provide structured evidence from this assessment only.
+          They should not be treated as a final hiring decision, a diagnosis, or
+          a complete measure of candidate capability. The bands are intended to
+          support review within this campaign and should be considered alongside
+          interviews, role-relevant work evidence, experience, and consistent
+          selection criteria.
+        </p>
+
+        <p className="mt-3 max-w-4xl text-sm leading-6 text-slate-600">
+          Differences between candidates should be interpreted cautiously,
+          especially where completion conditions, accessibility needs, or
+          contextual factors may have shaped performance. The platform supports
+          decision-making; it does not replace employer judgement.
+        </p>
       </section>
     </div>
   );

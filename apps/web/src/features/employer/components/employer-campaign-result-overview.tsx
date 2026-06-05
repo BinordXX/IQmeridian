@@ -30,8 +30,9 @@ export const EmployerCampaignResultOverview = ({
 
         <p className="mt-2 text-sm leading-6 text-slate-600">
           A compact view of candidate outcome bands within this campaign. This
-          is intended for campaign-level monitoring, not as a standalone hiring
-          decision.
+          view is intended to help employers understand campaign-level patterns;
+          it should not be used as a standalone ranking mechanism or final
+          hiring decision.
         </p>
       </div>
 
