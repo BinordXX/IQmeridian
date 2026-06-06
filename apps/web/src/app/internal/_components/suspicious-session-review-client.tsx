@@ -5,14 +5,14 @@ import { useMemo, useState } from 'react';
 
 import {
   formatInternalDuration,
-  getSuspiciousSessionRecords,
-  sessionStatusLabels,
+  formatOmissionRate,
   sessionTypeLabels,
   suspiciousFlagStatusLabels,
   suspiciousSessionIndicatorLabels,
+  type InternalSessionOutput,
   type SuspiciousFlagStatus,
   type SuspiciousSessionIndicator,
-} from '../_data/internal-tooling-data';
+} from '../_lib/internal-api';
 
 type IndicatorFilter = 'ALL' | SuspiciousSessionIndicator;
 type SeverityFilter = 'ALL' | Exclude<SuspiciousFlagStatus, 'NONE'>;
@@ -29,16 +29,18 @@ const indicatorOptions: IndicatorFilter[] = [
 
 const severityOptions: SeverityFilter[] = ['ALL', 'LOW', 'MEDIUM', 'HIGH'];
 
-export function SuspiciousSessionReviewClient() {
+export function SuspiciousSessionReviewClient({
+  sessions,
+}: {
+  sessions: InternalSessionOutput[];
+}) {
   const [indicatorFilter, setIndicatorFilter] =
     useState<IndicatorFilter>('ALL');
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter>('ALL');
 
-  const suspiciousSessions = useMemo(() => getSuspiciousSessionRecords(), []);
-
   const filteredSessions = useMemo(
     () =>
-      suspiciousSessions.filter((session) => {
+      sessions.filter((session) => {
         const matchesIndicator =
           indicatorFilter === 'ALL' ||
           session.suspiciousIndicators.includes(indicatorFilter);
@@ -49,7 +51,7 @@ export function SuspiciousSessionReviewClient() {
 
         return matchesIndicator && matchesSeverity;
       }),
-    [indicatorFilter, severityFilter, suspiciousSessions]
+    [indicatorFilter, severityFilter, sessions]
   );
 
   return (
@@ -57,10 +59,9 @@ export function SuspiciousSessionReviewClient() {
       <div>
         <h2 className="text-xl font-semibold">Suspicious-session review</h2>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-          Suspicious-session indicators are review signals, not proof of
-          misconduct. Their value is in directing careful internal review toward
-          timing, reconnect, access, omission, and submission patterns that may
-          affect assessment interpretation.
+          This list is now populated from the internal API. If no sessions
+          appear, the backend found no currently suspicious sessions under the
+          calibrated MVP rules.
         </p>
       </div>
 
@@ -124,14 +125,9 @@ export function SuspiciousSessionReviewClient() {
               </div>
 
               <div className="flex flex-col gap-3 lg:items-end">
-                <div className="flex flex-wrap gap-2">
-                  <span className="rounded-full border border-slate-300 bg-white px-2 py-1 text-xs font-semibold">
-                    {suspiciousFlagStatusLabels[session.suspiciousFlagStatus]}
-                  </span>
-                  <span className="rounded-full border border-slate-300 bg-white px-2 py-1 text-xs font-semibold">
-                    {sessionStatusLabels[session.status]}
-                  </span>
-                </div>
+                <span className="w-fit rounded-full border border-slate-300 bg-white px-2 py-1 text-xs font-semibold">
+                  {suspiciousFlagStatusLabels[session.suspiciousFlagStatus]}
+                </span>
 
                 <Link
                   href={`/internal/admin/sessions/${encodeURIComponent(
@@ -160,7 +156,7 @@ export function SuspiciousSessionReviewClient() {
               <div className="rounded-xl bg-white px-4 py-3">
                 <dt className="text-slate-500">Omission rate</dt>
                 <dd className="mt-1 font-semibold">
-                  {Math.round(session.omissionRate * 100)}%
+                  {formatOmissionRate(session.omissionRate)}
                 </dd>
               </div>
               <div className="rounded-xl bg-white px-4 py-3">
@@ -182,27 +178,11 @@ export function SuspiciousSessionReviewClient() {
               ))}
             </div>
 
-            <div className="mt-5 grid gap-3 text-sm lg:grid-cols-3">
-              <section className="rounded-xl border border-slate-200 bg-white p-4">
-                <h4 className="font-semibold">Response timing</h4>
-                <p className="mt-2 leading-6 text-slate-600">
-                  {session.responseTimingPattern}
-                </p>
-              </section>
-
-              <section className="rounded-xl border border-slate-200 bg-white p-4">
-                <h4 className="font-semibold">Access anomaly</h4>
-                <p className="mt-2 leading-6 text-slate-600">
-                  {session.accessAnomaly}
-                </p>
-              </section>
-
-              <section className="rounded-xl border border-slate-200 bg-white p-4">
-                <h4 className="font-semibold">Submission pattern</h4>
-                <p className="mt-2 leading-6 text-slate-600">
-                  {session.submissionPattern}
-                </p>
-              </section>
+            <div className="mt-5 rounded-xl border border-slate-200 bg-white p-4 text-sm">
+              <h4 className="font-semibold">Response pattern</h4>
+              <p className="mt-2 leading-6 text-slate-600">
+                {session.responsePatternSummary}
+              </p>
             </div>
           </article>
         ))}
