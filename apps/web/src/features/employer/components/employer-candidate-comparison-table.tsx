@@ -52,7 +52,9 @@ export const EmployerCandidateComparisonTable = ({
         <p className="mt-1 text-sm text-slate-600">
           Compare candidates within this campaign only. The table supports
           structured review and should be interpreted alongside wider hiring
-          evidence rather than as an automatic selection order.
+          evidence rather than as an automatic selection order. If no results
+          are ready, candidates will remain visible with unavailable bands until
+          scoring and reporting are complete.
         </p>
       </div>
 
@@ -118,7 +120,8 @@ export const EmployerCandidateComparisonTable = ({
                   colSpan={6}
                   className="px-4 py-10 text-center text-sm text-slate-500"
                 >
-                  No candidate sessions are available for comparison.
+                  No candidate sessions are available for comparison. Candidates
+                  will appear here after they start the assessment.
                 </td>
               </tr>
             )}

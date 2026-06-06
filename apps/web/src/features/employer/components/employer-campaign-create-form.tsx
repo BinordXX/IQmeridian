@@ -27,10 +27,27 @@ export const EmployerCampaignCreateForm = ({
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  const hasActiveForms = activeForms.length > 0;
+  const selectedFormExists = activeForms.some((form) => {
+    return form.id === assessmentFormId;
+  });
+
   const submitCampaign = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!name.trim() || !assessmentFormId || isSaving) {
+    if (isSaving) {
+      return;
+    }
+
+    if (!name.trim()) {
+      setErrorMessage('Enter a campaign name before creating this campaign.');
+      return;
+    }
+
+    if (!assessmentFormId || !hasActiveForms || !selectedFormExists) {
+      setErrorMessage(
+        'Select a valid active assessment form before creating this campaign.'
+      );
       return;
     }
 
@@ -121,6 +138,13 @@ export const EmployerCampaignCreateForm = ({
         </p>
       </div>
 
+      {!hasActiveForms ? (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+          No active assessment forms are currently available. A campaign cannot
+          be created until an active assessment form exists.
+        </div>
+      ) : null}
+
       <div>
         <label
           htmlFor="assessment-form"
@@ -133,7 +157,8 @@ export const EmployerCampaignCreateForm = ({
           id="assessment-form"
           value={assessmentFormId}
           onChange={(event) => setAssessmentFormId(event.currentTarget.value)}
-          className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-950"
+          disabled={!hasActiveForms}
+          className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-950 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
           required
         >
           {activeForms.map((form) => (
@@ -158,7 +183,13 @@ export const EmployerCampaignCreateForm = ({
       <div className="flex items-center gap-3">
         <button
           type="submit"
-          disabled={isSaving || !name.trim() || !assessmentFormId}
+          disabled={
+            isSaving ||
+            !name.trim() ||
+            !assessmentFormId ||
+            !hasActiveForms ||
+            !selectedFormExists
+          }
           className="rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
         >
           {isSaving ? 'Creating campaign...' : 'Create campaign'}
