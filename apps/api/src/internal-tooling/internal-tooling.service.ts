@@ -1,150 +1,40 @@
 import { Injectable } from '@nestjs/common';
+import { FormItemMappingStatus, Prisma, SessionStatus } from '@prisma/client';
 
+import { PrismaService } from '../prisma/prisma.service';
 import {
   AnalyticsExportDefinition,
+  CreateInternalAuditEventInput,
+  CreateInternalReviewStatusInput,
+  InternalAuditEvent,
+  InternalCompletionStatus,
+  InternalReviewStatusRecord,
   InternalSessionOutput,
-  InternalSessionSourceRecord,
   SuspiciousFlagEvaluation,
   SuspiciousFlagStatus,
   SuspiciousSessionIndicator,
 } from './internal-tooling.types';
 
-const internalSessionSourceRecords: InternalSessionSourceRecord[] = [
-  {
-    sessionId: 'SES-091',
-    participantIdentifier: 'candidate-091',
-    sessionType: 'EMPLOYER_LINKED',
-    formId: 'FORM-A',
-    formLabel: 'General cognitive form A',
-    status: 'COMPLETED',
-    startedAt: '2026-06-06 09:01',
-    endedAt: '2026-06-06 09:34',
-    completionStatus: 'COMPLETE',
-    overallBand: 'Strong',
-    completionTimeMinutes: 33,
-    refreshReconnectEvents: 1,
-    omissionRate: 0.04,
-    duplicateAccessAttempts: 0,
-    inconsistentSubmissionEvents: 0,
-    compressedTimingEvents: 2,
-    interruptionHistory: [
-      'One short focus-loss event was recorded during the abstract section.',
-    ],
-    responsePatternSummary:
-      'Long inactivity followed by a compressed answer sequence near section end.',
-    scoringOutcome:
-      'Overall band was Strong, with uneven timing across later abstract items.',
-    reviewerNotes: [
-      'Timing signal requires review, but no access anomaly is currently visible.',
-    ],
-  },
-  {
-    sessionId: 'SES-104',
-    participantIdentifier: 'candidate-104',
-    sessionType: 'EMPLOYER_LINKED',
-    formId: 'FORM-B',
-    formLabel: 'General cognitive form B',
-    status: 'COMPLETED',
-    startedAt: '2026-06-06 10:42',
-    endedAt: '2026-06-06 11:01',
-    completionStatus: 'COMPLETE',
-    overallBand: 'Advanced',
-    completionTimeMinutes: 19,
-    refreshReconnectEvents: 6,
-    omissionRate: 0.02,
-    duplicateAccessAttempts: 3,
-    inconsistentSubmissionEvents: 2,
-    compressedTimingEvents: 5,
-    interruptionHistory: [
-      'Repeated reconnect events were recorded.',
-      'Multiple route escape attempts occurred before final submission.',
-      'The same invitation token was accessed repeatedly within a short window.',
-    ],
-    responsePatternSummary:
-      'Several high-difficulty items were answered with unusually compressed timing.',
-    scoringOutcome:
-      'Overall band was Advanced despite an unusually short completion profile.',
-    reviewerNotes: [
-      'High-priority review recommended before relying on this session outcome.',
-    ],
-  },
-  {
-    sessionId: 'SES-117',
-    participantIdentifier: 'consumer-117',
-    sessionType: 'CONSUMER',
-    formId: 'FORM-C',
-    formLabel: 'Consumer practice form',
-    status: 'IN_PROGRESS',
-    startedAt: '2026-06-06 13:03',
-    endedAt: null,
-    completionStatus: 'PARTIAL',
-    overallBand: null,
-    completionTimeMinutes: null,
-    refreshReconnectEvents: 4,
-    omissionRate: 0.11,
-    duplicateAccessAttempts: 0,
-    inconsistentSubmissionEvents: 0,
-    compressedTimingEvents: 0,
-    interruptionHistory: [
-      'Four reconnect events were recorded while the session remained open.',
-    ],
-    responsePatternSummary:
-      'Reconnect events occurred, but response timing remains broadly plausible.',
-    scoringOutcome:
-      'No final score has been produced because the session is open.',
-    reviewerNotes: [
-      'Monitor if the session later completes with unusual timing or omissions.',
-    ],
-  },
-  {
-    sessionId: 'SES-122',
-    participantIdentifier: 'candidate-122',
-    sessionType: 'EMPLOYER_LINKED',
-    formId: 'FORM-B',
-    formLabel: 'General cognitive form B',
-    status: 'COMPLETED',
-    startedAt: '2026-06-06 14:10',
-    endedAt: '2026-06-06 15:02',
-    completionStatus: 'COMPLETE',
-    overallBand: 'Developing',
-    completionTimeMinutes: 52,
-    refreshReconnectEvents: 0,
-    omissionRate: 0.38,
-    duplicateAccessAttempts: 0,
-    inconsistentSubmissionEvents: 0,
-    compressedTimingEvents: 0,
-    interruptionHistory: ['No interruption event was recorded.'],
-    responsePatternSummary:
-      'Timing was slow but not erratic; omissions were concentrated in the numerical section.',
-    scoringOutcome:
-      'Overall band was Developing, with high omission volume affecting interpretability.',
-    reviewerNotes: [
-      'Review whether omissions reflect ability, timing pressure, or interface friction.',
-    ],
-  },
-  {
-    sessionId: 'SES-128',
-    participantIdentifier: 'consumer-128',
-    sessionType: 'CONSUMER',
-    formId: 'FORM-C',
-    formLabel: 'Consumer practice form',
-    status: 'COMPLETED',
-    startedAt: '2026-06-06 15:18',
-    endedAt: '2026-06-06 15:49',
-    completionStatus: 'COMPLETE',
-    overallBand: 'Functional',
-    completionTimeMinutes: 31,
-    refreshReconnectEvents: 0,
-    omissionRate: 0.05,
-    duplicateAccessAttempts: 0,
-    inconsistentSubmissionEvents: 0,
-    compressedTimingEvents: 0,
-    interruptionHistory: ['No interruption event was recorded.'],
-    responsePatternSummary: 'No abnormal response timing pattern detected.',
-    scoringOutcome: 'Overall band was Functional with no current review flag.',
-    reviewerNotes: ['No suspicious-session review required at this stage.'],
-  },
-];
+const sessionInclude = {
+  user: true,
+  campaign: true,
+  invitation: true,
+  assessmentForm: true,
+  responses: true,
+  score: true,
+} satisfies Prisma.SessionInclude;
+
+const auditLogInclude = {
+  user: true,
+} satisfies Prisma.AuditLogInclude;
+
+type SessionWithInternalRelations = Prisma.SessionGetPayload<{
+  include: typeof sessionInclude;
+}>;
+
+type AuditLogWithUser = Prisma.AuditLogGetPayload<{
+  include: typeof auditLogInclude;
+}>;
 
 const analyticsExportDefinitions: AnalyticsExportDefinition[] = [
   {
@@ -169,7 +59,7 @@ const analyticsExportDefinitions: AnalyticsExportDefinition[] = [
     description:
       'Candidate responses, item identifiers, response timing, omission state, and answer correctness.',
     format: 'CSV',
-    currentlyAvailable: false,
+    currentlyAvailable: true,
   },
   {
     dataset: 'SCORE_LEVEL',
@@ -177,7 +67,7 @@ const analyticsExportDefinitions: AnalyticsExportDefinition[] = [
     description:
       'Section scores, overall score bands, score spread, and scoring timestamps.',
     format: 'CSV',
-    currentlyAvailable: false,
+    currentlyAvailable: true,
   },
   {
     dataset: 'CAMPAIGN_SUMMARY',
@@ -191,81 +81,270 @@ const analyticsExportDefinitions: AnalyticsExportDefinition[] = [
 
 @Injectable()
 export class InternalToolingService {
-  getSessionReviewRecords(): InternalSessionOutput[] {
-    return internalSessionSourceRecords.map((session) =>
-      this.withSuspiciousFlagEvaluation(session),
+  constructor(private readonly prisma: PrismaService) {}
+
+  async getSessionReviewRecords(): Promise<InternalSessionOutput[]> {
+    const sessions = await this.prisma.session.findMany({
+      orderBy: {
+        createdAt: 'desc',
+      },
+      take: 100,
+      include: sessionInclude,
+    });
+
+    return Promise.all(
+      sessions.map((session) => this.toInternalSessionOutput(session)),
     );
   }
 
-  getSuspiciousSessionRecords(): InternalSessionOutput[] {
-    return this.getSessionReviewRecords().filter(
+  async getSuspiciousSessionRecords(): Promise<InternalSessionOutput[]> {
+    const sessions = await this.getSessionReviewRecords();
+
+    return sessions.filter(
       (session) => session.suspiciousFlagStatus !== 'NONE',
     );
   }
 
-  getSessionById(sessionId: string): InternalSessionOutput | undefined {
-    return this.getSessionReviewRecords().find(
-      (session) => session.sessionId === sessionId,
-    );
+  async getSessionById(
+    sessionId: string,
+  ): Promise<InternalSessionOutput | undefined> {
+    const session = await this.prisma.session.findUnique({
+      where: { id: sessionId },
+      include: sessionInclude,
+    });
+
+    if (!session) {
+      return undefined;
+    }
+
+    return this.toInternalSessionOutput(session);
   }
 
   getAnalyticsExportDefinitions(): AnalyticsExportDefinition[] {
     return analyticsExportDefinitions;
   }
 
-  private withSuspiciousFlagEvaluation(
-    session: InternalSessionSourceRecord,
-  ): InternalSessionOutput {
-    const evaluation = this.evaluateSuspiciousFlags(session);
+  async getInternalAuditEvents(): Promise<InternalAuditEvent[]> {
+    const auditLogs = await this.prisma.auditLog.findMany({
+      orderBy: {
+        createdAt: 'desc',
+      },
+      take: 100,
+      include: auditLogInclude,
+    });
+
+    return auditLogs.map((auditLog) => this.toInternalAuditEvent(auditLog));
+  }
+
+  async recordInternalAuditEvent(
+    input: CreateInternalAuditEventInput,
+  ): Promise<InternalAuditEvent> {
+    const auditLog = await this.prisma.auditLog.create({
+      data: {
+        action: input.action,
+        userId: input.userId ?? null,
+        entityType: input.entityType ?? null,
+        entityId: input.entityId ?? null,
+        metadata:
+          input.metadata === undefined
+            ? undefined
+            : this.toJsonValue(input.metadata),
+      },
+      include: auditLogInclude,
+    });
+
+    return this.toInternalAuditEvent(auditLog);
+  }
+
+  async getInternalReviewStatusRecords(): Promise<
+    InternalReviewStatusRecord[]
+  > {
+    const auditLogs = await this.prisma.auditLog.findMany({
+      where: {
+        action: 'REVIEW_STATUS_CHANGED',
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      take: 100,
+      include: auditLogInclude,
+    });
+
+    return auditLogs.map((auditLog) =>
+      this.toInternalReviewStatusRecord(auditLog),
+    );
+  }
+
+  async recordInternalReviewStatus(
+    input: CreateInternalReviewStatusInput,
+  ): Promise<InternalReviewStatusRecord> {
+    const auditLog = await this.prisma.auditLog.create({
+      data: {
+        action: 'REVIEW_STATUS_CHANGED',
+        entityType: input.targetType,
+        entityId: input.targetId,
+        metadata: this.toJsonValue({
+          targetType: input.targetType,
+          targetId: input.targetId,
+          status: input.status,
+          reviewer: input.reviewer,
+          notes: input.notes,
+        }),
+      },
+      include: auditLogInclude,
+    });
+
+    return this.toInternalReviewStatusRecord(auditLog);
+  }
+
+  private async toInternalSessionOutput(
+    session: SessionWithInternalRelations,
+  ): Promise<InternalSessionOutput> {
+    const expectedItemCount = await this.prisma.formItemMapping.count({
+      where: {
+        formId: session.assessmentFormId,
+        status: FormItemMappingStatus.ACTIVE,
+      },
+    });
+
+    const answeredResponses = session.responses.filter(
+      (response) => response.answer !== null && response.answer !== undefined,
+    );
+
+    const omissionCount = Math.max(
+      expectedItemCount - answeredResponses.length,
+      0,
+    );
+
+    const omissionRate =
+      expectedItemCount === 0 ? 0 : omissionCount / expectedItemCount;
+
+    const completionTimeMinutes = this.calculateCompletionTimeMinutes({
+      startedAt: session.startedAt,
+      completedAt: session.completedAt,
+    });
+
+    const refreshReconnectEvents = await this.countSessionAuditEvents({
+      sessionId: session.id,
+      actionTerms: ['RECONNECT', 'REFRESH', 'RESUME', 'ROUTE_ESCAPE', 'ESCAPE'],
+    });
+
+    const duplicateAccessAttempts = await this.countSessionAuditEvents({
+      sessionId: session.id,
+      actionTerms: ['DUPLICATE', 'REPEATED_ACCESS'],
+    });
+
+    const inconsistentSubmissionEvents = await this.countSessionAuditEvents({
+      sessionId: session.id,
+      actionTerms: ['INCONSISTENT_SUBMISSION', 'SUBMISSION_ANOMALY'],
+    });
+
+    const compressedTimingEvents = this.countCompressedTimingEvents(session);
+    const interruptionHistory = await this.getInterruptionHistory(session.id);
+    const reviewerNotes = await this.getReviewerNotes(session.id);
+
+    const source = {
+      status: session.status,
+      completionTimeMinutes,
+      refreshReconnectEvents,
+      omissionRate,
+      duplicateAccessAttempts,
+      inconsistentSubmissionEvents,
+      compressedTimingEvents,
+      expectedItemCount,
+    };
+
+    const evaluation = this.evaluateSuspiciousFlags(source);
 
     return {
-      ...session,
+      sessionId: session.id,
+      participantIdentifier:
+        session.user.name ?? session.user.email ?? session.user.id,
+      sessionType: session.campaignId ? 'EMPLOYER_LINKED' : 'CONSUMER',
+      formId: session.assessmentFormId,
+      formLabel: session.assessmentForm.name,
+      status: session.status,
+      startedAt: session.startedAt?.toISOString() ?? null,
+      endedAt: session.completedAt?.toISOString() ?? null,
+      createdAt: session.createdAt.toISOString(),
+      updatedAt: session.updatedAt.toISOString(),
+      completionStatus: this.toCompletionStatus(session.status),
+      overallBand: session.score?.overallBand ?? null,
+      completionTimeMinutes,
+      refreshReconnectEvents,
+      omissionRate,
+      duplicateAccessAttempts,
+      inconsistentSubmissionEvents,
+      compressedTimingEvents,
+      interruptionHistory,
+      responsePatternSummary: this.buildResponsePatternSummary({
+        compressedTimingEvents,
+        omissionRate,
+        answeredCount: answeredResponses.length,
+        expectedItemCount,
+      }),
+      scoringOutcome: this.buildScoringOutcome(session),
+      reviewerNotes,
       suspiciousFlagStatus: evaluation.status,
       suspiciousIndicators: evaluation.indicators,
       suspiciousFlagReasons: evaluation.reasons,
     };
   }
 
-  private evaluateSuspiciousFlags(
-    session: InternalSessionSourceRecord,
-  ): SuspiciousFlagEvaluation {
+  private evaluateSuspiciousFlags(input: {
+    status: SessionStatus;
+    completionTimeMinutes: number | null;
+    refreshReconnectEvents: number;
+    omissionRate: number;
+    expectedItemCount: number;
+    duplicateAccessAttempts: number;
+    inconsistentSubmissionEvents: number;
+    compressedTimingEvents: number;
+  }): SuspiciousFlagEvaluation {
     const indicators: SuspiciousSessionIndicator[] = [];
     const reasons: string[] = [];
 
     if (
-      session.status === 'COMPLETED' &&
-      session.completionTimeMinutes !== null &&
-      session.completionTimeMinutes < 20
+      input.status === SessionStatus.COMPLETED &&
+      input.expectedItemCount >= 10 &&
+      input.completionTimeMinutes !== null &&
+      input.completionTimeMinutes < 20
     ) {
       indicators.push('UNUSUALLY_SHORT_COMPLETION_TIME');
       reasons.push(
-        'Completed session below the minimum expected time threshold.',
+        'Completed session below the minimum expected time threshold for a full assessment form.',
       );
     }
 
-    if (session.refreshReconnectEvents >= 4) {
+    if (input.refreshReconnectEvents >= 4) {
       indicators.push('REPEATED_REFRESH_RECONNECT');
       reasons.push('Repeated refresh or reconnect events were recorded.');
     }
 
-    if (session.compressedTimingEvents >= 2) {
+    if (input.compressedTimingEvents >= 2) {
       indicators.push('ABNORMAL_RESPONSE_TIMING');
       reasons.push('Compressed response timing pattern was detected.');
     }
 
-    if (session.duplicateAccessAttempts >= 2) {
+    if (input.duplicateAccessAttempts >= 2) {
       indicators.push('DUPLICATE_ACCESS_ANOMALY');
       reasons.push('Duplicate or repeated access behaviour was recorded.');
     }
 
-    if (session.inconsistentSubmissionEvents >= 1) {
+    if (input.inconsistentSubmissionEvents >= 1) {
       indicators.push('INCONSISTENT_SUBMISSION_PATTERN');
       reasons.push('Submission behaviour was inconsistent with normal flow.');
     }
 
-    if (session.omissionRate >= 0.3) {
+    if (
+      input.status === SessionStatus.COMPLETED &&
+      input.expectedItemCount >= 5 &&
+      input.omissionRate >= 0.3
+    ) {
       indicators.push('EXTREME_OMISSION_BEHAVIOUR');
-      reasons.push('Omission rate exceeded the internal review threshold.');
+      reasons.push(
+        'Completed session omission rate exceeded the internal review threshold.',
+      );
     }
 
     return {
@@ -291,5 +370,244 @@ export class InternalToolingService {
     }
 
     return 'NONE';
+  }
+
+  private toCompletionStatus(status: SessionStatus): InternalCompletionStatus {
+    if (status === SessionStatus.COMPLETED) {
+      return 'COMPLETE';
+    }
+
+    if (status === SessionStatus.NOT_STARTED) {
+      return 'NOT_STARTED';
+    }
+
+    return 'PARTIAL';
+  }
+
+  private calculateCompletionTimeMinutes({
+    startedAt,
+    completedAt,
+  }: {
+    startedAt: Date | null;
+    completedAt: Date | null;
+  }) {
+    if (!startedAt || !completedAt) {
+      return null;
+    }
+
+    return Math.max(
+      Math.round((completedAt.getTime() - startedAt.getTime()) / 60000),
+      0,
+    );
+  }
+
+  private countCompressedTimingEvents(session: SessionWithInternalRelations) {
+    const submittedResponses = session.responses
+      .filter((response) => response.submittedAt)
+      .sort((first, second) => {
+        const firstTime = first.submittedAt?.getTime() ?? 0;
+        const secondTime = second.submittedAt?.getTime() ?? 0;
+
+        return firstTime - secondTime;
+      });
+
+    let compressedTimingEvents = 0;
+
+    for (let index = 1; index < submittedResponses.length; index += 1) {
+      const previous = submittedResponses[index - 1]?.submittedAt;
+      const current = submittedResponses[index]?.submittedAt;
+
+      if (!previous || !current) {
+        continue;
+      }
+
+      const secondsBetweenResponses =
+        (current.getTime() - previous.getTime()) / 1000;
+
+      if (secondsBetweenResponses >= 0 && secondsBetweenResponses <= 5) {
+        compressedTimingEvents += 1;
+      }
+    }
+
+    return compressedTimingEvents;
+  }
+
+  private async countSessionAuditEvents({
+    sessionId,
+    actionTerms,
+  }: {
+    sessionId: string;
+    actionTerms: string[];
+  }) {
+    return this.prisma.auditLog.count({
+      where: {
+        entityType: 'Session',
+        entityId: sessionId,
+        OR: actionTerms.map((term) => ({
+          action: {
+            contains: term,
+          },
+        })),
+      },
+    });
+  }
+
+  private async getInterruptionHistory(sessionId: string) {
+    const auditLogs = await this.prisma.auditLog.findMany({
+      where: {
+        entityType: 'Session',
+        entityId: sessionId,
+        OR: [
+          { action: { contains: 'RECONNECT' } },
+          { action: { contains: 'REFRESH' } },
+          { action: { contains: 'RESUME' } },
+          { action: { contains: 'ROUTE_ESCAPE' } },
+          { action: { contains: 'ESCAPE' } },
+        ],
+      },
+      orderBy: {
+        createdAt: 'asc',
+      },
+      take: 20,
+    });
+
+    if (auditLogs.length === 0) {
+      return ['No interruption event was recorded in the audit log.'];
+    }
+
+    return auditLogs.map(
+      (auditLog) => `${auditLog.action} at ${auditLog.createdAt.toISOString()}`,
+    );
+  }
+
+  private async getReviewerNotes(sessionId: string) {
+    const auditLogs = await this.prisma.auditLog.findMany({
+      where: {
+        entityType: 'SESSION',
+        entityId: sessionId,
+        action: 'REVIEW_STATUS_CHANGED',
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      take: 5,
+    });
+
+    if (auditLogs.length === 0) {
+      return ['No reviewer note has been recorded for this session.'];
+    }
+
+    return auditLogs.map((auditLog) => {
+      const metadata = this.toPlainRecord(auditLog.metadata);
+      const notes = metadata.notes;
+
+      return typeof notes === 'string' && notes.trim().length > 0
+        ? notes
+        : `Review status updated at ${auditLog.createdAt.toISOString()}`;
+    });
+  }
+
+  private buildResponsePatternSummary({
+    compressedTimingEvents,
+    omissionRate,
+    answeredCount,
+    expectedItemCount,
+  }: {
+    compressedTimingEvents: number;
+    omissionRate: number;
+    answeredCount: number;
+    expectedItemCount: number;
+  }) {
+    if (expectedItemCount === 0) {
+      return 'No active form-item mappings were found for this session form.';
+    }
+
+    if (compressedTimingEvents >= 2 && omissionRate >= 0.3) {
+      return 'Compressed response timing and high omission behaviour were both detected.';
+    }
+
+    if (compressedTimingEvents >= 2) {
+      return 'Several responses were submitted within compressed timing windows.';
+    }
+
+    if (omissionRate >= 0.3) {
+      return 'Omissions are high relative to the active item count for the form.';
+    }
+
+    return `${answeredCount} of ${expectedItemCount} expected items have recorded answers, with no major timing pattern detected.`;
+  }
+
+  private buildScoringOutcome(session: SessionWithInternalRelations) {
+    if (!session.score) {
+      return 'No score record has been generated for this session.';
+    }
+
+    const rawScore =
+      session.score.overallRawScore === null ||
+      session.score.overallMaxScore === null
+        ? 'raw score unavailable'
+        : `${session.score.overallRawScore}/${session.score.overallMaxScore}`;
+
+    return `Overall band: ${session.score.overallBand ?? 'not assigned'}; overall score: ${rawScore}.`;
+  }
+
+  private toInternalAuditEvent(auditLog: AuditLogWithUser): InternalAuditEvent {
+    return {
+      id: auditLog.id,
+      action: auditLog.action,
+      entityType: auditLog.entityType,
+      entityId: auditLog.entityId,
+      actor: auditLog.user?.name ?? auditLog.user?.email ?? 'System',
+      actorUserId: auditLog.userId,
+      metadata: auditLog.metadata,
+      createdAt: auditLog.createdAt.toISOString(),
+    };
+  }
+
+  private toInternalReviewStatusRecord(
+    auditLog: AuditLogWithUser,
+  ): InternalReviewStatusRecord {
+    const metadata = this.toPlainRecord(auditLog.metadata);
+
+    return {
+      id: auditLog.id,
+      targetType:
+        metadata.targetType === 'ITEM' || metadata.targetType === 'SESSION'
+          ? metadata.targetType
+          : 'SESSION',
+      targetId:
+        typeof metadata.targetId === 'string'
+          ? metadata.targetId
+          : (auditLog.entityId ?? auditLog.id),
+      status:
+        metadata.status === 'UNDER_REVIEW' ||
+        metadata.status === 'NEEDS_REVISION' ||
+        metadata.status === 'APPROVED' ||
+        metadata.status === 'SUSPICIOUS_REVIEWED' ||
+        metadata.status === 'FALSE_POSITIVE' ||
+        metadata.status === 'RETIRE_RECOMMENDED'
+          ? metadata.status
+          : 'UNDER_REVIEW',
+      reviewer:
+        typeof metadata.reviewer === 'string'
+          ? metadata.reviewer
+          : (auditLog.user?.name ??
+            auditLog.user?.email ??
+            'Internal reviewer'),
+      notes: typeof metadata.notes === 'string' ? metadata.notes : '',
+      updatedAt: auditLog.createdAt.toISOString(),
+    };
+  }
+
+  private toPlainRecord(value: unknown): Record<string, unknown> {
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      return value as Record<string, unknown>;
+    }
+
+    return {};
+  }
+
+  private toJsonValue(value: unknown): Prisma.InputJsonValue {
+    return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
   }
 }
