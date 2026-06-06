@@ -15,6 +15,7 @@ import { ScoringModule } from './scoring/scoring.module';
 import { ReportsModule } from './reports/reports.module';
 import { AuditModule } from './audit/audit.module';
 import { DiagnosticsModule } from './diagnostics/diagnostics.module';
+import { InternalToolingModule } from './internal-tooling/internal-tooling.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { DiagnosticsModule } from './diagnostics/diagnostics.module';
     ReportsModule,
     AuditModule,
     DiagnosticsModule,
+    InternalToolingModule,
   ],
   controllers: [AppController],
   providers: [AppService],

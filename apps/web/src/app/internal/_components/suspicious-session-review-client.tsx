@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useMemo, useState } from 'react';
 
 import {
@@ -122,13 +123,24 @@ export function SuspiciousSessionReviewClient() {
                 </p>
               </div>
 
-              <div className="flex flex-wrap gap-2">
-                <span className="rounded-full border border-slate-300 bg-white px-2 py-1 text-xs font-semibold">
-                  {suspiciousFlagStatusLabels[session.suspiciousFlagStatus]}
-                </span>
-                <span className="rounded-full border border-slate-300 bg-white px-2 py-1 text-xs font-semibold">
-                  {sessionStatusLabels[session.status]}
-                </span>
+              <div className="flex flex-col gap-3 lg:items-end">
+                <div className="flex flex-wrap gap-2">
+                  <span className="rounded-full border border-slate-300 bg-white px-2 py-1 text-xs font-semibold">
+                    {suspiciousFlagStatusLabels[session.suspiciousFlagStatus]}
+                  </span>
+                  <span className="rounded-full border border-slate-300 bg-white px-2 py-1 text-xs font-semibold">
+                    {sessionStatusLabels[session.status]}
+                  </span>
+                </div>
+
+                <Link
+                  href={`/internal/admin/sessions/${encodeURIComponent(
+                    session.sessionId
+                  )}`}
+                  className="w-fit rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white"
+                >
+                  Open detail review
+                </Link>
               </div>
             </div>
 
