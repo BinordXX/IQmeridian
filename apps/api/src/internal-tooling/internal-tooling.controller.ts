@@ -1,13 +1,19 @@
 import {
+  Body,
   Controller,
   ForbiddenException,
   Get,
   Headers,
   NotFoundException,
   Param,
+  Post,
 } from '@nestjs/common';
 
 import { InternalToolingService } from './internal-tooling.service';
+import {
+  CreateInternalAuditEventInput,
+  CreateInternalReviewStatusInput,
+} from './internal-tooling.types';
 
 type InternalApiRole = 'PLATFORM_ADMIN' | 'RESEARCHER';
 
@@ -62,7 +68,7 @@ export class InternalToolingController {
   }
 
   @Get('sessions/:sessionId')
-  getSessionById(
+  async getSessionById(
     @Param('sessionId') sessionId: string,
     @Headers('x-internal-role') roleHeader?: string,
   ) {
@@ -71,7 +77,7 @@ export class InternalToolingController {
       allowedRoles: ['PLATFORM_ADMIN'],
     });
 
-    const session = this.internalToolingService.getSessionById(sessionId);
+    const session = await this.internalToolingService.getSessionById(sessionId);
 
     if (!session) {
       throw new NotFoundException('Internal session record was not found.');
@@ -90,5 +96,53 @@ export class InternalToolingController {
     });
 
     return this.internalToolingService.getAnalyticsExportDefinitions();
+  }
+
+  @Get('audit')
+  getInternalAuditEvents(@Headers('x-internal-role') roleHeader?: string) {
+    assertInternalAccess({
+      roleHeader,
+      allowedRoles: ['PLATFORM_ADMIN'],
+    });
+
+    return this.internalToolingService.getInternalAuditEvents();
+  }
+
+  @Post('audit')
+  recordInternalAuditEvent(
+    @Body() input: CreateInternalAuditEventInput,
+    @Headers('x-internal-role') roleHeader?: string,
+  ) {
+    assertInternalAccess({
+      roleHeader,
+      allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
+    });
+
+    return this.internalToolingService.recordInternalAuditEvent(input);
+  }
+
+  @Get('review-statuses')
+  getInternalReviewStatusRecords(
+    @Headers('x-internal-role') roleHeader?: string,
+  ) {
+    assertInternalAccess({
+      roleHeader,
+      allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
+    });
+
+    return this.internalToolingService.getInternalReviewStatusRecords();
+  }
+
+  @Post('review-statuses')
+  recordInternalReviewStatus(
+    @Body() input: CreateInternalReviewStatusInput,
+    @Headers('x-internal-role') roleHeader?: string,
+  ) {
+    assertInternalAccess({
+      roleHeader,
+      allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
+    });
+
+    return this.internalToolingService.recordInternalReviewStatus(input);
   }
 }
