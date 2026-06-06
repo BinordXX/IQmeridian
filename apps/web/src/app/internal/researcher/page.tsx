@@ -1,128 +1,220 @@
-import { redirect } from 'next/navigation';
+import Link from 'next/link';
 
-import { guardResearcherRoute } from '@/features/internal/guards/internal-route-guards';
+import {
+  formPerformanceSummaries,
+  formatInternalDuration,
+  formatInternalRate,
+  internalItems,
+  internalSessionReviewRecords,
+  itemDomainLabels,
+  itemStatusLabels,
+  sectionPerformanceSummaries,
+} from '../_data/internal-tooling-data';
 
-const MetricCard = ({
-  label,
-  value,
-  helper,
-}: {
-  label: string;
-  value: string | number;
-  helper: string;
-}) => {
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <p className="text-sm font-medium text-slate-500">{label}</p>
-      <p className="mt-3 text-3xl font-bold text-slate-950">{value}</p>
-      <p className="mt-2 text-sm text-slate-600">{helper}</p>
-    </div>
+export default function InternalResearcherDashboardPage() {
+  const totalItemsByStatus = {
+    DRAFT: internalItems.filter((item) => item.status === 'DRAFT').length,
+    ACTIVE: internalItems.filter((item) => item.status === 'ACTIVE').length,
+    UNDER_REVIEW: internalItems.filter((item) => item.status === 'UNDER_REVIEW')
+      .length,
+    RETIRED: internalItems.filter((item) => item.status === 'RETIRED').length,
+  };
+
+  const activeItemsByDomain = Object.entries(itemDomainLabels).map(
+    ([domain, label]) => ({
+      domain,
+      label,
+      count: internalItems.filter(
+        (item) => item.domain === domain && item.status === 'ACTIVE'
+      ).length,
+    })
   );
-};
 
-export default async function InternalResearcherPage() {
-  const guard = await guardResearcherRoute();
+  const recentSessionVolume = internalSessionReviewRecords.length;
+  const flaggedSessionCount = internalSessionReviewRecords.filter(
+    (session) => session.suspiciousFlagStatus !== 'NONE'
+  ).length;
+  const itemsNeedingReview = internalItems.filter(
+    (item) => item.status === 'UNDER_REVIEW' || Boolean(item.flaggedReason)
+  );
 
-  if (!guard.allowed) {
-    redirect('/internal/unavailable');
-  }
-
-  const { data } = guard;
+  const averageSectionCompletionTime =
+    sectionPerformanceSummaries.reduce(
+      (total, section) => total + section.averageCompletionTimeMinutes,
+      0
+    ) / sectionPerformanceSummaries.length;
 
   return (
-    <div className="space-y-8">
-      <section>
-        <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-          Researcher workspace
-        </p>
+    <main className="min-h-screen bg-slate-50 px-6 py-8 text-slate-950">
+      <div className="mx-auto flex max-w-7xl flex-col gap-6">
+        <nav className="flex flex-wrap gap-3 text-sm">
+          <Link href="/internal" className="font-medium text-slate-600">
+            Internal dashboard
+          </Link>
+          <span className="text-slate-400">/</span>
+          <span className="font-semibold text-slate-950">
+            Researcher analytics
+          </span>
+        </nav>
 
-        <h2 className="mt-2 text-3xl font-bold text-slate-950">
-          Assessment data review
-        </h2>
+        <header className="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.25em] text-slate-500">
+              Researcher dashboard
+            </p>
+            <h1 className="mt-3 text-3xl font-semibold tracking-tight">
+              Internal quality-monitoring surface
+            </h1>
+            <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
+              This dashboard gives researchers a compact view of item status,
+              domain coverage, form usage, recent session volume, suspicious
+              review pressure, completion timing, and items that require closer
+              inspection.
+            </p>
+          </div>
 
-        <p className="mt-3 max-w-4xl text-sm leading-6 text-slate-600">
-          This workspace is for reviewing assessment sessions, response
-          completeness, scoring availability, and report outputs. It is separate
-          from platform administration and employer-facing campaign management.
-        </p>
-      </section>
+          <div className="flex flex-wrap gap-3">
+            <Link
+              href="/internal/researcher/item-bank"
+              className="rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white"
+            >
+              Open item bank
+            </Link>
+            <Link
+              href="/internal/researcher/performance"
+              className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800"
+            >
+              Section/form analytics
+            </Link>
+          </div>
+        </header>
 
-      <section className="grid gap-4 md:grid-cols-3">
-        <MetricCard
-          label="Sessions"
-          value={data.metrics.sessionCount}
-          helper="Assessment sessions available for review"
-        />
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {Object.entries(totalItemsByStatus).map(([status, count]) => (
+            <article
+              key={status}
+              className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+            >
+              <p className="text-sm font-medium text-slate-500">
+                {itemStatusLabels[status as keyof typeof itemStatusLabels]}
+              </p>
+              <p className="mt-3 text-3xl font-semibold">{count}</p>
+              <p className="mt-2 text-sm text-slate-600">Items by status</p>
+            </article>
+          ))}
+        </section>
 
-        <MetricCard
-          label="Completed sessions"
-          value={data.metrics.completedSessionCount}
-          helper="Submitted sessions available for analysis"
-        />
+        <section className="grid gap-6 lg:grid-cols-[1fr_0.8fr]">
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 className="text-lg font-semibold">Active items by domain</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              This helps researchers see whether operational coverage is
+              concentrated in some domains while others remain underdeveloped.
+            </p>
 
-        <MetricCard
-          label="Reports"
-          value={data.metrics.reportCount}
-          helper="Generated reports linked to scoring"
-        />
-      </section>
+            <div className="mt-5 grid gap-3 md:grid-cols-2">
+              {activeItemsByDomain.map((domain) => (
+                <div
+                  key={domain.domain}
+                  className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3 text-sm"
+                >
+                  <span className="text-slate-600">{domain.label}</span>
+                  <span className="font-semibold">{domain.count}</span>
+                </div>
+              ))}
+            </div>
+          </div>
 
-      <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="border-b border-slate-100 px-5 py-4">
-          <h3 className="text-lg font-semibold text-slate-950">
-            Recent sessions
-          </h3>
+          <aside className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 className="text-lg font-semibold">Researcher indicators</h2>
 
-          <p className="mt-1 text-sm text-slate-600">
-            Session-level operational data for research review.
-          </p>
-        </div>
+            <dl className="mt-5 space-y-3 text-sm">
+              <div className="flex justify-between rounded-xl bg-slate-50 px-4 py-3">
+                <dt className="text-slate-500">Forms in use</dt>
+                <dd className="font-semibold">
+                  {
+                    formPerformanceSummaries.filter(
+                      (form) => form.completedSessions > 0
+                    ).length
+                  }
+                </dd>
+              </div>
+              <div className="flex justify-between rounded-xl bg-slate-50 px-4 py-3">
+                <dt className="text-slate-500">Recent session volume</dt>
+                <dd className="font-semibold">{recentSessionVolume}</dd>
+              </div>
+              <div className="flex justify-between rounded-xl bg-slate-50 px-4 py-3">
+                <dt className="text-slate-500">Flagged sessions</dt>
+                <dd className="font-semibold">{flaggedSessionCount}</dd>
+              </div>
+              <div className="flex justify-between rounded-xl bg-slate-50 px-4 py-3">
+                <dt className="text-slate-500">Average section time</dt>
+                <dd className="font-semibold">
+                  {formatInternalDuration(
+                    Math.round(averageSectionCompletionTime * 10) / 10
+                  )}
+                </dd>
+              </div>
+            </dl>
+          </aside>
+        </section>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="text-sm text-slate-500">
-                <th className="px-4 py-3 font-medium">Session</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium">Campaign</th>
-                <th className="px-4 py-3 font-medium">Completed</th>
-              </tr>
-            </thead>
+        <section className="grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 className="text-lg font-semibold">Forms in use</h2>
 
-            <tbody>
-              {data.sessions.length > 0 ? (
-                data.sessions.slice(0, 10).map((session) => (
-                  <tr key={session.id} className="border-t border-slate-100">
-                    <td className="px-4 py-4 text-sm font-medium text-slate-950">
-                      {session.id}
-                    </td>
-                    <td className="px-4 py-4 text-sm text-slate-700">
-                      {session.status}
-                    </td>
-                    <td className="px-4 py-4 text-sm text-slate-700">
-                      {session.campaignId ?? 'Consumer session'}
-                    </td>
-                    <td className="px-4 py-4 text-sm text-slate-700">
-                      {session.completedAt
-                        ? new Date(session.completedAt).toLocaleString()
-                        : 'Not completed'}
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td
-                    colSpan={4}
-                    className="px-4 py-10 text-center text-sm text-slate-500"
+            <div className="mt-5 space-y-3">
+              {formPerformanceSummaries.map((form) => (
+                <article
+                  key={form.formId}
+                  className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm"
+                >
+                  <p className="font-semibold">{form.formLabel}</p>
+                  <p className="mt-1 text-slate-600">
+                    Completion rate {formatInternalRate(form.completionRate)} ·
+                    average time{' '}
+                    {formatInternalDuration(form.averageCompletionTimeMinutes)}
+                  </p>
+                </article>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 className="text-lg font-semibold">Items needing review</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Items appear here when they are under review or already have an
+              active flag reason.
+            </p>
+
+            <div className="mt-5 space-y-3">
+              {itemsNeedingReview.map((item) => (
+                <article
+                  key={item.id}
+                  className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm md:flex-row md:items-start md:justify-between"
+                >
+                  <div>
+                    <p className="font-semibold">{item.id}</p>
+                    <p className="mt-1 text-slate-600">{item.label}</p>
+                    <p className="mt-2 text-xs text-slate-500">
+                      {item.flaggedReason ?? 'Review required'}
+                    </p>
+                  </div>
+
+                  <Link
+                    href={`/internal/researcher/item-bank/${encodeURIComponent(
+                      item.id
+                    )}`}
+                    className="w-fit rounded-full border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-800"
                   >
-                    No sessions are available for research review.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </section>
-    </div>
+                    Open item
+                  </Link>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
   );
 }

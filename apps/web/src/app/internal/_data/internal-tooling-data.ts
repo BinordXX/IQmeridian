@@ -810,12 +810,25 @@ export type AnalyticsExportDataset =
   | 'SCORE_LEVEL'
   | 'CAMPAIGN_SUMMARY';
 
+export type AnalyticsExportFormat = 'CSV' | 'JSON';
+
 export type AnalyticsExportDefinition = {
   dataset: AnalyticsExportDataset;
   label: string;
   description: string;
-  format: 'CSV' | 'JSON';
+  supportedFormats: AnalyticsExportFormat[];
+  defaultFormat: AnalyticsExportFormat;
   currentlyAvailable: boolean;
+  requiredRole: 'PLATFORM_ADMIN' | 'RESEARCHER';
+};
+
+export type AnalyticsExportScopeOptions = {
+  campaigns: string[];
+  forms: string[];
+  domains: InternalItemDomain[];
+  items: string[];
+  sessionStatuses: InternalSessionStatus[];
+  suspiciousFlagStatuses: SuspiciousFlagStatus[];
 };
 
 export const analyticsExportDefinitions: AnalyticsExportDefinition[] = [
@@ -824,42 +837,65 @@ export const analyticsExportDefinitions: AnalyticsExportDefinition[] = [
     label: 'Item-level data',
     description:
       'Item metadata, status, domain, active state, review flags, and item-performance indicators.',
-    format: 'CSV',
+    supportedFormats: ['CSV', 'JSON'],
+    defaultFormat: 'CSV',
     currentlyAvailable: true,
+    requiredRole: 'RESEARCHER',
   },
   {
     dataset: 'SESSION_LEVEL',
     label: 'Session-level data',
     description:
       'Session status, participant identifier, form used, timestamps, completion state, and suspicious markers.',
-    format: 'CSV',
+    supportedFormats: ['CSV', 'JSON'],
+    defaultFormat: 'CSV',
     currentlyAvailable: true,
+    requiredRole: 'PLATFORM_ADMIN',
   },
   {
     dataset: 'RESPONSE_LEVEL',
     label: 'Response-level data',
     description:
       'Candidate responses, item identifiers, response timing, omission state, and answer correctness.',
-    format: 'CSV',
+    supportedFormats: ['CSV'],
+    defaultFormat: 'CSV',
     currentlyAvailable: false,
+    requiredRole: 'RESEARCHER',
   },
   {
     dataset: 'SCORE_LEVEL',
     label: 'Score-level data',
     description:
       'Section scores, overall score bands, score spread, and scoring timestamps.',
-    format: 'CSV',
+    supportedFormats: ['CSV'],
+    defaultFormat: 'CSV',
     currentlyAvailable: false,
+    requiredRole: 'RESEARCHER',
   },
   {
     dataset: 'CAMPAIGN_SUMMARY',
     label: 'Campaign-level summaries',
     description:
       'Campaign-level completion, invitation usage, form distribution, and aggregate score outcomes.',
-    format: 'JSON',
+    supportedFormats: ['CSV', 'JSON'],
+    defaultFormat: 'CSV',
     currentlyAvailable: true,
+    requiredRole: 'PLATFORM_ADMIN',
   },
 ];
+
+export const analyticsExportScopeOptions: AnalyticsExportScopeOptions = {
+  campaigns: [
+    'All campaigns',
+    'Graduate hiring pilot',
+    'Consumer practice release',
+  ],
+  forms: ['All forms', 'FORM-A', 'FORM-B', 'FORM-C'],
+  domains: ['ABSTRACT', 'NUMERICAL', 'VERBAL', 'SPATIAL', 'WORKING_MEMORY'],
+  items: ['All items', ...internalItems.map((item) => item.id)],
+  sessionStatuses: ['IN_PROGRESS', 'COMPLETED', 'EXPIRED', 'ABANDONED'],
+  suspiciousFlagStatuses: ['NONE', 'LOW', 'MEDIUM', 'HIGH'],
+};
 
 export function getInternalSessionReviewRecordById(sessionId: string) {
   return internalSessionReviewRecords.find(
