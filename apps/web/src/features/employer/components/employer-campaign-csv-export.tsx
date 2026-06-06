@@ -30,7 +30,17 @@ export const EmployerCampaignCsvExport = ({
   invitations,
   sessions,
 }: EmployerCampaignCsvExportProps) => {
+  const completedSessions = sessions.filter((session) => {
+    return session.status === 'COMPLETED';
+  });
+
+  const canExport = completedSessions.length > 0;
+
   const exportCsv = () => {
+    if (!canExport) {
+      return;
+    }
+
     const rows = invitations.map((invitation) => {
       const session = sessions.find((entry) => {
         return entry.invitationId === invitation.id;
@@ -82,12 +92,22 @@ export const EmployerCampaignCsvExport = ({
   };
 
   return (
-    <button
-      type="button"
-      onClick={exportCsv}
-      className="rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800"
-    >
-      Export CSV summary
-    </button>
+    <div>
+      <button
+        type="button"
+        onClick={exportCsv}
+        disabled={!canExport}
+        className="rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+      >
+        Export CSV summary
+      </button>
+
+      {!canExport ? (
+        <p className="mt-2 max-w-xs text-xs leading-5 text-slate-500">
+          CSV export becomes available after at least one candidate has
+          completed the assessment.
+        </p>
+      ) : null}
+    </div>
   );
 };

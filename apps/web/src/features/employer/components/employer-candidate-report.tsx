@@ -1,5 +1,5 @@
 import Link from 'next/link';
-
+import { EmployerStatePanel } from './employer-state-panel';
 import type {
   EmployerCampaignDetail,
   EmployerInvitationSummary,
@@ -93,12 +93,21 @@ export const EmployerCandidateReport = ({
       </section>
 
       {!report ? (
-        <EmployerReportActions
-          campaignId={campaign.id}
-          candidateId={session.id}
-          sessionId={session.id}
-          canGenerateReport={canGenerateReport}
-        />
+        <div className="space-y-4">
+          <EmployerStatePanel
+            eyebrow="Report not generated"
+            title="No employer report is available yet"
+            body="This candidate has no generated employer report. Generate the report once the session is completed and scoring is available."
+            tone="warning"
+          />
+
+          <EmployerReportActions
+            campaignId={campaign.id}
+            candidateId={session.id}
+            sessionId={session.id}
+            canGenerateReport={canGenerateReport}
+          />
+        </div>
       ) : null}
 
       <section className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">

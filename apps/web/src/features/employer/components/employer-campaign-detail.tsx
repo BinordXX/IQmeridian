@@ -44,6 +44,9 @@ export const EmployerCampaignDetail = ({
 }: EmployerCampaignDetailProps) => {
   const invitations: EmployerInvitationSummary[] = campaign.invitations ?? [];
   const sessions = campaign.sessions ?? [];
+  const hasCompletedSessions = sessions.some((session) => {
+    return session.status === 'COMPLETED';
+  });
 
   return (
     <div className="space-y-8">
@@ -107,7 +110,7 @@ export const EmployerCampaignDetail = ({
               sessions={sessions}
             />
 
-            <EmployerCampaignPdfExport />
+            <EmployerCampaignPdfExport canExport={hasCompletedSessions} />
           </div>
         </div>
       </section>
