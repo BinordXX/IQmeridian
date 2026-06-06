@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 
+import { InternalAccessBoundary } from './_components/internal-access-boundary';
+
 type InternalLayoutProps = {
   children: ReactNode;
 };
@@ -29,11 +31,31 @@ export default function InternalLayout({ children }: InternalLayoutProps) {
             <Link href="/internal/researcher" className="hover:text-slate-950">
               Researcher
             </Link>
+            <Link
+              href="/internal/researcher/item-bank"
+              className="hover:text-slate-950"
+            >
+              Item bank
+            </Link>
+            <Link
+              href="/internal/admin/sessions"
+              className="hover:text-slate-950"
+            >
+              Sessions
+            </Link>
+            <Link
+              href="/internal/admin/exports"
+              className="hover:text-slate-950"
+            >
+              Exports
+            </Link>
           </nav>
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-6 py-8">{children}</main>
+      <InternalAccessBoundary>
+        <main className="mx-auto max-w-7xl px-6 py-8">{children}</main>
+      </InternalAccessBoundary>
     </div>
   );
 }
