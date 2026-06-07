@@ -210,7 +210,7 @@ export class InternalToolingService {
     );
   }
 
-    async getInternalItemTraceability(
+  async getInternalItemTraceability(
     itemId: string,
   ): Promise<InternalItemTraceabilityOutput | undefined> {
     const item = await this.prisma.item.findUnique({
@@ -718,7 +718,7 @@ export class InternalToolingService {
       numericalBand: score?.numericalBand ?? null,
     };
   }
-  
+
   private async toInternalSessionOutput(
     session: SessionWithInternalRelations,
   ): Promise<InternalSessionOutput> {

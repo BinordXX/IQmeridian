@@ -1,6 +1,6 @@
-import Link from "next/link";
+import Link from 'next/link';
 
-import { fetchReportScoreAuditRecords } from "../../_lib/internal-api";
+import { fetchReportScoreAuditRecords } from '../../_lib/internal-api';
 
 export default async function InternalReportScoreAuditPage() {
   const records = await fetchReportScoreAuditRecords();
@@ -26,8 +26,8 @@ export default async function InternalReportScoreAuditPage() {
         </h1>
         <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
           This view shows how reports and scores were generated, including
-          scoring version, report version, report timestamp, visibility category,
-          score state, and associated form/session context.
+          scoring version, report version, report timestamp, visibility
+          category, score state, and associated form/session context.
         </p>
       </header>
 
@@ -54,22 +54,18 @@ export default async function InternalReportScoreAuditPage() {
             <tbody className="divide-y divide-slate-200 bg-white">
               {records.map((record) => (
                 <tr key={record.reportId} className="align-top">
-                  <td className="px-4 py-4 font-semibold">
-                    {record.reportId}
-                  </td>
+                  <td className="px-4 py-4 font-semibold">{record.reportId}</td>
                   <td className="px-4 py-4">
                     <Link
                       href={`/internal/admin/sessions/${encodeURIComponent(
-                        record.sessionId,
+                        record.sessionId
                       )}`}
                       className="font-medium underline-offset-4 hover:underline"
                     >
                       {record.sessionId}
                     </Link>
                   </td>
-                  <td className="px-4 py-4">
-                    {record.participantIdentifier}
-                  </td>
+                  <td className="px-4 py-4">{record.participantIdentifier}</td>
                   <td className="px-4 py-4">
                     <p className="font-medium">{record.formId}</p>
                     <p className="mt-1 text-xs text-slate-500">
@@ -77,10 +73,10 @@ export default async function InternalReportScoreAuditPage() {
                     </p>
                   </td>
                   <td className="px-4 py-4">
-                    {record.formVersion ?? "Not recorded"}
+                    {record.formVersion ?? 'Not recorded'}
                   </td>
                   <td className="px-4 py-4">
-                    {record.scoringVersion ?? "Not scored"}
+                    {record.scoringVersion ?? 'Not scored'}
                   </td>
                   <td className="px-4 py-4">{record.reportVersion}</td>
                   <td className="px-4 py-4">
@@ -89,12 +85,12 @@ export default async function InternalReportScoreAuditPage() {
                   <td className="px-4 py-4">{record.reportType}</td>
                   <td className="px-4 py-4">{record.visibilityCategory}</td>
                   <td className="px-4 py-4">
-                    {record.overallBand ?? "Not assigned"}
+                    {record.overallBand ?? 'Not assigned'}
                   </td>
                   <td className="px-4 py-4">
                     {record.overallRawScore === null ||
                     record.overallMaxScore === null
-                      ? "Not available"
+                      ? 'Not available'
                       : `${record.overallRawScore}/${record.overallMaxScore}`}
                   </td>
                 </tr>

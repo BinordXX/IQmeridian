@@ -68,13 +68,13 @@ export default async function InternalItemDetailPage({
             View performance
           </Link>
           <Link
-  href={`/internal/researcher/item-bank/${encodeURIComponent(
-    item.id,
-  )}/traceability`}
-  className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800"
->
-  View traceability
-</Link>
+            href={`/internal/researcher/item-bank/${encodeURIComponent(
+              item.id
+            )}/traceability`}
+            className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800"
+          >
+            View traceability
+          </Link>
         </div>
       </header>
 

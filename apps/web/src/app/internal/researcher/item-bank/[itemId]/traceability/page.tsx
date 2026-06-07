@@ -1,10 +1,10 @@
-import Link from "next/link";
-import { notFound } from "next/navigation";
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
 
 import {
   fetchInternalItemTraceability,
   formatJsonValue,
-} from "../../../../_lib/internal-api";
+} from '../../../../_lib/internal-api';
 
 export default async function InternalItemTraceabilityPage({
   params,
@@ -16,7 +16,7 @@ export default async function InternalItemTraceabilityPage({
   const { itemId } = await params;
 
   const traceability = await fetchInternalItemTraceability(
-    decodeURIComponent(itemId),
+    decodeURIComponent(itemId)
   )
     .then((record) => record)
     .catch(() => null);
@@ -41,7 +41,7 @@ export default async function InternalItemTraceabilityPage({
         <span className="text-slate-400">/</span>
         <Link
           href={`/internal/researcher/item-bank/${encodeURIComponent(
-            traceability.itemId,
+            traceability.itemId
           )}`}
           className="font-medium text-slate-600"
         >
@@ -126,11 +126,9 @@ export default async function InternalItemTraceabilityPage({
                     </p>
                   </td>
                   <td className="px-4 py-4">
-                    {form.sectionId ?? "Not linked"}
+                    {form.sectionId ?? 'Not linked'}
                   </td>
-                  <td className="px-4 py-4">
-                    {form.orderIndex ?? "Not set"}
-                  </td>
+                  <td className="px-4 py-4">{form.orderIndex ?? 'Not set'}</td>
                   <td className="px-4 py-4">{form.mappingStatus}</td>
                   <td className="px-4 py-4">{form.exposureCount}</td>
                   <td className="px-4 py-4">{form.validResponses}</td>
@@ -174,20 +172,18 @@ export default async function InternalItemTraceabilityPage({
                   <td className="px-4 py-4">
                     <Link
                       href={`/internal/admin/sessions/${encodeURIComponent(
-                        session.sessionId,
+                        session.sessionId
                       )}`}
                       className="font-semibold text-slate-950 underline-offset-4 hover:underline"
                     >
                       {session.sessionId}
                     </Link>
                   </td>
-                  <td className="px-4 py-4">
-                    {session.participantIdentifier}
-                  </td>
+                  <td className="px-4 py-4">{session.participantIdentifier}</td>
                   <td className="px-4 py-4">{session.formId}</td>
                   <td className="px-4 py-4">{session.sessionStatus}</td>
                   <td className="px-4 py-4">
-                    {session.answeredItem ? "Yes" : "No"}
+                    {session.answeredItem ? 'Yes' : 'No'}
                   </td>
                   <td className="px-4 py-4">
                     <pre className="max-w-[220px] overflow-auto rounded-lg bg-slate-50 p-2 text-xs">
@@ -195,10 +191,10 @@ export default async function InternalItemTraceabilityPage({
                     </pre>
                   </td>
                   <td className="px-4 py-4">
-                    {session.submittedAt ?? "Not submitted"}
+                    {session.submittedAt ?? 'Not submitted'}
                   </td>
                   <td className="px-4 py-4">
-                    {session.overallBand ?? "Not scored"}
+                    {session.overallBand ?? 'Not scored'}
                   </td>
                 </tr>
               ))}

@@ -211,7 +211,9 @@ async function fetchInternalApi<T>({
   path: string;
   role?: 'PLATFORM_ADMIN' | 'RESEARCHER';
 }): Promise<T> {
-  const response = await fetch(`${getInternalApiBaseUrl()}${path}`, {
+  const url = `${getInternalApiBaseUrl()}${path}`;
+
+  const response = await fetch(url, {
     cache: 'no-store',
     headers: {
       'x-internal-role': role,
@@ -219,8 +221,26 @@ async function fetchInternalApi<T>({
   });
 
   if (!response.ok) {
+    let details = '';
+
+    try {
+      const body = (await response.json()) as {
+        message?: string;
+        error?: string;
+        statusCode?: number;
+      };
+
+      details = body.message
+        ? ` ${body.message}`
+        : body.error
+          ? ` ${body.error}`
+          : '';
+    } catch {
+      details = '';
+    }
+
     throw new Error(
-      `Internal API request failed: ${response.status} ${response.statusText}`
+      `Internal API request failed for ${path}: ${response.status} ${response.statusText}.${details}`
     );
   }
 
@@ -421,13 +441,13 @@ export function fetchAdminOverview() {
 export function fetchInternalItemTraceability(itemId: string) {
   return fetchInternalApi<InternalItemTraceabilityOutput>({
     path: `/internal/items/${encodeURIComponent(itemId)}/traceability`,
-    role: "RESEARCHER",
+    role: 'RESEARCHER',
   });
 }
 
 export function fetchReportScoreAuditRecords() {
   return fetchInternalApi<InternalReportScoreAuditOutput[]>({
-    path: "/internal/reports/score-audit",
-    role: "RESEARCHER",
+    path: '/internal/reports/score-audit',
+    role: 'RESEARCHER',
   });
 }

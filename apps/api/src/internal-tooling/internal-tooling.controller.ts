@@ -112,9 +112,7 @@ export class InternalToolingController {
   }
 
   @Get('reports/score-audit')
-  getReportScoreAuditRecords(
-    @Headers('x-internal-role') roleHeader?: string,
-  ) {
+  getReportScoreAuditRecords(@Headers('x-internal-role') roleHeader?: string) {
     assertInternalAccess({
       roleHeader,
       allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
@@ -122,7 +120,6 @@ export class InternalToolingController {
 
     return this.internalToolingService.getReportScoreAuditRecords();
   }
-
 
   @Get('items')
   getInternalItems(@Headers('x-internal-role') roleHeader?: string) {
