@@ -107,3 +107,51 @@ export type CreateInternalReviewStatusInput = {
   reviewer: string;
   notes: string;
 };
+
+export type InternalItemOutput = {
+  id: string;
+  label: string;
+  domain: string;
+  itemType: string;
+  prompt: string;
+  options: unknown;
+  correctAnswer: unknown;
+  difficulty: string | null;
+  status: string;
+  version: number;
+  active: boolean;
+  historicallyActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  formAssociationCount: number;
+  activeFormAssociationCount: number;
+  performance: InternalItemPerformanceOutput;
+};
+
+export type InternalItemPerformanceOutput = {
+  itemId: string;
+  exposureCount: number;
+  validResponses: number;
+  correctResponseRate: number;
+  omissionCount: number;
+  averageResponseTimeSeconds: number | null;
+  activeFormAssociations: number;
+};
+
+export type InternalItemDetailOutput = InternalItemOutput & {
+  statusHistory: {
+    id: string;
+    action: string;
+    actor: string;
+    summary: string;
+    occurredAt: string;
+  }[];
+  formAssociations: {
+    id: string;
+    formId: string;
+    sectionId: string | null;
+    status: string;
+    orderIndex: number | null;
+  }[];
+  reviewNotes: string[];
+};

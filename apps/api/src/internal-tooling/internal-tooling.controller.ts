@@ -46,7 +46,54 @@ export class InternalToolingController {
   constructor(
     private readonly internalToolingService: InternalToolingService,
   ) {}
+  @Get('items')
+  getInternalItems(@Headers('x-internal-role') roleHeader?: string) {
+    assertInternalAccess({
+      roleHeader,
+      allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
+    });
 
+    return this.internalToolingService.getInternalItems();
+  }
+
+  @Get('items/:itemId/performance')
+  async getInternalItemPerformance(
+    @Param('itemId') itemId: string,
+    @Headers('x-internal-role') roleHeader?: string,
+  ) {
+    assertInternalAccess({
+      roleHeader,
+      allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
+    });
+
+    const performance =
+      await this.internalToolingService.getInternalItemPerformance(itemId);
+
+    if (!performance) {
+      throw new NotFoundException('Internal item performance was not found.');
+    }
+
+    return performance;
+  }
+
+  @Get('items/:itemId')
+  async getInternalItemById(
+    @Param('itemId') itemId: string,
+    @Headers('x-internal-role') roleHeader?: string,
+  ) {
+    assertInternalAccess({
+      roleHeader,
+      allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
+    });
+
+    const item = await this.internalToolingService.getInternalItemById(itemId);
+
+    if (!item) {
+      throw new NotFoundException('Internal item record was not found.');
+    }
+
+    return item;
+  }
   @Get('sessions')
   getSessionReviewRecords(@Headers('x-internal-role') roleHeader?: string) {
     assertInternalAccess({

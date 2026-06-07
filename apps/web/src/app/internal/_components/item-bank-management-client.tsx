@@ -4,39 +4,15 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 
 import {
-  evaluateItemPerformancePatterns,
   formatCorrectRate,
-  internalItems,
   itemDomainLabels,
   itemStatusLabels,
-  performancePatternLabels,
-  type InternalItemDomain,
-  type InternalItemStatus,
-  type InternalPerformancePattern,
-} from '../_data/internal-tooling-data';
+  type InternalItemOutput,
+} from '../_lib/internal-api';
 
-type DomainFilter = 'ALL' | InternalItemDomain;
-type StatusFilter = 'ALL' | InternalItemStatus;
-type PerformanceFilter = 'ALL' | InternalPerformancePattern;
+type FilterValue = 'ALL' | string;
 
-const domainOptions: DomainFilter[] = [
-  'ALL',
-  'ABSTRACT',
-  'NUMERICAL',
-  'VERBAL',
-  'SPATIAL',
-  'WORKING_MEMORY',
-];
-
-const statusOptions: StatusFilter[] = [
-  'ALL',
-  'DRAFT',
-  'ACTIVE',
-  'UNDER_REVIEW',
-  'RETIRED',
-];
-
-const performanceFilterOptions: PerformanceFilter[] = [
+const performanceFilterOptions = [
   'ALL',
   'VERY_LOW_CORRECT_RATE',
   'VERY_HIGH_CORRECT_RATE',
@@ -44,11 +20,75 @@ const performanceFilterOptions: PerformanceFilter[] = [
   'HIGH_OMISSION',
   'HIGH_AVERAGE_TIME',
   'RETIRED_OR_FLAGGED',
-];
+] as const;
 
-export function ItemBankManagementClient() {
-  const [domainFilter, setDomainFilter] = useState<DomainFilter>('ALL');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
+type PerformanceFilter = (typeof performanceFilterOptions)[number];
+
+const performancePatternLabels: Record<PerformanceFilter, string> = {
+  ALL: 'All performance patterns',
+  VERY_LOW_CORRECT_RATE: 'Very low correct rate',
+  VERY_HIGH_CORRECT_RATE: 'Very high correct rate',
+  LOW_EXPOSURE: 'Low exposure',
+  HIGH_OMISSION: 'High omission',
+  HIGH_AVERAGE_TIME: 'High average time',
+  RETIRED_OR_FLAGGED: 'Retired or flagged',
+};
+
+function getPerformancePatterns(item: InternalItemOutput): PerformanceFilter[] {
+  const patterns: PerformanceFilter[] = [];
+
+  if (
+    item.performance.validResponses >= 20 &&
+    item.performance.correctResponseRate <= 0.25
+  ) {
+    patterns.push('VERY_LOW_CORRECT_RATE');
+  }
+
+  if (
+    item.performance.validResponses >= 20 &&
+    item.performance.correctResponseRate >= 0.9
+  ) {
+    patterns.push('VERY_HIGH_CORRECT_RATE');
+  }
+
+  if (item.performance.exposureCount < 20) {
+    patterns.push('LOW_EXPOSURE');
+  }
+
+  if (item.performance.omissionCount >= 10) {
+    patterns.push('HIGH_OMISSION');
+  }
+
+  if (
+    item.performance.averageResponseTimeSeconds !== null &&
+    item.performance.averageResponseTimeSeconds >= 100
+  ) {
+    patterns.push('HIGH_AVERAGE_TIME');
+  }
+
+  if (item.status === 'RETIRED' || item.status === 'UNDER_REVIEW') {
+    patterns.push('RETIRED_OR_FLAGGED');
+  }
+
+  return patterns;
+}
+
+export function ItemBankManagementClient({
+  items,
+}: {
+  items: InternalItemOutput[];
+}) {
+  const domainOptions = useMemo(
+    () => ['ALL', ...Array.from(new Set(items.map((item) => item.domain)))],
+    [items]
+  );
+  const statusOptions = useMemo(
+    () => ['ALL', ...Array.from(new Set(items.map((item) => item.status)))],
+    [items]
+  );
+
+  const [domainFilter, setDomainFilter] = useState<FilterValue>('ALL');
+  const [statusFilter, setStatusFilter] = useState<FilterValue>('ALL');
   const [performanceFilter, setPerformanceFilter] =
     useState<PerformanceFilter>('ALL');
   const [searchTerm, setSearchTerm] = useState('');
@@ -56,8 +96,8 @@ export function ItemBankManagementClient() {
   const filteredItems = useMemo(() => {
     const normalisedSearch = searchTerm.trim().toLowerCase();
 
-    return internalItems.filter((item) => {
-      const performancePatterns = evaluateItemPerformancePatterns(item);
+    return items.filter((item) => {
+      const performancePatterns = getPerformancePatterns(item);
 
       const matchesDomain =
         domainFilter === 'ALL' || item.domain === domainFilter;
@@ -69,13 +109,14 @@ export function ItemBankManagementClient() {
       const matchesSearch =
         normalisedSearch.length === 0 ||
         item.id.toLowerCase().includes(normalisedSearch) ||
-        item.label.toLowerCase().includes(normalisedSearch);
+        item.label.toLowerCase().includes(normalisedSearch) ||
+        item.prompt.toLowerCase().includes(normalisedSearch);
 
       return (
         matchesDomain && matchesStatus && matchesPerformance && matchesSearch
       );
     });
-  }, [domainFilter, performanceFilter, searchTerm, statusFilter]);
+  }, [domainFilter, items, performanceFilter, searchTerm, statusFilter]);
 
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -83,9 +124,9 @@ export function ItemBankManagementClient() {
         <div>
           <h2 className="text-xl font-semibold">Item-bank management</h2>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-            Use this screen to inspect item status, domain coverage, activation
-            state, review signals, and early performance patterns. Historically
-            active items are protected from silent in-place mutation.
+            This table is now populated from the internal item API, which reads
+            item records, mappings, responses, and audit-derived metadata from
+            the backend.
           </p>
         </div>
 
@@ -99,11 +140,11 @@ export function ItemBankManagementClient() {
 
       <div className="mt-6 grid gap-4 md:grid-cols-4">
         <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
-          Search item ID or label
+          Search item ID, label, or prompt
           <input
             value={searchTerm}
             onChange={(event) => setSearchTerm(event.target.value)}
-            placeholder="Example: IQM-VER or matrix"
+            placeholder="Example: abstract or matrix"
             className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-950"
           />
         </label>
@@ -112,14 +153,14 @@ export function ItemBankManagementClient() {
           Filter by domain
           <select
             value={domainFilter}
-            onChange={(event) =>
-              setDomainFilter(event.target.value as DomainFilter)
-            }
+            onChange={(event) => setDomainFilter(event.target.value)}
             className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-950"
           >
             {domainOptions.map((domain) => (
               <option key={domain} value={domain}>
-                {domain === 'ALL' ? 'All domains' : itemDomainLabels[domain]}
+                {domain === 'ALL'
+                  ? 'All domains'
+                  : (itemDomainLabels[domain] ?? domain)}
               </option>
             ))}
           </select>
@@ -129,14 +170,14 @@ export function ItemBankManagementClient() {
           Filter by status
           <select
             value={statusFilter}
-            onChange={(event) =>
-              setStatusFilter(event.target.value as StatusFilter)
-            }
+            onChange={(event) => setStatusFilter(event.target.value)}
             className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-950"
           >
             {statusOptions.map((status) => (
               <option key={status} value={status}>
-                {status === 'ALL' ? 'All statuses' : itemStatusLabels[status]}
+                {status === 'ALL'
+                  ? 'All statuses'
+                  : (itemStatusLabels[status] ?? status)}
               </option>
             ))}
           </select>
@@ -153,9 +194,7 @@ export function ItemBankManagementClient() {
           >
             {performanceFilterOptions.map((pattern) => (
               <option key={pattern} value={pattern}>
-                {pattern === 'ALL'
-                  ? 'All performance patterns'
-                  : performancePatternLabels[pattern]}
+                {performancePatternLabels[pattern]}
               </option>
             ))}
           </select>
@@ -182,33 +221,31 @@ export function ItemBankManagementClient() {
 
           <tbody className="divide-y divide-slate-200 bg-white">
             {filteredItems.map((item) => {
-              const performancePatterns = evaluateItemPerformancePatterns(item);
+              const performancePatterns = getPerformancePatterns(item);
 
               return (
                 <tr key={item.id} className="align-top">
                   <td className="px-4 py-4">
                     <p className="font-semibold text-slate-950">{item.id}</p>
-                    <p className="mt-1 text-slate-600">{item.label}</p>
+                    <p className="mt-1 line-clamp-2 text-slate-600">
+                      {item.label}
+                    </p>
                   </td>
                   <td className="px-4 py-4 text-slate-700">
-                    {itemDomainLabels[item.domain]}
+                    {itemDomainLabels[item.domain] ?? item.domain}
                   </td>
                   <td className="px-4 py-4">
                     <span className="rounded-full border border-slate-300 px-2 py-1 text-xs font-semibold">
-                      {itemStatusLabels[item.status]}
+                      {itemStatusLabels[item.status] ?? item.status}
                     </span>
                   </td>
                   <td className="px-4 py-4 text-slate-700">
                     {item.active ? 'Currently active' : 'Inactive'}
-                    {item.historicallyActive ? (
-                      <p className="mt-1 text-xs text-slate-500">
-                        Historically active
-                      </p>
-                    ) : (
-                      <p className="mt-1 text-xs text-slate-500">
-                        Never activated
-                      </p>
-                    )}
+                    <p className="mt-1 text-xs text-slate-500">
+                      {item.historicallyActive
+                        ? 'Historically active'
+                        : 'Never activated'}
+                    </p>
                   </td>
                   <td className="px-4 py-4 text-slate-700">
                     {item.performance.exposureCount}

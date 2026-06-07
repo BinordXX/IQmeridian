@@ -1,5 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { FormItemMappingStatus, Prisma, SessionStatus } from '@prisma/client';
+import {
+  FormItemMappingStatus,
+  ItemStatus,
+  Prisma,
+  SessionStatus,
+} from '@prisma/client';
 
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -8,6 +13,9 @@ import {
   CreateInternalReviewStatusInput,
   InternalAuditEvent,
   InternalCompletionStatus,
+  InternalItemDetailOutput,
+  InternalItemOutput,
+  InternalItemPerformanceOutput,
   InternalReviewStatusRecord,
   InternalSessionOutput,
   SuspiciousFlagEvaluation,
@@ -28,12 +36,25 @@ const auditLogInclude = {
   user: true,
 } satisfies Prisma.AuditLogInclude;
 
+const itemInclude = {
+  formMappings: true,
+  responses: {
+    include: {
+      session: true,
+    },
+  },
+} satisfies Prisma.ItemInclude;
+
 type SessionWithInternalRelations = Prisma.SessionGetPayload<{
   include: typeof sessionInclude;
 }>;
 
 type AuditLogWithUser = Prisma.AuditLogGetPayload<{
   include: typeof auditLogInclude;
+}>;
+
+type ItemWithInternalRelations = Prisma.ItemGetPayload<{
+  include: typeof itemInclude;
 }>;
 
 const analyticsExportDefinitions: AnalyticsExportDefinition[] = [
@@ -82,6 +103,65 @@ const analyticsExportDefinitions: AnalyticsExportDefinition[] = [
 @Injectable()
 export class InternalToolingService {
   constructor(private readonly prisma: PrismaService) {}
+
+  async getInternalItems(): Promise<InternalItemOutput[]> {
+    const items = await this.prisma.item.findMany({
+      orderBy: {
+        createdAt: 'desc',
+      },
+      include: itemInclude,
+    });
+
+    return Promise.all(items.map((item) => this.toInternalItemOutput(item)));
+  }
+
+  async getInternalItemById(
+    itemId: string,
+  ): Promise<InternalItemDetailOutput | undefined> {
+    const item = await this.prisma.item.findUnique({
+      where: { id: itemId },
+      include: itemInclude,
+    });
+
+    if (!item) {
+      return undefined;
+    }
+
+    const baseItem = await this.toInternalItemOutput(item);
+
+    const [statusHistory, reviewNotes] = await Promise.all([
+      this.getItemStatusHistory(item.id),
+      this.getItemReviewNotes(item.id),
+    ]);
+
+    return {
+      ...baseItem,
+      statusHistory,
+      formAssociations: item.formMappings.map((mapping) => ({
+        id: mapping.id,
+        formId: mapping.formId,
+        sectionId: mapping.sectionId,
+        status: mapping.status,
+        orderIndex: mapping.orderIndex,
+      })),
+      reviewNotes,
+    };
+  }
+
+  async getInternalItemPerformance(
+    itemId: string,
+  ): Promise<InternalItemPerformanceOutput | undefined> {
+    const item = await this.prisma.item.findUnique({
+      where: { id: itemId },
+      include: itemInclude,
+    });
+
+    if (!item) {
+      return undefined;
+    }
+
+    return this.toInternalItemPerformance(item);
+  }
 
   async getSessionReviewRecords(): Promise<InternalSessionOutput[]> {
     const sessions = await this.prisma.session.findMany({
@@ -243,7 +323,7 @@ export class InternalToolingService {
     const interruptionHistory = await this.getInterruptionHistory(session.id);
     const reviewerNotes = await this.getReviewerNotes(session.id);
 
-    const source = {
+    const evaluation = this.evaluateSuspiciousFlags({
       status: session.status,
       completionTimeMinutes,
       refreshReconnectEvents,
@@ -252,9 +332,7 @@ export class InternalToolingService {
       inconsistentSubmissionEvents,
       compressedTimingEvents,
       expectedItemCount,
-    };
-
-    const evaluation = this.evaluateSuspiciousFlags(source);
+    });
 
     return {
       sessionId: session.id,
@@ -549,6 +627,234 @@ export class InternalToolingService {
         : `${session.score.overallRawScore}/${session.score.overallMaxScore}`;
 
     return `Overall band: ${session.score.overallBand ?? 'not assigned'}; overall score: ${rawScore}.`;
+  }
+
+  private async toInternalItemOutput(
+    item: ItemWithInternalRelations,
+  ): Promise<InternalItemOutput> {
+    const performance = await this.toInternalItemPerformance(item);
+
+    return {
+      id: item.id,
+      label: `${item.domain} ${item.itemType}`,
+      domain: item.domain,
+      itemType: item.itemType,
+      prompt: item.prompt,
+      options: item.options,
+      correctAnswer: item.correctAnswer,
+      difficulty: item.difficulty,
+      status: item.status,
+      version: item.version,
+      active: item.status === ItemStatus.ACTIVE,
+      historicallyActive: await this.hasItemEverBeenActive(
+        item.id,
+        item.status,
+      ),
+      createdAt: item.createdAt.toISOString(),
+      updatedAt: item.updatedAt.toISOString(),
+      formAssociationCount: item.formMappings.length,
+      activeFormAssociationCount: item.formMappings.filter(
+        (mapping) => mapping.status === FormItemMappingStatus.ACTIVE,
+      ).length,
+      performance,
+    };
+  }
+
+  private async toInternalItemPerformance(
+    item: ItemWithInternalRelations,
+  ): Promise<InternalItemPerformanceOutput> {
+    const activeFormIds = item.formMappings
+      .filter((mapping) => mapping.status === FormItemMappingStatus.ACTIVE)
+      .map((mapping) => mapping.formId);
+
+    const exposureCount =
+      activeFormIds.length === 0
+        ? 0
+        : await this.prisma.session.count({
+            where: {
+              assessmentFormId: {
+                in: activeFormIds,
+              },
+              status: {
+                in: [SessionStatus.IN_PROGRESS, SessionStatus.COMPLETED],
+              },
+            },
+          });
+
+    const validResponses = item.responses.filter(
+      (response) => response.answer !== null && response.answer !== undefined,
+    );
+
+    const correctResponses = validResponses.filter((response) =>
+      this.areJsonValuesEqual(response.answer, item.correctAnswer),
+    );
+
+    const omissionCount = Math.max(exposureCount - validResponses.length, 0);
+
+    return {
+      itemId: item.id,
+      exposureCount,
+      validResponses: validResponses.length,
+      correctResponseRate:
+        validResponses.length === 0
+          ? 0
+          : correctResponses.length / validResponses.length,
+      omissionCount,
+      averageResponseTimeSeconds:
+        validResponses.length === 0
+          ? null
+          : this.calculateAverageItemResponseTimeSeconds(item),
+      activeFormAssociations: activeFormIds.length,
+    };
+  }
+
+  private async hasItemEverBeenActive(
+    itemId: string,
+    currentStatus: ItemStatus,
+  ) {
+    if (
+      currentStatus === ItemStatus.ACTIVE ||
+      currentStatus === ItemStatus.RETIRED
+    ) {
+      return true;
+    }
+
+    const activationAuditLog = await this.prisma.auditLog.findFirst({
+      where: {
+        entityType: 'Item',
+        entityId: itemId,
+        action: {
+          contains: 'ITEM_ACTIVATED',
+        },
+      },
+    });
+
+    return Boolean(activationAuditLog);
+  }
+
+  private async getItemStatusHistory(itemId: string) {
+    const auditLogs = await this.prisma.auditLog.findMany({
+      where: {
+        entityType: {
+          in: ['Item', 'ITEM'],
+        },
+        entityId: itemId,
+        OR: [
+          { action: { contains: 'ITEM_CREATED' } },
+          { action: { contains: 'ITEM_DRAFT_UPDATED' } },
+          { action: { contains: 'ITEM_ACTIVATED' } },
+          { action: { contains: 'ITEM_RETIRED' } },
+          { action: { contains: 'REVIEW_STATUS_CHANGED' } },
+        ],
+      },
+      orderBy: {
+        createdAt: 'asc',
+      },
+      take: 50,
+      include: auditLogInclude,
+    });
+
+    return auditLogs.map((auditLog) => ({
+      id: auditLog.id,
+      action: auditLog.action,
+      actor: auditLog.user?.name ?? auditLog.user?.email ?? 'System',
+      summary: this.buildAuditSummary(auditLog),
+      occurredAt: auditLog.createdAt.toISOString(),
+    }));
+  }
+
+  private async getItemReviewNotes(itemId: string) {
+    const auditLogs = await this.prisma.auditLog.findMany({
+      where: {
+        entityType: {
+          in: ['Item', 'ITEM'],
+        },
+        entityId: itemId,
+        action: 'REVIEW_STATUS_CHANGED',
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      take: 10,
+    });
+
+    if (auditLogs.length === 0) {
+      return ['No internal review note has been recorded for this item.'];
+    }
+
+    return auditLogs.map((auditLog) => {
+      const metadata = this.toPlainRecord(auditLog.metadata);
+      const notes = metadata.notes;
+
+      return typeof notes === 'string' && notes.trim().length > 0
+        ? notes
+        : `Review status updated at ${auditLog.createdAt.toISOString()}`;
+    });
+  }
+
+  private calculateAverageItemResponseTimeSeconds(
+    item: ItemWithInternalRelations,
+  ) {
+    const durations = item.responses
+      .map((response) => {
+        if (!response.submittedAt || !response.session.startedAt) {
+          return null;
+        }
+
+        return Math.max(
+          Math.round(
+            (response.submittedAt.getTime() -
+              response.session.startedAt.getTime()) /
+              1000,
+          ),
+          0,
+        );
+      })
+      .filter((duration): duration is number => duration !== null);
+
+    if (durations.length === 0) {
+      return null;
+    }
+
+    const total = durations.reduce((sum, duration) => sum + duration, 0);
+
+    return Math.round(total / durations.length);
+  }
+
+  private areJsonValuesEqual(first: unknown, second: unknown) {
+    return this.stableStringify(first) === this.stableStringify(second);
+  }
+
+  private stableStringify(value: unknown): string {
+    if (Array.isArray(value)) {
+      return `[${value.map((item) => this.stableStringify(item)).join(',')}]`;
+    }
+
+    if (value && typeof value === 'object') {
+      return `{${Object.entries(value)
+        .sort(([firstKey], [secondKey]) => firstKey.localeCompare(secondKey))
+        .map(
+          ([key, nestedValue]) =>
+            `${JSON.stringify(key)}:${this.stableStringify(nestedValue)}`,
+        )
+        .join(',')}}`;
+    }
+
+    return JSON.stringify(value);
+  }
+
+  private buildAuditSummary(auditLog: AuditLogWithUser) {
+    const metadata = this.toPlainRecord(auditLog.metadata);
+
+    if (typeof metadata.status === 'string') {
+      return `${auditLog.action} · status ${metadata.status}`;
+    }
+
+    if (typeof metadata.domain === 'string') {
+      return `${auditLog.action} · domain ${metadata.domain}`;
+    }
+
+    return auditLog.action;
   }
 
   private toInternalAuditEvent(auditLog: AuditLogWithUser): InternalAuditEvent {
