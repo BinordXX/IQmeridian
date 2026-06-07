@@ -70,6 +70,36 @@ export const sessionTypeLabels: Record<InternalSessionType, string> = {
   EMPLOYER_LINKED: 'Employer-linked',
   CONSUMER: 'Consumer',
 };
+export const itemDomainLabels: Record<string, string> = {
+  ABSTRACT: 'Abstract reasoning',
+  NUMERICAL: 'Numerical reasoning',
+  VERBAL: 'Verbal reasoning',
+  SPATIAL: 'Spatial reasoning',
+  WORKING_MEMORY: 'Working memory',
+};
+
+export const itemStatusLabels: Record<string, string> = {
+  DRAFT: 'Draft',
+  ACTIVE: 'Active',
+  RETIRED: 'Retired',
+  UNDER_REVIEW: 'Under review',
+};
+
+export function formatCorrectRate(rate: number) {
+  return `${Math.round(rate * 100)}%`;
+}
+
+export function formatJsonValue(value: unknown) {
+  if (value === null || value === undefined) {
+    return 'Not set';
+  }
+
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  return JSON.stringify(value, null, 2);
+}
 
 export const completionStatusLabels: Record<InternalCompletionStatus, string> =
   {
@@ -168,6 +198,74 @@ export function fetchInternalAuditEvents() {
 export function fetchAnalyticsExportDefinitions() {
   return fetchInternalApi<AnalyticsExportDefinition[]>({
     path: '/internal/exports',
+    role: 'RESEARCHER',
+  });
+}
+
+export type InternalItemPerformanceOutput = {
+  itemId: string;
+  exposureCount: number;
+  validResponses: number;
+  correctResponseRate: number;
+  omissionCount: number;
+  averageResponseTimeSeconds: number | null;
+  activeFormAssociations: number;
+};
+
+export type InternalItemOutput = {
+  id: string;
+  label: string;
+  domain: string;
+  itemType: string;
+  prompt: string;
+  options: unknown;
+  correctAnswer: unknown;
+  difficulty: string | null;
+  status: string;
+  version: number;
+  active: boolean;
+  historicallyActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  formAssociationCount: number;
+  activeFormAssociationCount: number;
+  performance: InternalItemPerformanceOutput;
+};
+
+export type InternalItemDetailOutput = InternalItemOutput & {
+  statusHistory: {
+    id: string;
+    action: string;
+    actor: string;
+    summary: string;
+    occurredAt: string;
+  }[];
+  formAssociations: {
+    id: string;
+    formId: string;
+    sectionId: string | null;
+    status: string;
+    orderIndex: number | null;
+  }[];
+  reviewNotes: string[];
+};
+export function fetchInternalItems() {
+  return fetchInternalApi<InternalItemOutput[]>({
+    path: '/internal/items',
+    role: 'RESEARCHER',
+  });
+}
+
+export function fetchInternalItemById(itemId: string) {
+  return fetchInternalApi<InternalItemDetailOutput>({
+    path: `/internal/items/${encodeURIComponent(itemId)}`,
+    role: 'RESEARCHER',
+  });
+}
+
+export function fetchInternalItemPerformance(itemId: string) {
+  return fetchInternalApi<InternalItemPerformanceOutput>({
+    path: `/internal/items/${encodeURIComponent(itemId)}/performance`,
     role: 'RESEARCHER',
   });
 }
