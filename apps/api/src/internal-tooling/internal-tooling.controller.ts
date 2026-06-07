@@ -91,6 +91,39 @@ export class InternalToolingController {
     return this.internalToolingService.getAdminOverview();
   }
 
+  @Get('items/:itemId/traceability')
+  async getInternalItemTraceability(
+    @Param('itemId') itemId: string,
+    @Headers('x-internal-role') roleHeader?: string,
+  ) {
+    assertInternalAccess({
+      roleHeader,
+      allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
+    });
+
+    const traceability =
+      await this.internalToolingService.getInternalItemTraceability(itemId);
+
+    if (!traceability) {
+      throw new NotFoundException('Internal item traceability was not found.');
+    }
+
+    return traceability;
+  }
+
+  @Get('reports/score-audit')
+  getReportScoreAuditRecords(
+    @Headers('x-internal-role') roleHeader?: string,
+  ) {
+    assertInternalAccess({
+      roleHeader,
+      allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
+    });
+
+    return this.internalToolingService.getReportScoreAuditRecords();
+  }
+
+
   @Get('items')
   getInternalItems(@Headers('x-internal-role') roleHeader?: string) {
     assertInternalAccess({

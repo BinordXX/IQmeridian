@@ -27,6 +27,8 @@ import {
   InternalResearcherDashboardOverview,
   InternalSectionPerformanceSummary,
   ScoreDistributionBucket,
+  InternalItemTraceabilityOutput,
+  InternalReportScoreAuditOutput,
 } from './internal-tooling.types';
 
 const sessionInclude = {
@@ -41,6 +43,20 @@ const sessionInclude = {
 const auditLogInclude = {
   user: true,
 } satisfies Prisma.AuditLogInclude;
+
+const reportAuditInclude = {
+  session: {
+    include: {
+      user: true,
+      assessmentForm: true,
+      score: true,
+    },
+  },
+} satisfies Prisma.ReportInclude;
+
+type ReportWithInternalAuditRelations = Prisma.ReportGetPayload<{
+  include: typeof reportAuditInclude;
+}>;
 
 const itemInclude = {
   formMappings: true,
@@ -192,6 +208,135 @@ export class InternalToolingService {
         };
       }),
     );
+  }
+
+    async getInternalItemTraceability(
+    itemId: string,
+  ): Promise<InternalItemTraceabilityOutput | undefined> {
+    const item = await this.prisma.item.findUnique({
+      where: { id: itemId },
+      include: itemInclude,
+    });
+
+    if (!item) {
+      return undefined;
+    }
+
+    const formIds = item.formMappings.map((mapping) => mapping.formId);
+
+    const sessions =
+      formIds.length === 0
+        ? []
+        : await this.prisma.session.findMany({
+            where: {
+              assessmentFormId: {
+                in: formIds,
+              },
+            },
+            orderBy: {
+              createdAt: 'desc',
+            },
+            include: sessionInclude,
+          });
+
+    const linkedSessions = sessions.map((session) => {
+      const response = session.responses.find(
+        (currentResponse) => currentResponse.itemId === item.id,
+      );
+
+      return {
+        sessionId: session.id,
+        participantIdentifier:
+          session.user.name ?? session.user.email ?? session.user.id,
+        formId: session.assessmentFormId,
+        formLabel: session.assessmentForm.name,
+        sessionStatus: session.status,
+        startedAt: session.startedAt?.toISOString() ?? null,
+        completedAt: session.completedAt?.toISOString() ?? null,
+        answeredItem:
+          response?.answer !== null &&
+          response?.answer !== undefined &&
+          Boolean(response),
+        answer: response?.answer ?? null,
+        submittedAt: response?.submittedAt?.toISOString() ?? null,
+        overallBand: session.score?.overallBand ?? null,
+      };
+    });
+
+    const forms = item.formMappings.map((mapping) => {
+      const formSessions = sessions.filter(
+        (session) => session.assessmentFormId === mapping.formId,
+      );
+
+      const formResponses = formSessions
+        .map((session) =>
+          session.responses.find((response) => response.itemId === item.id),
+        )
+        .filter((response) => response !== undefined);
+
+      const validResponses = formResponses.filter(
+        (response) => response.answer !== null && response.answer !== undefined,
+      );
+
+      const correctResponses = validResponses.filter((response) =>
+        this.areJsonValuesEqual(response.answer, item.correctAnswer),
+      );
+
+      return {
+        mappingId: mapping.id,
+        formId: mapping.formId,
+        formLabel:
+          formSessions[0]?.assessmentForm.name ?? `Form ${mapping.formId}`,
+        sectionId: mapping.sectionId,
+        mappingStatus: mapping.status,
+        orderIndex: mapping.orderIndex,
+        exposureCount: formSessions.length,
+        validResponses: validResponses.length,
+        correctResponses: correctResponses.length,
+        omissionCount: Math.max(formSessions.length - validResponses.length, 0),
+        completedSessions: formSessions.filter(
+          (session) => session.status === SessionStatus.COMPLETED,
+        ).length,
+        inProgressSessions: formSessions.filter(
+          (session) => session.status === SessionStatus.IN_PROGRESS,
+        ).length,
+      };
+    });
+
+    const totalValidResponses = linkedSessions.filter(
+      (session) => session.answeredItem,
+    ).length;
+
+    const totalCorrectResponses = linkedSessions.filter((session) =>
+      this.areJsonValuesEqual(session.answer, item.correctAnswer),
+    ).length;
+
+    return {
+      itemId: item.id,
+      itemLabel: `${item.domain} ${item.itemType}`,
+      domain: item.domain,
+      status: item.status,
+      totalExposureCount: linkedSessions.length,
+      totalValidResponses,
+      totalCorrectResponses,
+      totalOmissions: Math.max(linkedSessions.length - totalValidResponses, 0),
+      forms,
+      linkedSessions,
+    };
+  }
+
+  async getReportScoreAuditRecords(): Promise<
+    InternalReportScoreAuditOutput[]
+  > {
+    const reports = await this.prisma.report.findMany({
+      orderBy: {
+        createdAt: 'desc',
+      },
+      take: 100,
+      include: reportAuditInclude,
+    });
+
+    return reports.map((report) => this.toReportScoreAuditOutput(report));
   }
 
   async getFormPerformanceSummaries(): Promise<
@@ -535,7 +680,45 @@ export class InternalToolingService {
 
     return this.toInternalReviewStatusRecord(auditLog);
   }
+  private toReportScoreAuditOutput(
+    report: ReportWithInternalAuditRelations,
+  ): InternalReportScoreAuditOutput {
+    const metadata = this.toPlainRecord(report.metadata);
+    const score = report.session.score;
 
+    return {
+      reportId: report.id,
+      sessionId: report.sessionId,
+      participantIdentifier:
+        report.session.user.name ??
+        report.session.user.email ??
+        report.session.user.id,
+      formId: report.session.assessmentFormId,
+      formLabel: report.session.assessmentForm.name,
+      formVersion:
+        typeof metadata.formVersion === 'string' ||
+        typeof metadata.formVersion === 'number'
+          ? String(metadata.formVersion)
+          : null,
+      scoringVersion: score?.scoringVersion ?? null,
+      reportVersion: report.reportVersion,
+      reportGenerationTimestamp: report.createdAt.toISOString(),
+      reportType:
+        typeof metadata.reportType === 'string'
+          ? metadata.reportType
+          : String(report.visibility),
+      visibilityCategory: String(report.visibility),
+      scoreId: report.scoreId,
+      scoreCreatedAt: score?.createdAt.toISOString() ?? null,
+      scoreUpdatedAt: score?.updatedAt.toISOString() ?? null,
+      overallBand: score?.overallBand ?? null,
+      overallRawScore: score?.overallRawScore ?? null,
+      overallMaxScore: score?.overallMaxScore ?? null,
+      abstractBand: score?.abstractBand ?? null,
+      numericalBand: score?.numericalBand ?? null,
+    };
+  }
+  
   private async toInternalSessionOutput(
     session: SessionWithInternalRelations,
   ): Promise<InternalSessionOutput> {

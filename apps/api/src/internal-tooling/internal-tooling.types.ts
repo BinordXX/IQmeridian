@@ -210,3 +210,63 @@ export type InternalAdminOverview = {
   exportEvents: InternalAuditEvent[];
   itemLifecycleEvents: InternalAuditEvent[];
 };
+
+export type InternalItemTraceabilityOutput = {
+  itemId: string;
+  itemLabel: string;
+  domain: string;
+  status: string;
+  totalExposureCount: number;
+  totalValidResponses: number;
+  totalCorrectResponses: number;
+  totalOmissions: number;
+  forms: {
+    mappingId: string;
+    formId: string;
+    formLabel: string;
+    sectionId: string | null;
+    mappingStatus: string;
+    orderIndex: number | null;
+    exposureCount: number;
+    validResponses: number;
+    correctResponses: number;
+    omissionCount: number;
+    completedSessions: number;
+    inProgressSessions: number;
+  }[];
+  linkedSessions: {
+    sessionId: string;
+    participantIdentifier: string;
+    formId: string;
+    formLabel: string;
+    sessionStatus: string;
+    startedAt: string | null;
+    completedAt: string | null;
+    answeredItem: boolean;
+    answer: unknown;
+    submittedAt: string | null;
+    overallBand: string | null;
+  }[];
+};
+
+export type InternalReportScoreAuditOutput = {
+  reportId: string;
+  sessionId: string;
+  participantIdentifier: string;
+  formId: string;
+  formLabel: string;
+  formVersion: string | null;
+  scoringVersion: number | null;
+  reportVersion: number;
+  reportGenerationTimestamp: string;
+  reportType: string;
+  visibilityCategory: string;
+  scoreId: string | null;
+  scoreCreatedAt: string | null;
+  scoreUpdatedAt: string | null;
+  overallBand: string | null;
+  overallRawScore: number | null;
+  overallMaxScore: number | null;
+  abstractBand: string | null;
+  numericalBand: string | null;
+};
