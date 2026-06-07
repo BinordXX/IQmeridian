@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import {
+  CampaignStatus,
   FormItemMappingStatus,
   ItemStatus,
   Prisma,
@@ -21,6 +22,11 @@ import {
   SuspiciousFlagEvaluation,
   SuspiciousFlagStatus,
   SuspiciousSessionIndicator,
+  InternalAdminOverview,
+  InternalFormPerformanceSummary,
+  InternalResearcherDashboardOverview,
+  InternalSectionPerformanceSummary,
+  ScoreDistributionBucket,
 } from './internal-tooling.types';
 
 const sessionInclude = {
@@ -103,7 +109,260 @@ const analyticsExportDefinitions: AnalyticsExportDefinition[] = [
 @Injectable()
 export class InternalToolingService {
   constructor(private readonly prisma: PrismaService) {}
+  async getSectionPerformanceSummaries(): Promise<
+    InternalSectionPerformanceSummary[]
+  > {
+    const [items, sessions] = await Promise.all([
+      this.prisma.item.findMany({
+        include: itemInclude,
+      }),
+      this.prisma.session.findMany({
+        include: sessionInclude,
+      }),
+    ]);
 
+    const domains = Array.from(new Set(items.map((item) => item.domain)));
+
+    return Promise.all(
+      domains.map(async (domain) => {
+        const domainItems = items.filter((item) => item.domain === domain);
+        const domainItemIds = new Set(domainItems.map((item) => item.id));
+        const activeFormIds = new Set(
+          domainItems.flatMap((item) =>
+            item.formMappings
+              .filter(
+                (mapping) => mapping.status === FormItemMappingStatus.ACTIVE,
+              )
+              .map((mapping) => mapping.formId),
+          ),
+        );
+
+        const relevantSessions = sessions.filter((session) =>
+          activeFormIds.has(session.assessmentFormId),
+        );
+
+        const startedSessions = relevantSessions.filter(
+          (session) => session.status !== SessionStatus.NOT_STARTED,
+        );
+        const completedSessions = relevantSessions.filter(
+          (session) => session.status === SessionStatus.COMPLETED,
+        );
+
+        const sessionScores = this.calculateDomainSessionScores({
+          domainItemIds,
+          sessions: relevantSessions,
+          items: domainItems,
+        });
+
+        const averageScorePercent =
+          sessionScores.length === 0
+            ? 0
+            : Math.round(
+                sessionScores.reduce((sum, score) => sum + score, 0) /
+                  sessionScores.length,
+              );
+
+        const completionTimes = completedSessions
+          .map((session) =>
+            this.calculateCompletionTimeMinutes({
+              startedAt: session.startedAt,
+              completedAt: session.completedAt,
+            }),
+          )
+          .filter((duration): duration is number => duration !== null);
+
+        return {
+          section: domain,
+          sectionLabel: this.humaniseDomain(domain),
+          startedSessions: startedSessions.length,
+          completedSessions: completedSessions.length,
+          completionRate:
+            startedSessions.length === 0
+              ? 0
+              : completedSessions.length / startedSessions.length,
+          averageScorePercent,
+          averageCompletionTimeMinutes:
+            completionTimes.length === 0
+              ? null
+              : Math.round(
+                  completionTimes.reduce((sum, time) => sum + time, 0) /
+                    completionTimes.length,
+                ),
+          scoreDistribution: this.toScoreDistribution(sessionScores),
+        };
+      }),
+    );
+  }
+
+  async getFormPerformanceSummaries(): Promise<
+    InternalFormPerformanceSummary[]
+  > {
+    const sessions = await this.prisma.session.findMany({
+      include: sessionInclude,
+    });
+
+    const groupedByForm = new Map<string, SessionWithInternalRelations[]>();
+
+    sessions.forEach((session) => {
+      const current = groupedByForm.get(session.assessmentFormId) ?? [];
+      current.push(session);
+      groupedByForm.set(session.assessmentFormId, current);
+    });
+
+    return Array.from(groupedByForm.entries()).map(([formId, formSessions]) => {
+      const startedSessions = formSessions.filter(
+        (session) => session.status !== SessionStatus.NOT_STARTED,
+      );
+      const completedSessions = formSessions.filter(
+        (session) => session.status === SessionStatus.COMPLETED,
+      );
+
+      const completionTimes = completedSessions
+        .map((session) =>
+          this.calculateCompletionTimeMinutes({
+            startedAt: session.startedAt,
+            completedAt: session.completedAt,
+          }),
+        )
+        .filter((duration): duration is number => duration !== null);
+
+      return {
+        formId,
+        formLabel: formSessions[0]?.assessmentForm.name ?? formId,
+        startedSessions: startedSessions.length,
+        completedSessions: completedSessions.length,
+        completionRate:
+          startedSessions.length === 0
+            ? 0
+            : completedSessions.length / startedSessions.length,
+        averageCompletionTimeMinutes:
+          completionTimes.length === 0
+            ? null
+            : Math.round(
+                completionTimes.reduce((sum, time) => sum + time, 0) /
+                  completionTimes.length,
+              ),
+        scoreSpread: this.toBandDistribution(
+          completedSessions.map(
+            (session) => session.score?.overallBand ?? 'Not scored',
+          ),
+        ),
+      };
+    });
+  }
+
+  async getResearcherDashboardOverview(): Promise<InternalResearcherDashboardOverview> {
+    const [items, sessions, sectionPerformance, formPerformance] =
+      await Promise.all([
+        this.getInternalItems(),
+        this.getSessionReviewRecords(),
+        this.getSectionPerformanceSummaries(),
+        this.getFormPerformanceSummaries(),
+      ]);
+
+    const totalItemsByStatus = items.reduce<Record<string, number>>(
+      (summary, item) => ({
+        ...summary,
+        [item.status]: (summary[item.status] ?? 0) + 1,
+      }),
+      {},
+    );
+
+    const activeItemsByDomain = Object.entries(
+      items
+        .filter((item) => item.active)
+        .reduce<Record<string, number>>(
+          (summary, item) => ({
+            ...summary,
+            [item.domain]: (summary[item.domain] ?? 0) + 1,
+          }),
+          {},
+        ),
+    ).map(([domain, count]) => ({
+      domain,
+      label: this.humaniseDomain(domain),
+      count,
+    }));
+
+    const sectionTimes = sectionPerformance
+      .map((section) => section.averageCompletionTimeMinutes)
+      .filter((duration): duration is number => duration !== null);
+
+    const itemsNeedingReview = items
+      .filter(
+        (item) =>
+          item.status === ItemStatus.UNDER_REVIEW ||
+          (item.performance.validResponses >= 5 &&
+            item.performance.correctResponseRate <= 0.25) ||
+          (item.performance.validResponses >= 5 &&
+            item.performance.correctResponseRate >= 0.9) ||
+          item.performance.omissionCount >= 10,
+      )
+      .map((item) => ({
+        id: item.id,
+        label: item.label,
+        domain: item.domain,
+        status: item.status,
+        reason: this.getItemReviewReason(item),
+      }));
+
+    return {
+      totalItemsByStatus,
+      activeItemsByDomain,
+      formsInUse: formPerformance.length,
+      recentSessionVolume: sessions.length,
+      flaggedSessionCount: sessions.filter(
+        (session) => session.suspiciousFlagStatus !== 'NONE',
+      ).length,
+      averageSectionCompletionTime:
+        sectionTimes.length === 0
+          ? null
+          : Math.round(
+              sectionTimes.reduce((sum, duration) => sum + duration, 0) /
+                sectionTimes.length,
+            ),
+      itemsNeedingReview,
+    };
+  }
+
+  async getAdminOverview(): Promise<InternalAdminOverview> {
+    const [
+      organisationCount,
+      activeCampaigns,
+      userCountsByRole,
+      recentAuditActivity,
+    ] = await Promise.all([
+      this.prisma.organisation.count(),
+      this.prisma.campaign.count({
+        where: {
+          status: CampaignStatus.ACTIVE,
+        },
+      }),
+      this.getUserCountsByRole(),
+      this.getInternalAuditEvents(),
+    ]);
+
+    return {
+      organisationCount,
+      activeCampaigns,
+      userCountsByRole,
+      recentAuditActivity: recentAuditActivity.slice(0, 10),
+      platformErrors: recentAuditActivity.filter(
+        (event) =>
+          event.action.includes('ERROR') ||
+          event.action.includes('FAILED') ||
+          event.action.includes('FAILURE'),
+      ),
+      exportEvents: recentAuditActivity.filter((event) =>
+        event.action.includes('EXPORT'),
+      ),
+      itemLifecycleEvents: recentAuditActivity.filter(
+        (event) =>
+          event.action.includes('ITEM_ACTIVATED') ||
+          event.action.includes('ITEM_RETIRED'),
+      ),
+    };
+  }
   async getInternalItems(): Promise<InternalItemOutput[]> {
     const items = await this.prisma.item.findMany({
       orderBy: {
@@ -904,7 +1163,130 @@ export class InternalToolingService {
       updatedAt: auditLog.createdAt.toISOString(),
     };
   }
+  private calculateDomainSessionScores({
+    domainItemIds,
+    sessions,
+    items,
+  }: {
+    domainItemIds: Set<string>;
+    sessions: SessionWithInternalRelations[];
+    items: ItemWithInternalRelations[];
+  }) {
+    const itemById = new Map(items.map((item) => [item.id, item]));
 
+    return sessions
+      .map((session) => {
+        const relevantResponses = session.responses.filter((response) =>
+          domainItemIds.has(response.itemId),
+        );
+
+        if (relevantResponses.length === 0) {
+          return null;
+        }
+
+        const correctResponses = relevantResponses.filter((response) => {
+          const item = itemById.get(response.itemId);
+
+          if (!item) {
+            return false;
+          }
+
+          return this.areJsonValuesEqual(response.answer, item.correctAnswer);
+        });
+
+        return Math.round(
+          (correctResponses.length / relevantResponses.length) * 100,
+        );
+      })
+      .filter((score): score is number => score !== null);
+  }
+
+  private toScoreDistribution(scores: number[]): ScoreDistributionBucket[] {
+    return [
+      {
+        label: '0–25%',
+        count: scores.filter((score) => score >= 0 && score <= 25).length,
+      },
+      {
+        label: '26–50%',
+        count: scores.filter((score) => score >= 26 && score <= 50).length,
+      },
+      {
+        label: '51–75%',
+        count: scores.filter((score) => score >= 51 && score <= 75).length,
+      },
+      {
+        label: '76–100%',
+        count: scores.filter((score) => score >= 76 && score <= 100).length,
+      },
+    ];
+  }
+
+  private toBandDistribution(bands: string[]): ScoreDistributionBucket[] {
+    const counts = bands.reduce<Record<string, number>>(
+      (summary, band) => ({
+        ...summary,
+        [band]: (summary[band] ?? 0) + 1,
+      }),
+      {},
+    );
+
+    return Object.entries(counts).map(([label, count]) => ({
+      label,
+      count,
+    }));
+  }
+
+  private async getUserCountsByRole() {
+    const groupedUsers = await this.prisma.user.groupBy({
+      by: ['role'],
+      _count: {
+        _all: true,
+      },
+    });
+
+    return groupedUsers.reduce<Record<string, number>>(
+      (summary, groupedUser) => ({
+        ...summary,
+        [groupedUser.role]: groupedUser._count._all,
+      }),
+      {},
+    );
+  }
+
+  private humaniseDomain(domain: string) {
+    return domain
+      .toLowerCase()
+      .split('_')
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  }
+
+  private getItemReviewReason(item: InternalItemOutput) {
+    if (item.status === ItemStatus.UNDER_REVIEW) {
+      return 'Item is already marked under review.';
+    }
+
+    if (
+      item.performance.validResponses >= 5 &&
+      item.performance.correctResponseRate <= 0.25
+    ) {
+      return 'Correct-response rate is very low for observed responses.';
+    }
+
+    if (
+      item.performance.validResponses >= 5 &&
+      item.performance.correctResponseRate >= 0.9
+    ) {
+      return 'Correct-response rate is very high for observed responses.';
+    }
+
+    if (item.performance.omissionCount >= 10) {
+      return 'Omission count is high relative to current exposure.';
+    }
+
+    return 'Review recommended.';
+  }
   private toPlainRecord(value: unknown): Record<string, unknown> {
     if (value && typeof value === 'object' && !Array.isArray(value)) {
       return value as Record<string, unknown>;

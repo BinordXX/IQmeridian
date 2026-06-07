@@ -70,6 +70,62 @@ export const sessionTypeLabels: Record<InternalSessionType, string> = {
   EMPLOYER_LINKED: 'Employer-linked',
   CONSUMER: 'Consumer',
 };
+
+export type ScoreDistributionBucket = {
+  label: string;
+  count: number;
+};
+
+export type InternalSectionPerformanceSummary = {
+  section: string;
+  sectionLabel: string;
+  startedSessions: number;
+  completedSessions: number;
+  completionRate: number;
+  averageScorePercent: number;
+  averageCompletionTimeMinutes: number | null;
+  scoreDistribution: ScoreDistributionBucket[];
+};
+
+export type InternalFormPerformanceSummary = {
+  formId: string;
+  formLabel: string;
+  startedSessions: number;
+  completedSessions: number;
+  completionRate: number;
+  averageCompletionTimeMinutes: number | null;
+  scoreSpread: ScoreDistributionBucket[];
+};
+
+export type InternalResearcherDashboardOverview = {
+  totalItemsByStatus: Record<string, number>;
+  activeItemsByDomain: {
+    domain: string;
+    label: string;
+    count: number;
+  }[];
+  formsInUse: number;
+  recentSessionVolume: number;
+  flaggedSessionCount: number;
+  averageSectionCompletionTime: number | null;
+  itemsNeedingReview: {
+    id: string;
+    label: string;
+    domain: string;
+    status: string;
+    reason: string;
+  }[];
+};
+
+export type InternalAdminOverview = {
+  organisationCount: number;
+  activeCampaigns: number;
+  userCountsByRole: Record<string, number>;
+  recentAuditActivity: InternalAuditEvent[];
+  platformErrors: InternalAuditEvent[];
+  exportEvents: InternalAuditEvent[];
+  itemLifecycleEvents: InternalAuditEvent[];
+};
 export const itemDomainLabels: Record<string, string> = {
   ABSTRACT: 'Abstract reasoning',
   NUMERICAL: 'Numerical reasoning',
@@ -134,6 +190,10 @@ export function formatInternalDuration(minutes: number | null) {
   }
 
   return `${minutes} min`;
+}
+
+export function formatInternalRate(rate: number) {
+  return `${Math.round(rate * 100)}%`;
 }
 
 export function formatOmissionRate(rate: number) {
@@ -267,5 +327,33 @@ export function fetchInternalItemPerformance(itemId: string) {
   return fetchInternalApi<InternalItemPerformanceOutput>({
     path: `/internal/items/${encodeURIComponent(itemId)}/performance`,
     role: 'RESEARCHER',
+  });
+}
+
+export function fetchSectionPerformanceSummaries() {
+  return fetchInternalApi<InternalSectionPerformanceSummary[]>({
+    path: '/internal/performance/sections',
+    role: 'RESEARCHER',
+  });
+}
+
+export function fetchFormPerformanceSummaries() {
+  return fetchInternalApi<InternalFormPerformanceSummary[]>({
+    path: '/internal/performance/forms',
+    role: 'RESEARCHER',
+  });
+}
+
+export function fetchResearcherDashboardOverview() {
+  return fetchInternalApi<InternalResearcherDashboardOverview>({
+    path: '/internal/researcher/dashboard',
+    role: 'RESEARCHER',
+  });
+}
+
+export function fetchAdminOverview() {
+  return fetchInternalApi<InternalAdminOverview>({
+    path: '/internal/admin/overview',
+    role: 'PLATFORM_ADMIN',
   });
 }

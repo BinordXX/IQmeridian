@@ -1,36 +1,13 @@
 import Link from 'next/link';
 
-import {
-  fetchAnalyticsExportDefinitions,
-  fetchInternalAuditEvents,
-  fetchInternalSessions,
-} from '../_lib/internal-api';
+import { fetchAdminOverview } from '../_lib/internal-api';
 
 export default async function InternalAdminDashboardPage() {
-  const [sessions, auditEvents, exportDefinitions] = await Promise.all([
-    fetchInternalSessions(),
-    fetchInternalAuditEvents(),
-    fetchAnalyticsExportDefinitions(),
-  ]);
+  const overview = await fetchAdminOverview();
 
-  const completedSessions = sessions.filter(
-    (session) => session.status === 'COMPLETED'
-  ).length;
-  const inProgressSessions = sessions.filter(
-    (session) => session.status === 'IN_PROGRESS'
-  ).length;
-  const flaggedSessions = sessions.filter(
-    (session) => session.suspiciousFlagStatus !== 'NONE'
-  ).length;
-
-  const exportEvents = auditEvents.filter((event) =>
-    event.action.includes('EXPORT')
-  );
-
-  const itemLifecycleEvents = auditEvents.filter(
-    (event) =>
-      event.action.includes('ITEM_ACTIVATED') ||
-      event.action.includes('ITEM_RETIRED')
+  const totalUsers = Object.values(overview.userCountsByRole).reduce(
+    (sum, count) => sum + count,
+    0
   );
 
   return (
@@ -44,9 +21,8 @@ export default async function InternalAdminDashboardPage() {
             Operational oversight dashboard
           </h1>
           <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
-            This dashboard now uses the internal API for session, audit, and
-            export-definition data. Some governance metrics still need dedicated
-            organisation, campaign, user-role, and platform-error endpoints.
+            This dashboard now reads operational aggregates from the internal
+            admin overview endpoint.
           </p>
         </div>
 
@@ -68,52 +44,60 @@ export default async function InternalAdminDashboardPage() {
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-sm font-medium text-slate-500">Total sessions</p>
-          <p className="mt-3 text-3xl font-semibold">{sessions.length}</p>
-          <p className="mt-2 text-sm text-slate-600">
-            Sessions returned by the internal API.
+          <p className="text-sm font-medium text-slate-500">Organisations</p>
+          <p className="mt-3 text-3xl font-semibold">
+            {overview.organisationCount}
           </p>
         </article>
 
         <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-sm font-medium text-slate-500">
-            Completed sessions
-          </p>
-          <p className="mt-3 text-3xl font-semibold">{completedSessions}</p>
-          <p className="mt-2 text-sm text-slate-600">
-            Sessions currently marked completed.
+          <p className="text-sm font-medium text-slate-500">Active campaigns</p>
+          <p className="mt-3 text-3xl font-semibold">
+            {overview.activeCampaigns}
           </p>
         </article>
 
         <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-sm font-medium text-slate-500">
-            In-progress sessions
-          </p>
-          <p className="mt-3 text-3xl font-semibold">{inProgressSessions}</p>
-          <p className="mt-2 text-sm text-slate-600">
-            Sessions still open or partially completed.
-          </p>
+          <p className="text-sm font-medium text-slate-500">Total users</p>
+          <p className="mt-3 text-3xl font-semibold">{totalUsers}</p>
         </article>
 
         <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-sm font-medium text-slate-500">Flagged sessions</p>
-          <p className="mt-3 text-3xl font-semibold">{flaggedSessions}</p>
-          <p className="mt-2 text-sm text-slate-600">
-            Sessions currently carrying suspicious markers.
+          <p className="text-sm font-medium text-slate-500">Platform issues</p>
+          <p className="mt-3 text-3xl font-semibold">
+            {overview.platformErrors.length}
           </p>
         </article>
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+      <section className="grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
+        <aside className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="text-lg font-semibold">User counts by role</h2>
+
+          <dl className="mt-5 space-y-3 text-sm">
+            {Object.entries(overview.userCountsByRole).map(([role, count]) => (
+              <div
+                key={role}
+                className="flex justify-between rounded-xl bg-slate-50 px-4 py-3"
+              >
+                <dt className="text-slate-500">{role}</dt>
+                <dd className="font-semibold">{count}</dd>
+              </div>
+            ))}
+          </dl>
+
+          {Object.keys(overview.userCountsByRole).length === 0 ? (
+            <p className="mt-5 rounded-xl bg-slate-50 p-4 text-sm text-slate-600">
+              No user-role counts are available yet.
+            </p>
+          ) : null}
+        </aside>
+
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold">Recent audit activity</h2>
-          <p className="mt-2 text-sm leading-6 text-slate-600">
-            Internal audit activity is now read from the database-backed audit
-            endpoint.
-          </p>
 
           <div className="mt-5 space-y-3">
-            {auditEvents.slice(0, 8).map((event) => (
+            {overview.recentAuditActivity.map((event) => (
               <article
                 key={event.id}
                 className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm"
@@ -136,86 +120,90 @@ export default async function InternalAdminDashboardPage() {
                 <p className="mt-3 text-xs text-slate-500">{event.createdAt}</p>
               </article>
             ))}
-
-            {auditEvents.length === 0 ? (
-              <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600">
-                No audit events were returned by the internal API.
-              </p>
-            ) : null}
           </div>
+
+          {overview.recentAuditActivity.length === 0 ? (
+            <p className="mt-5 rounded-xl bg-slate-50 p-4 text-sm text-slate-600">
+              No audit activity is available yet.
+            </p>
+          ) : null}
+        </section>
+      </section>
+
+      <section className="grid gap-6 lg:grid-cols-3">
+        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="text-lg font-semibold">Platform errors or failures</h2>
+
+          <div className="mt-5 space-y-3">
+            {overview.platformErrors.map((event) => (
+              <article
+                key={event.id}
+                className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm"
+              >
+                <p className="font-semibold">{event.action}</p>
+                <p className="mt-2 text-slate-600">
+                  {event.entityType ?? 'Unknown entity'} ·{' '}
+                  {event.entityId ?? 'No entity ID'}
+                </p>
+              </article>
+            ))}
+          </div>
+
+          {overview.platformErrors.length === 0 ? (
+            <p className="mt-5 rounded-xl bg-slate-50 p-4 text-sm text-slate-600">
+              No platform error audit events are currently recorded.
+            </p>
+          ) : null}
         </section>
 
-        <aside className="space-y-6">
-          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-semibold">Export definitions</h2>
+        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="text-lg font-semibold">Export events</h2>
 
-            <div className="mt-5 space-y-3">
-              {exportDefinitions.map((definition) => (
-                <article
-                  key={definition.dataset}
-                  className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm"
-                >
-                  <p className="font-semibold">{definition.label}</p>
-                  <p className="mt-2 text-slate-600">
-                    {definition.format} ·{' '}
-                    {definition.currentlyAvailable
-                      ? 'Available'
-                      : 'Pending backend wiring'}
-                  </p>
-                </article>
-              ))}
-            </div>
-          </section>
+          <div className="mt-5 space-y-3">
+            {overview.exportEvents.map((event) => (
+              <article
+                key={event.id}
+                className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm"
+              >
+                <p className="font-semibold">{event.action}</p>
+                <p className="mt-2 text-slate-600">{event.createdAt}</p>
+              </article>
+            ))}
+          </div>
 
-          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-semibold">Export events</h2>
+          {overview.exportEvents.length === 0 ? (
+            <p className="mt-5 rounded-xl bg-slate-50 p-4 text-sm text-slate-600">
+              No export audit events are currently recorded.
+            </p>
+          ) : null}
+        </section>
 
-            <div className="mt-5 space-y-3">
-              {exportEvents.length > 0 ? (
-                exportEvents.map((event) => (
-                  <article
-                    key={event.id}
-                    className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm"
-                  >
-                    <p className="font-semibold">{event.action}</p>
-                    <p className="mt-2 text-slate-600">{event.createdAt}</p>
-                  </article>
-                ))
-              ) : (
-                <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600">
-                  No export audit events are currently recorded.
+        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="text-lg font-semibold">
+            Item activations and retirements
+          </h2>
+
+          <div className="mt-5 space-y-3">
+            {overview.itemLifecycleEvents.map((event) => (
+              <article
+                key={event.id}
+                className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm"
+              >
+                <p className="font-semibold">{event.action}</p>
+                <p className="mt-2 text-slate-600">
+                  {event.entityId ?? 'No entity ID'}
                 </p>
-              )}
-            </div>
-          </section>
+              </article>
+            ))}
+          </div>
 
-          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-semibold">
-              Item activations and retirements
-            </h2>
-
-            <div className="mt-5 space-y-3">
-              {itemLifecycleEvents.length > 0 ? (
-                itemLifecycleEvents.map((event) => (
-                  <article
-                    key={event.id}
-                    className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm"
-                  >
-                    <p className="font-semibold">{event.action}</p>
-                    <p className="mt-2 text-slate-600">
-                      {event.entityId ?? 'No entity ID'}
-                    </p>
-                  </article>
-                ))
-              ) : (
-                <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600">
-                  No item activation or retirement audit events are currently
-                  recorded.
-                </p>
-              )}
-            </div>
-          </section>
-        </aside>
+          {overview.itemLifecycleEvents.length === 0 ? (
+            <p className="mt-5 rounded-xl bg-slate-50 p-4 text-sm text-slate-600">
+              No item activation or retirement audit events are currently
+              recorded.
+            </p>
+          ) : null}
+        </section>
       </section>
     </div>
   );

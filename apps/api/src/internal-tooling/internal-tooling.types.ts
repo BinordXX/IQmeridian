@@ -155,3 +155,58 @@ export type InternalItemDetailOutput = InternalItemOutput & {
   }[];
   reviewNotes: string[];
 };
+export type ScoreDistributionBucket = {
+  label: string;
+  count: number;
+};
+
+export type InternalSectionPerformanceSummary = {
+  section: string;
+  sectionLabel: string;
+  startedSessions: number;
+  completedSessions: number;
+  completionRate: number;
+  averageScorePercent: number;
+  averageCompletionTimeMinutes: number | null;
+  scoreDistribution: ScoreDistributionBucket[];
+};
+
+export type InternalFormPerformanceSummary = {
+  formId: string;
+  formLabel: string;
+  startedSessions: number;
+  completedSessions: number;
+  completionRate: number;
+  averageCompletionTimeMinutes: number | null;
+  scoreSpread: ScoreDistributionBucket[];
+};
+
+export type InternalResearcherDashboardOverview = {
+  totalItemsByStatus: Record<string, number>;
+  activeItemsByDomain: {
+    domain: string;
+    label: string;
+    count: number;
+  }[];
+  formsInUse: number;
+  recentSessionVolume: number;
+  flaggedSessionCount: number;
+  averageSectionCompletionTime: number | null;
+  itemsNeedingReview: {
+    id: string;
+    label: string;
+    domain: string;
+    status: string;
+    reason: string;
+  }[];
+};
+
+export type InternalAdminOverview = {
+  organisationCount: number;
+  activeCampaigns: number;
+  userCountsByRole: Record<string, number>;
+  recentAuditActivity: InternalAuditEvent[];
+  platformErrors: InternalAuditEvent[];
+  exportEvents: InternalAuditEvent[];
+  itemLifecycleEvents: InternalAuditEvent[];
+};
