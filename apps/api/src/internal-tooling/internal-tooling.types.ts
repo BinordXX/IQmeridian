@@ -270,3 +270,17 @@ export type InternalReportScoreAuditOutput = {
   abstractBand: string | null;
   numericalBand: string | null;
 };
+
+export type CreateInternalDraftItemInput = {
+  id?: string;
+  domain: string;
+  itemType: string;
+  prompt: string;
+  options: unknown;
+  correctAnswer: unknown;
+  difficulty: string | null;
+  distractorRationale?: string | null;
+  timeExpectationSeconds?: number | null;
+  explanationNotes?: string | null;
+  assetLinkage?: string | null;
+};

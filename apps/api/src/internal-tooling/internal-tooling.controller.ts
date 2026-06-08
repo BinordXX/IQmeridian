@@ -12,6 +12,7 @@ import {
 import { InternalToolingService } from './internal-tooling.service';
 import {
   CreateInternalAuditEventInput,
+  CreateInternalDraftItemInput,
   CreateInternalReviewStatusInput,
 } from './internal-tooling.types';
 
@@ -46,6 +47,19 @@ export class InternalToolingController {
   constructor(
     private readonly internalToolingService: InternalToolingService,
   ) {}
+
+  @Post('items')
+  createInternalDraftItem(
+    @Body() input: CreateInternalDraftItemInput,
+    @Headers('x-internal-role') roleHeader?: string,
+  ) {
+    assertInternalAccess({
+      roleHeader,
+      allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
+    });
+
+    return this.internalToolingService.createInternalDraftItem(input);
+  }
 
   @Get('performance/sections')
   getSectionPerformanceSummaries(

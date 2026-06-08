@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import {
   CampaignStatus,
   FormItemMappingStatus,
@@ -29,6 +30,7 @@ import {
   ScoreDistributionBucket,
   InternalItemTraceabilityOutput,
   InternalReportScoreAuditOutput,
+  CreateInternalDraftItemInput,
 } from './internal-tooling.types';
 
 const sessionInclude = {
@@ -209,7 +211,55 @@ export class InternalToolingService {
       }),
     );
   }
+  async createInternalDraftItem(
+    input: CreateInternalDraftItemInput,
+  ): Promise<InternalItemDetailOutput> {
+    const itemId =
+      input.id && input.id.trim().length > 0
+        ? input.id.trim()
+        : `draft-item-${randomUUID()}`;
 
+    const item = await this.prisma.item.create({
+      data: {
+        id: itemId,
+        domain: input.domain,
+        itemType: input.itemType,
+        prompt: input.prompt,
+        options: this.toJsonValue(input.options),
+        correctAnswer: this.toJsonValue(input.correctAnswer),
+        difficulty: input.difficulty,
+        status: ItemStatus.DRAFT,
+        version: 1,
+      } as Prisma.ItemCreateInput,
+      include: itemInclude,
+    });
+
+    await this.prisma.auditLog.create({
+      data: {
+        action: 'ITEM_CREATED',
+        entityType: 'Item',
+        entityId: item.id,
+        metadata: this.toJsonValue({
+          domain: input.domain,
+          itemType: input.itemType,
+          status: ItemStatus.DRAFT,
+          difficulty: input.difficulty,
+          distractorRationale: input.distractorRationale ?? null,
+          timeExpectationSeconds: input.timeExpectationSeconds ?? null,
+          explanationNotes: input.explanationNotes ?? null,
+          assetLinkage: input.assetLinkage ?? null,
+        }),
+      },
+    });
+
+    const createdItem = await this.getInternalItemById(item.id);
+
+    if (!createdItem) {
+      throw new Error('Created item could not be reloaded.');
+    }
+
+    return createdItem;
+  }
   async getInternalItemTraceability(
     itemId: string,
   ): Promise<InternalItemTraceabilityOutput | undefined> {

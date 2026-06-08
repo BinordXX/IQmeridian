@@ -47,6 +47,20 @@ export type AnalyticsExportDataset =
   | 'SCORE_LEVEL'
   | 'CAMPAIGN_SUMMARY';
 
+export type CreateInternalDraftItemInput = {
+  id?: string;
+  domain: string;
+  itemType: string;
+  prompt: string;
+  options: unknown;
+  correctAnswer: unknown;
+  difficulty: string | null;
+  distractorRationale?: string | null;
+  timeExpectationSeconds?: number | null;
+  explanationNotes?: string | null;
+  assetLinkage?: string | null;
+};
+
 export type AnalyticsExportDefinition = {
   dataset: AnalyticsExportDataset;
   label: string;
@@ -241,6 +255,55 @@ async function fetchInternalApi<T>({
 
     throw new Error(
       `Internal API request failed for ${path}: ${response.status} ${response.statusText}.${details}`
+    );
+  }
+
+  return response.json() as Promise<T>;
+}
+
+async function writeInternalApi<T>({
+  path,
+  method,
+  body,
+  role = 'RESEARCHER',
+}: {
+  path: string;
+  method: 'POST' | 'PATCH';
+  body: unknown;
+  role?: 'PLATFORM_ADMIN' | 'RESEARCHER';
+}): Promise<T> {
+  const url =
+    typeof window === 'undefined' ? `${getInternalApiBaseUrl()}${path}` : path;
+
+  const response = await fetch(url, {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      'x-internal-role': role,
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    let details = '';
+
+    try {
+      const responseBody = (await response.json()) as {
+        message?: string;
+        error?: string;
+      };
+
+      details = responseBody.message
+        ? ` ${responseBody.message}`
+        : responseBody.error
+          ? ` ${responseBody.error}`
+          : '';
+    } catch {
+      details = '';
+    }
+
+    throw new Error(
+      `Internal API write failed for ${path}: ${response.status} ${response.statusText}.${details}`
     );
   }
 
@@ -449,5 +512,13 @@ export function fetchReportScoreAuditRecords() {
   return fetchInternalApi<InternalReportScoreAuditOutput[]>({
     path: '/internal/reports/score-audit',
     role: 'RESEARCHER',
+  });
+}
+export function createInternalDraftItem(input: CreateInternalDraftItemInput) {
+  return writeInternalApi<InternalItemDetailOutput>({
+    path: '/internal/api/items',
+    method: 'POST',
+    role: 'RESEARCHER',
+    body: input,
   });
 }
