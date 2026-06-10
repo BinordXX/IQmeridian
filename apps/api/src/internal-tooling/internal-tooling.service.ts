@@ -12,6 +12,7 @@ import {
   ItemStatus,
   Prisma,
   SessionStatus,
+  AssessmentDomain,
 } from '@prisma/client';
 
 import { PrismaService } from '../prisma/prisma.service';
@@ -40,6 +41,7 @@ import {
   CreateInternalItemFormMappingInput,
   ActivateInternalItemInput,
   UpdateInternalItemStatusInput,
+  UpdateInternalDraftItemInput,
 } from './internal-tooling.types';
 
 const sessionInclude = {
@@ -219,6 +221,125 @@ export class InternalToolingService {
         };
       }),
     );
+  }
+
+  async updateInternalDraftItem(
+    itemId: string,
+    input: UpdateInternalDraftItemInput,
+  ): Promise<InternalItemDetailOutput> {
+    const item = await this.prisma.item.findUnique({
+      where: { id: itemId },
+      include: itemInclude,
+    });
+
+    if (!item) {
+      throw new NotFoundException('Internal item record was not found.');
+    }
+
+    if (item.status !== ItemStatus.DRAFT) {
+      throw new BadRequestException(
+        'Only draft items can be edited. Return the item to draft or create a new version before editing.',
+      );
+    }
+
+    const updateData: Prisma.ItemUpdateInput = {};
+    const changedFields: string[] = [];
+
+    if (input.domain !== undefined) {
+      const domain = input.domain.trim();
+
+      if (domain.length === 0) {
+        throw new BadRequestException('Domain cannot be empty.');
+      }
+
+      if (
+        !Object.values(AssessmentDomain).includes(domain as AssessmentDomain)
+      ) {
+        throw new BadRequestException('Unsupported assessment domain.');
+      }
+
+      updateData.domain = domain as AssessmentDomain;
+      changedFields.push('domain');
+    }
+
+    if (input.itemType !== undefined) {
+      const itemType = input.itemType.trim();
+
+      if (itemType.length === 0) {
+        throw new BadRequestException('Item type cannot be empty.');
+      }
+
+      updateData.itemType = itemType;
+      changedFields.push('itemType');
+    }
+
+    if (input.prompt !== undefined) {
+      const prompt = input.prompt.trim();
+
+      if (prompt.length === 0) {
+        throw new BadRequestException('Prompt cannot be empty.');
+      }
+
+      updateData.prompt = prompt;
+      changedFields.push('prompt');
+    }
+
+    if (input.options !== undefined) {
+      updateData.options = this.toJsonValue(input.options);
+      changedFields.push('options');
+    }
+
+    if (input.correctAnswer !== undefined) {
+      updateData.correctAnswer = this.toJsonValue(input.correctAnswer);
+      changedFields.push('correctAnswer');
+    }
+
+    if (input.difficulty !== undefined) {
+      updateData.difficulty =
+        input.difficulty && input.difficulty.trim().length > 0
+          ? input.difficulty.trim()
+          : null;
+      changedFields.push('difficulty');
+    }
+
+    if (changedFields.length === 0) {
+      throw new BadRequestException('No editable item fields were provided.');
+    }
+
+    updateData.version = {
+      increment: 1,
+    };
+
+    const updatedItem = await this.prisma.item.update({
+      where: { id: item.id },
+      data: updateData,
+      include: itemInclude,
+    });
+
+    await this.prisma.auditLog.create({
+      data: {
+        action: 'ITEM_UPDATED',
+        entityType: 'Item',
+        entityId: item.id,
+        metadata: this.toJsonValue({
+          itemId: item.id,
+          previousStatus: item.status,
+          status: updatedItem.status,
+          previousVersion: item.version,
+          newVersion: updatedItem.version,
+          changedFields,
+          note: input.note ?? null,
+        }),
+      },
+    });
+
+    const reloadedItem = await this.getInternalItemById(updatedItem.id);
+
+    if (!reloadedItem) {
+      throw new Error('Updated item could not be reloaded.');
+    }
+
+    return reloadedItem;
   }
 
   async updateInternalItemStatus(

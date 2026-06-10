@@ -361,9 +361,7 @@ export function ItemBankManagementClient({
 
                       {item.status === 'DRAFT' ? (
                         <Link
-                          href={`/internal/researcher/item-bank/edit?itemId=${encodeURIComponent(
-                            item.id
-                          )}`}
+                          href={`/internal/researcher/item-bank/${encodeURIComponent(item.id)}/edit`}
                           className="w-fit rounded-full border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-800"
                         >
                           Edit draft

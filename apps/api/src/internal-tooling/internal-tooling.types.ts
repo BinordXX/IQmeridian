@@ -296,6 +296,16 @@ export type ActivateInternalItemInput = {
   note?: string | null;
 };
 
+export type UpdateInternalDraftItemInput = {
+  domain?: string;
+  itemType?: string;
+  prompt?: string;
+  options?: unknown;
+  correctAnswer?: unknown;
+  difficulty?: string | null;
+  note?: string | null;
+};
+
 export type UpdateInternalItemStatusInput = {
   status: 'DRAFT' | 'UNDER_REVIEW' | 'ACTIVE' | 'RETIRED';
   note?: string | null;

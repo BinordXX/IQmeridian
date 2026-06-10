@@ -7,6 +7,17 @@ export type SuspiciousFlagStatus = 'NONE' | 'LOW' | 'MEDIUM' | 'HIGH';
 export type ActivateInternalItemInput = {
   note?: string | null;
 };
+
+export type UpdateInternalDraftItemInput = {
+  domain?: string;
+  itemType?: string;
+  prompt?: string;
+  options?: unknown;
+  correctAnswer?: unknown;
+  difficulty?: string | null;
+  note?: string | null;
+};
+
 export type UpdateInternalItemStatusInput = {
   status: 'DRAFT' | 'UNDER_REVIEW' | 'ACTIVE' | 'RETIRED';
   note?: string | null;
@@ -577,6 +588,21 @@ export function updateInternalItemStatus({
   return writeInternalApi<InternalItemDetailOutput>({
     path: `/internal/api/items/${encodeURIComponent(itemId)}/status`,
     method: 'POST',
+    role: 'RESEARCHER',
+    body: input,
+  });
+}
+
+export function updateInternalDraftItem({
+  itemId,
+  input,
+}: {
+  itemId: string;
+  input: UpdateInternalDraftItemInput;
+}) {
+  return writeInternalApi<InternalItemDetailOutput>({
+    path: `/internal/api/items/${encodeURIComponent(itemId)}`,
+    method: 'PATCH',
     role: 'RESEARCHER',
     body: input,
   });

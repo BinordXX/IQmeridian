@@ -75,6 +75,14 @@ export default async function InternalItemDetailPage({
           >
             View traceability
           </Link>
+          {item.status === 'DRAFT' ? (
+            <Link
+              href={`/internal/researcher/item-bank/${encodeURIComponent(item.id)}/edit`}
+              className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800"
+            >
+              Edit draft
+            </Link>
+          ) : null}
 
           <Link
             href={`/internal/researcher/item-bank/${encodeURIComponent(

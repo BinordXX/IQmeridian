@@ -6,6 +6,7 @@ import {
   Headers,
   NotFoundException,
   Param,
+  Patch,
   Post,
 } from '@nestjs/common';
 
@@ -17,6 +18,7 @@ import {
   CreateInternalItemFormMappingInput,
   ActivateInternalItemInput,
   UpdateInternalItemStatusInput,
+  UpdateInternalDraftItemInput,
 } from './internal-tooling.types';
 
 type InternalApiRole = 'PLATFORM_ADMIN' | 'RESEARCHER';
@@ -75,6 +77,20 @@ export class InternalToolingController {
     });
 
     return this.internalToolingService.activateInternalItem(itemId, input);
+  }
+
+  @Patch('items/:itemId')
+  updateInternalDraftItem(
+    @Param('itemId') itemId: string,
+    @Body() input: UpdateInternalDraftItemInput,
+    @Headers('x-internal-role') roleHeader?: string,
+  ) {
+    assertInternalAccess({
+      roleHeader,
+      allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
+    });
+
+    return this.internalToolingService.updateInternalDraftItem(itemId, input);
   }
 
   @Post('items/:itemId/status')
