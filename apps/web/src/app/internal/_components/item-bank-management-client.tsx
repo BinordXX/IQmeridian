@@ -82,6 +82,7 @@ export function ItemBankManagementClient({
     () => ['ALL', ...Array.from(new Set(items.map((item) => item.domain)))],
     [items]
   );
+
   const statusOptions = useMemo(
     () => ['ALL', ...Array.from(new Set(items.map((item) => item.status)))],
     [items]
@@ -124,9 +125,9 @@ export function ItemBankManagementClient({
         <div>
           <h2 className="text-xl font-semibold">Item-bank management</h2>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-            This table is now populated from the internal item API, which reads
-            item records, mappings, responses, and audit-derived metadata from
-            the backend.
+            This table supports quick review of item status, domain, exposure,
+            response behaviour, and operational readiness. Open an item detail
+            page before activating it so the decision is made with context.
           </p>
         </div>
 
@@ -202,13 +203,13 @@ export function ItemBankManagementClient({
       </div>
 
       <div className="mt-6 overflow-hidden rounded-xl border border-slate-200">
-        <table className="w-full min-w-[1180px] text-left text-sm">
+        <table className="w-full min-w-[1280px] text-left text-sm">
           <thead className="bg-slate-100 text-xs uppercase tracking-wide text-slate-600">
             <tr>
               <th className="px-4 py-3">Item</th>
               <th className="px-4 py-3">Domain</th>
               <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Activation</th>
+              <th className="px-4 py-3">Operational readiness</th>
               <th className="px-4 py-3">Exposure</th>
               <th className="px-4 py-3">Valid responses</th>
               <th className="px-4 py-3">Correct rate</th>
@@ -222,48 +223,91 @@ export function ItemBankManagementClient({
           <tbody className="divide-y divide-slate-200 bg-white">
             {filteredItems.map((item) => {
               const performancePatterns = getPerformancePatterns(item);
+              const detailHref = `/internal/researcher/item-bank/${encodeURIComponent(
+                item.id
+              )}`;
+              const needsAttachment =
+                item.status !== 'ACTIVE' &&
+                item.status !== 'RETIRED' &&
+                item.activeFormAssociationCount === 0;
 
               return (
-                <tr key={item.id} className="align-top">
+                <tr key={item.id} className="align-top hover:bg-slate-50">
                   <td className="px-4 py-4">
-                    <p className="font-semibold text-slate-950">{item.id}</p>
-                    <p className="mt-1 line-clamp-2 text-slate-600">
+                    <Link
+                      href={detailHref}
+                      className="font-semibold text-slate-950 underline-offset-4 hover:underline"
+                    >
+                      {item.id}
+                    </Link>
+                    <Link
+                      href={detailHref}
+                      className="mt-1 block line-clamp-2 text-slate-600 underline-offset-4 hover:underline"
+                    >
                       {item.label}
+                    </Link>
+                    <p className="mt-2 line-clamp-2 text-xs leading-5 text-slate-500">
+                      {item.prompt}
                     </p>
                   </td>
+
                   <td className="px-4 py-4 text-slate-700">
                     {itemDomainLabels[item.domain] ?? item.domain}
                   </td>
+
                   <td className="px-4 py-4">
                     <span className="rounded-full border border-slate-300 px-2 py-1 text-xs font-semibold">
                       {itemStatusLabels[item.status] ?? item.status}
                     </span>
                   </td>
+
                   <td className="px-4 py-4 text-slate-700">
-                    {item.active ? 'Currently active' : 'Inactive'}
+                    {item.status === 'ACTIVE' ? (
+                      <span className="text-xs font-semibold text-slate-700">
+                        Operationally active
+                      </span>
+                    ) : needsAttachment ? (
+                      <span className="text-xs font-semibold text-amber-700">
+                        Attach before activation
+                      </span>
+                    ) : item.status === 'RETIRED' ? (
+                      <span className="text-xs font-semibold text-slate-500">
+                        Retired; new version required
+                      </span>
+                    ) : (
+                      <span className="text-xs font-semibold text-slate-700">
+                        Open detail to activate
+                      </span>
+                    )}
+
                     <p className="mt-1 text-xs text-slate-500">
-                      {item.historicallyActive
-                        ? 'Historically active'
-                        : 'Never activated'}
+                      {item.activeFormAssociationCount} active form mapping
+                      {item.activeFormAssociationCount === 1 ? '' : 's'}
                     </p>
                   </td>
+
                   <td className="px-4 py-4 text-slate-700">
                     {item.performance.exposureCount}
                   </td>
+
                   <td className="px-4 py-4 text-slate-700">
                     {item.performance.validResponses}
                   </td>
+
                   <td className="px-4 py-4 text-slate-700">
                     {formatCorrectRate(item.performance.correctResponseRate)}
                   </td>
+
                   <td className="px-4 py-4 text-slate-700">
                     {item.performance.omissionCount}
                   </td>
+
                   <td className="px-4 py-4 text-slate-700">
                     {item.performance.averageResponseTimeSeconds === null
                       ? 'No data'
                       : `${item.performance.averageResponseTimeSeconds}s`}
                   </td>
+
                   <td className="px-4 py-4">
                     <div className="flex max-w-[220px] flex-wrap gap-2">
                       {performancePatterns.length > 0 ? (
@@ -282,40 +326,49 @@ export function ItemBankManagementClient({
                       )}
                     </div>
                   </td>
+
                   <td className="px-4 py-4">
                     <div className="flex flex-col gap-2">
                       <Link
-                        href={`/internal/researcher/item-bank/${encodeURIComponent(
-                          item.id
-                        )}`}
-                        className="w-fit rounded-full border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-800"
+                        href={detailHref}
+                        className="w-fit rounded-full bg-slate-950 px-3 py-2 text-xs font-semibold text-white"
                       >
-                        Detail
+                        Open detail
                       </Link>
 
                       <Link
-                        href={`/internal/researcher/item-bank/${encodeURIComponent(
-                          item.id
-                        )}/performance`}
+                        href={`${detailHref}/performance`}
                         className="w-fit rounded-full border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-800"
                       >
                         Performance
                       </Link>
+
+                      <Link
+                        href={`${detailHref}/traceability`}
+                        className="w-fit rounded-full border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-800"
+                      >
+                        Traceability
+                      </Link>
+
+                      {needsAttachment ? (
+                        <Link
+                          href={`${detailHref}/attach-form`}
+                          className="w-fit rounded-full border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-800"
+                        >
+                          Attach to form
+                        </Link>
+                      ) : null}
 
                       {item.status === 'DRAFT' ? (
                         <Link
                           href={`/internal/researcher/item-bank/edit?itemId=${encodeURIComponent(
                             item.id
                           )}`}
-                          className="w-fit rounded-full bg-slate-950 px-3 py-2 text-xs font-semibold text-white"
+                          className="w-fit rounded-full border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-800"
                         >
                           Edit draft
                         </Link>
-                      ) : (
-                        <span className="text-xs font-medium text-slate-500">
-                          Versioning required
-                        </span>
-                      )}
+                      ) : null}
                     </div>
                   </td>
                 </tr>

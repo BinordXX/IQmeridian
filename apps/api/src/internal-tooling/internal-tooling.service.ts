@@ -1,4 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+
 import { randomUUID } from 'node:crypto';
 import {
   CampaignStatus,
@@ -31,6 +37,9 @@ import {
   InternalItemTraceabilityOutput,
   InternalReportScoreAuditOutput,
   CreateInternalDraftItemInput,
+  CreateInternalItemFormMappingInput,
+  ActivateInternalItemInput,
+  UpdateInternalItemStatusInput,
 } from './internal-tooling.types';
 
 const sessionInclude = {
@@ -211,6 +220,167 @@ export class InternalToolingService {
       }),
     );
   }
+
+  async updateInternalItemStatus(
+    itemId: string,
+    input: UpdateInternalItemStatusInput,
+  ): Promise<InternalItemDetailOutput> {
+    const nextStatus = input.status as ItemStatus;
+
+    const allowedStatuses = [
+      ItemStatus.DRAFT,
+      ItemStatus.UNDER_REVIEW,
+      ItemStatus.ACTIVE,
+      ItemStatus.RETIRED,
+    ];
+
+    if (!allowedStatuses.includes(nextStatus)) {
+      throw new BadRequestException('Unsupported item status.');
+    }
+
+    const item = await this.prisma.item.findUnique({
+      where: { id: itemId },
+      include: itemInclude,
+    });
+
+    if (!item) {
+      throw new NotFoundException('Internal item record was not found.');
+    }
+
+    if (item.status === nextStatus) {
+      const unchangedItem = await this.getInternalItemById(item.id);
+
+      if (!unchangedItem) {
+        throw new Error('Item could not be reloaded.');
+      }
+
+      return unchangedItem;
+    }
+
+    if (item.status === ItemStatus.RETIRED) {
+      throw new BadRequestException(
+        'Retired items cannot be changed silently. Create a new version instead.',
+      );
+    }
+
+    if (item.status === ItemStatus.ACTIVE && nextStatus === ItemStatus.DRAFT) {
+      throw new BadRequestException(
+        'Active items cannot be returned to draft silently. Retire the item or create a new version.',
+      );
+    }
+
+    const activeMappingCount = item.formMappings.filter(
+      (mapping) => mapping.status === FormItemMappingStatus.ACTIVE,
+    ).length;
+
+    if (nextStatus === ItemStatus.ACTIVE && activeMappingCount === 0) {
+      throw new BadRequestException(
+        'Item must be attached to at least one active form mapping before activation.',
+      );
+    }
+
+    const updatedItem = await this.prisma.item.update({
+      where: { id: item.id },
+      data: {
+        status: nextStatus,
+      },
+      include: itemInclude,
+    });
+
+    await this.prisma.auditLog.create({
+      data: {
+        action: this.getItemStatusAuditAction(nextStatus),
+        entityType: 'Item',
+        entityId: item.id,
+        metadata: this.toJsonValue({
+          itemId: item.id,
+          previousStatus: item.status,
+          newStatus: nextStatus,
+          activeMappingCount,
+          note: input.note ?? null,
+        }),
+      },
+    });
+
+    const reloadedItem = await this.getInternalItemById(updatedItem.id);
+
+    if (!reloadedItem) {
+      throw new Error('Updated item could not be reloaded.');
+    }
+
+    return reloadedItem;
+  }
+
+  async activateInternalItem(
+    itemId: string,
+    input: ActivateInternalItemInput,
+  ): Promise<InternalItemDetailOutput> {
+    const item = await this.prisma.item.findUnique({
+      where: { id: itemId },
+      include: itemInclude,
+    });
+
+    if (!item) {
+      throw new NotFoundException('Internal item record was not found.');
+    }
+
+    if (item.status === ItemStatus.ACTIVE) {
+      const activeItem = await this.getInternalItemById(item.id);
+
+      if (!activeItem) {
+        throw new Error('Active item could not be reloaded.');
+      }
+
+      return activeItem;
+    }
+
+    if (item.status === ItemStatus.RETIRED) {
+      throw new BadRequestException(
+        'Retired items cannot be reactivated silently. Create a new version instead.',
+      );
+    }
+
+    const activeMappingCount = item.formMappings.filter(
+      (mapping) => mapping.status === FormItemMappingStatus.ACTIVE,
+    ).length;
+
+    if (activeMappingCount === 0) {
+      throw new BadRequestException(
+        'Item must be attached to at least one active form mapping before activation.',
+      );
+    }
+
+    const updatedItem = await this.prisma.item.update({
+      where: { id: item.id },
+      data: {
+        status: ItemStatus.ACTIVE,
+      },
+      include: itemInclude,
+    });
+
+    await this.prisma.auditLog.create({
+      data: {
+        action: 'ITEM_ACTIVATED',
+        entityType: 'Item',
+        entityId: item.id,
+        metadata: this.toJsonValue({
+          itemId: item.id,
+          previousStatus: item.status,
+          newStatus: ItemStatus.ACTIVE,
+          activeMappingCount,
+          note: input.note ?? null,
+        }),
+      },
+    });
+
+    const activatedItem = await this.getInternalItemById(updatedItem.id);
+
+    if (!activatedItem) {
+      throw new Error('Activated item could not be reloaded.');
+    }
+
+    return activatedItem;
+  }
   async createInternalDraftItem(
     input: CreateInternalDraftItemInput,
   ): Promise<InternalItemDetailOutput> {
@@ -259,6 +429,105 @@ export class InternalToolingService {
     }
 
     return createdItem;
+  }
+
+  async attachInternalItemToForm(
+    itemId: string,
+    input: CreateInternalItemFormMappingInput,
+  ): Promise<InternalItemTraceabilityOutput> {
+    if (!input.formId || input.formId.trim().length === 0) {
+      throw new BadRequestException('Form ID is required.');
+    }
+
+    const [item, form] = await Promise.all([
+      this.prisma.item.findUnique({
+        where: { id: itemId },
+      }),
+      this.prisma.assessmentForm.findUnique({
+        where: { id: input.formId },
+      }),
+    ]);
+
+    if (!item) {
+      throw new NotFoundException('Internal item record was not found.');
+    }
+
+    if (!form) {
+      throw new NotFoundException('Assessment form was not found.');
+    }
+
+    if (input.sectionId && input.sectionId.trim().length > 0) {
+      const section = await this.prisma.assessmentSection.findUnique({
+        where: { id: input.sectionId },
+      });
+
+      if (!section) {
+        throw new NotFoundException('Assessment section was not found.');
+      }
+    }
+
+    const mappingStatus =
+      input.status === FormItemMappingStatus.INACTIVE
+        ? FormItemMappingStatus.INACTIVE
+        : FormItemMappingStatus.ACTIVE;
+
+    try {
+      await this.prisma.formItemMapping.create({
+        data: {
+          itemId,
+          formId: input.formId,
+          sectionId:
+            input.sectionId && input.sectionId.trim().length > 0
+              ? input.sectionId
+              : null,
+          orderIndex: input.orderIndex ?? 0,
+          status: mappingStatus,
+        },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException(
+          'This item is already attached to the selected form or section.',
+        );
+      }
+
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2003'
+      ) {
+        throw new BadRequestException(
+          'The selected form, section, or item could not be linked because one of the references is invalid.',
+        );
+      }
+
+      throw error;
+    }
+
+    await this.prisma.auditLog.create({
+      data: {
+        action: 'ITEM_ATTACHED_TO_FORM',
+        entityType: 'Item',
+        entityId: itemId,
+        metadata: this.toJsonValue({
+          itemId,
+          formId: input.formId,
+          sectionId: input.sectionId ?? null,
+          orderIndex: input.orderIndex ?? 0,
+          status: mappingStatus,
+        }),
+      },
+    });
+
+    const traceability = await this.getInternalItemTraceability(itemId);
+
+    if (!traceability) {
+      throw new Error('Item traceability could not be reloaded.');
+    }
+
+    return traceability;
   }
   async getInternalItemTraceability(
     itemId: string,
@@ -729,6 +998,21 @@ export class InternalToolingService {
     });
 
     return this.toInternalReviewStatusRecord(auditLog);
+  }
+  private getItemStatusAuditAction(status: ItemStatus) {
+    if (status === ItemStatus.ACTIVE) {
+      return 'ITEM_ACTIVATED';
+    }
+
+    if (status === ItemStatus.RETIRED) {
+      return 'ITEM_RETIRED';
+    }
+
+    if (status === ItemStatus.UNDER_REVIEW) {
+      return 'ITEM_MARKED_UNDER_REVIEW';
+    }
+
+    return 'ITEM_RETURNED_TO_DRAFT';
   }
   private toReportScoreAuditOutput(
     report: ReportWithInternalAuditRelations,

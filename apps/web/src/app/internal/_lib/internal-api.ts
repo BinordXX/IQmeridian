@@ -4,6 +4,13 @@ export type InternalCompletionStatus = 'NOT_STARTED' | 'PARTIAL' | 'COMPLETE';
 
 export type SuspiciousFlagStatus = 'NONE' | 'LOW' | 'MEDIUM' | 'HIGH';
 
+export type ActivateInternalItemInput = {
+  note?: string | null;
+};
+export type UpdateInternalItemStatusInput = {
+  status: 'DRAFT' | 'UNDER_REVIEW' | 'ACTIVE' | 'RETIRED';
+  note?: string | null;
+};
 export type SuspiciousSessionIndicator =
   | 'UNUSUALLY_SHORT_COMPLETION_TIME'
   | 'REPEATED_REFRESH_RECONNECT'
@@ -38,6 +45,13 @@ export type InternalSessionOutput = {
   suspiciousFlagStatus: SuspiciousFlagStatus;
   suspiciousIndicators: SuspiciousSessionIndicator[];
   suspiciousFlagReasons: string[];
+};
+
+export type CreateInternalItemFormMappingInput = {
+  formId: string;
+  sectionId?: string | null;
+  orderIndex?: number | null;
+  status?: string;
 };
 
 export type AnalyticsExportDataset =
@@ -517,6 +531,51 @@ export function fetchReportScoreAuditRecords() {
 export function createInternalDraftItem(input: CreateInternalDraftItemInput) {
   return writeInternalApi<InternalItemDetailOutput>({
     path: '/internal/api/items',
+    method: 'POST',
+    role: 'RESEARCHER',
+    body: input,
+  });
+}
+
+export function attachInternalItemToForm({
+  itemId,
+  input,
+}: {
+  itemId: string;
+  input: CreateInternalItemFormMappingInput;
+}) {
+  return writeInternalApi<InternalItemTraceabilityOutput>({
+    path: `/internal/api/items/${encodeURIComponent(itemId)}/form-mappings`,
+    method: 'POST',
+    role: 'RESEARCHER',
+    body: input,
+  });
+}
+
+export function activateInternalItem({
+  itemId,
+  input,
+}: {
+  itemId: string;
+  input: ActivateInternalItemInput;
+}) {
+  return writeInternalApi<InternalItemDetailOutput>({
+    path: `/internal/api/items/${encodeURIComponent(itemId)}/activate`,
+    method: 'POST',
+    role: 'RESEARCHER',
+    body: input,
+  });
+}
+
+export function updateInternalItemStatus({
+  itemId,
+  input,
+}: {
+  itemId: string;
+  input: UpdateInternalItemStatusInput;
+}) {
+  return writeInternalApi<InternalItemDetailOutput>({
+    path: `/internal/api/items/${encodeURIComponent(itemId)}/status`,
     method: 'POST',
     role: 'RESEARCHER',
     body: input,

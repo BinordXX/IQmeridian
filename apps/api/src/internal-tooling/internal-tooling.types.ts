@@ -284,3 +284,19 @@ export type CreateInternalDraftItemInput = {
   explanationNotes?: string | null;
   assetLinkage?: string | null;
 };
+
+export type CreateInternalItemFormMappingInput = {
+  formId: string;
+  sectionId?: string | null;
+  orderIndex?: number | null;
+  status?: string;
+};
+
+export type ActivateInternalItemInput = {
+  note?: string | null;
+};
+
+export type UpdateInternalItemStatusInput = {
+  status: 'DRAFT' | 'UNDER_REVIEW' | 'ACTIVE' | 'RETIRED';
+  note?: string | null;
+};

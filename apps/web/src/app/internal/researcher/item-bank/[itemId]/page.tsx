@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-
+import { ItemStatusActionsClient } from '../../../_components/item-status-actions-client';
 import {
   fetchInternalItemById,
   formatCorrectRate,
@@ -74,6 +74,15 @@ export default async function InternalItemDetailPage({
             className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800"
           >
             View traceability
+          </Link>
+
+          <Link
+            href={`/internal/researcher/item-bank/${encodeURIComponent(
+              item.id
+            )}/attach-form`}
+            className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800"
+          >
+            Attach to form
           </Link>
         </div>
       </header>
@@ -151,7 +160,11 @@ export default async function InternalItemDetailPage({
             </div>
           </section>
         </div>
-
+        <ItemStatusActionsClient
+          itemId={item.id}
+          status={item.status}
+          activeFormAssociationCount={item.activeFormAssociationCount}
+        />
         <aside className="space-y-6">
           <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <h2 className="text-lg font-semibold">Metadata</h2>

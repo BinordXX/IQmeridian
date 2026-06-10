@@ -14,6 +14,9 @@ import {
   CreateInternalAuditEventInput,
   CreateInternalDraftItemInput,
   CreateInternalReviewStatusInput,
+  CreateInternalItemFormMappingInput,
+  ActivateInternalItemInput,
+  UpdateInternalItemStatusInput,
 } from './internal-tooling.types';
 
 type InternalApiRole = 'PLATFORM_ADMIN' | 'RESEARCHER';
@@ -60,6 +63,33 @@ export class InternalToolingController {
 
     return this.internalToolingService.createInternalDraftItem(input);
   }
+  @Post('items/:itemId/activate')
+  activateInternalItem(
+    @Param('itemId') itemId: string,
+    @Body() input: ActivateInternalItemInput,
+    @Headers('x-internal-role') roleHeader?: string,
+  ) {
+    assertInternalAccess({
+      roleHeader,
+      allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
+    });
+
+    return this.internalToolingService.activateInternalItem(itemId, input);
+  }
+
+  @Post('items/:itemId/status')
+  updateInternalItemStatus(
+    @Param('itemId') itemId: string,
+    @Body() input: UpdateInternalItemStatusInput,
+    @Headers('x-internal-role') roleHeader?: string,
+  ) {
+    assertInternalAccess({
+      roleHeader,
+      allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
+    });
+
+    return this.internalToolingService.updateInternalItemStatus(itemId, input);
+  }
 
   @Get('performance/sections')
   getSectionPerformanceSummaries(
@@ -103,6 +133,19 @@ export class InternalToolingController {
     });
 
     return this.internalToolingService.getAdminOverview();
+  }
+  @Post('items/:itemId/form-mappings')
+  attachInternalItemToForm(
+    @Param('itemId') itemId: string,
+    @Body() input: CreateInternalItemFormMappingInput,
+    @Headers('x-internal-role') roleHeader?: string,
+  ) {
+    assertInternalAccess({
+      roleHeader,
+      allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
+    });
+
+    return this.internalToolingService.attachInternalItemToForm(itemId, input);
   }
 
   @Get('items/:itemId/traceability')
