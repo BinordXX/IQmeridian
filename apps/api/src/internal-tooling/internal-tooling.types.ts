@@ -155,3 +155,148 @@ export type InternalItemDetailOutput = InternalItemOutput & {
   }[];
   reviewNotes: string[];
 };
+export type ScoreDistributionBucket = {
+  label: string;
+  count: number;
+};
+
+export type InternalSectionPerformanceSummary = {
+  section: string;
+  sectionLabel: string;
+  startedSessions: number;
+  completedSessions: number;
+  completionRate: number;
+  averageScorePercent: number;
+  averageCompletionTimeMinutes: number | null;
+  scoreDistribution: ScoreDistributionBucket[];
+};
+
+export type InternalFormPerformanceSummary = {
+  formId: string;
+  formLabel: string;
+  startedSessions: number;
+  completedSessions: number;
+  completionRate: number;
+  averageCompletionTimeMinutes: number | null;
+  scoreSpread: ScoreDistributionBucket[];
+};
+
+export type InternalResearcherDashboardOverview = {
+  totalItemsByStatus: Record<string, number>;
+  activeItemsByDomain: {
+    domain: string;
+    label: string;
+    count: number;
+  }[];
+  formsInUse: number;
+  recentSessionVolume: number;
+  flaggedSessionCount: number;
+  averageSectionCompletionTime: number | null;
+  itemsNeedingReview: {
+    id: string;
+    label: string;
+    domain: string;
+    status: string;
+    reason: string;
+  }[];
+};
+
+export type InternalAdminOverview = {
+  organisationCount: number;
+  activeCampaigns: number;
+  userCountsByRole: Record<string, number>;
+  recentAuditActivity: InternalAuditEvent[];
+  platformErrors: InternalAuditEvent[];
+  exportEvents: InternalAuditEvent[];
+  itemLifecycleEvents: InternalAuditEvent[];
+};
+
+export type InternalItemTraceabilityOutput = {
+  itemId: string;
+  itemLabel: string;
+  domain: string;
+  status: string;
+  totalExposureCount: number;
+  totalValidResponses: number;
+  totalCorrectResponses: number;
+  totalOmissions: number;
+  forms: {
+    mappingId: string;
+    formId: string;
+    formLabel: string;
+    sectionId: string | null;
+    mappingStatus: string;
+    orderIndex: number | null;
+    exposureCount: number;
+    validResponses: number;
+    correctResponses: number;
+    omissionCount: number;
+    completedSessions: number;
+    inProgressSessions: number;
+  }[];
+  linkedSessions: {
+    sessionId: string;
+    participantIdentifier: string;
+    formId: string;
+    formLabel: string;
+    sessionStatus: string;
+    startedAt: string | null;
+    completedAt: string | null;
+    answeredItem: boolean;
+    answer: unknown;
+    submittedAt: string | null;
+    overallBand: string | null;
+  }[];
+};
+
+export type InternalReportScoreAuditOutput = {
+  reportId: string;
+  sessionId: string;
+  participantIdentifier: string;
+  formId: string;
+  formLabel: string;
+  formVersion: string | null;
+  scoringVersion: number | null;
+  reportVersion: number;
+  reportGenerationTimestamp: string;
+  reportType: string;
+  visibilityCategory: string;
+  scoreId: string | null;
+  scoreCreatedAt: string | null;
+  scoreUpdatedAt: string | null;
+  overallBand: string | null;
+  overallRawScore: number | null;
+  overallMaxScore: number | null;
+  abstractBand: string | null;
+  numericalBand: string | null;
+};
+
+export type CreateInternalDraftItemInput = {
+  id?: string;
+  domain: string;
+  itemType: string;
+  prompt: string;
+  options: unknown;
+  correctAnswer: unknown;
+  difficulty: string | null;
+  distractorRationale?: string | null;
+  timeExpectationSeconds?: number | null;
+  explanationNotes?: string | null;
+  assetLinkage?: string | null;
+};
+
+export type CreateInternalItemFormMappingInput = {
+  formId: string;
+  sectionId?: string | null;
+  orderIndex?: number | null;
+  status?: string;
+};
+
+export type ActivateInternalItemInput = {
+  note?: string | null;
+};
+
+export type UpdateInternalItemStatusInput = {
+  status: 'DRAFT' | 'UNDER_REVIEW' | 'ACTIVE' | 'RETIRED';
+  note?: string | null;
+};

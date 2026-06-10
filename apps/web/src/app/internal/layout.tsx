@@ -32,6 +32,12 @@ export default function InternalLayout({ children }: InternalLayoutProps) {
               Researcher
             </Link>
             <Link
+              href="/internal/admin/reports"
+              className="hover:text-slate-950"
+            >
+              Reports
+            </Link>
+            <Link
               href="/internal/researcher/item-bank"
               className="hover:text-slate-950"
             >
