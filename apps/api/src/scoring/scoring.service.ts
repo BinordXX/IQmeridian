@@ -72,16 +72,28 @@ export class ScoringService {
       responses.map((response) => [response.itemId, response]),
     );
 
-    const domainScores: Record<AssessmentDomain, DomainAccumulator> = {
-      [AssessmentDomain.ABSTRACT_REASONING]: {
-        rawScore: 0,
-        maxScore: 0,
-      },
-      [AssessmentDomain.NUMERICAL_REASONING]: {
-        rawScore: 0,
-        maxScore: 0,
-      },
-    };
+const domainScores: Record<AssessmentDomain, DomainAccumulator> = {
+  [AssessmentDomain.VERBAL_REASONING]: {
+    rawScore: 0,
+    maxScore: 0,
+  },
+  [AssessmentDomain.NUMERICAL_REASONING]: {
+    rawScore: 0,
+    maxScore: 0,
+  },
+  [AssessmentDomain.ABSTRACT_REASONING]: {
+    rawScore: 0,
+    maxScore: 0,
+  },
+  [AssessmentDomain.LOGICAL_REASONING]: {
+    rawScore: 0,
+    maxScore: 0,
+  },
+  [AssessmentDomain.ANALYTICAL_PROBLEM_SOLVING]: {
+    rawScore: 0,
+    maxScore: 0,
+  },
+};
 
     for (const mapping of mappings) {
       const item = mapping.item;

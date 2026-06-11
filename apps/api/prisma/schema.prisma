@@ -69,13 +69,19 @@ enum CampaignStatus {
 }
 
 enum AssessmentDomain {
-  ABSTRACT_REASONING
+  VERBAL_REASONING
   NUMERICAL_REASONING
+  ABSTRACT_REASONING
+  LOGICAL_REASONING
+  ANALYTICAL_PROBLEM_SOLVING
 }
 
 enum AssessmentSectionType {
-  ABSTRACT
+  VERBAL
   NUMERICAL
+  ABSTRACT
+  LOGICAL
+  ANALYTICAL
 }
 
 enum ItemStatus {
@@ -83,6 +89,31 @@ enum ItemStatus {
   ACTIVE
   RETIRED
   UNDER_REVIEW
+}
+
+enum ItemIntendedDifficulty {
+  EASY
+  MODERATE
+  HARD
+  VERY_HARD
+}
+
+enum ItemReviewStatus {
+  NOT_REVIEWED
+  REVIEW_IN_PROGRESS
+  APPROVED_FOR_PILOT
+  NEEDS_REVISION
+  REJECTED
+}
+
+enum PsychometricItemStatus {
+  DRAFT
+  CONTENT_REVIEWED
+  PILOT_READY
+  UNDER_REVIEW
+  FLAGGED_AFTER_PILOT
+  RETIRED
+  CALIBRATED
 }
 
 enum SessionStatus {
@@ -183,11 +214,25 @@ model Item {
   difficulty    String?
   status        ItemStatus       @default(DRAFT)
   version       Int              @default(1)
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
 
-  formMappings        FormItemMapping[]
-  responses           Response[]
+  subdomain                String?
+  itemFamily               String?
+  stimulusType             String?
+  intendedDifficulty       ItemIntendedDifficulty?
+  estimatedResponseTimeSec Int?
+  cognitiveProcess         String?
+  itemRationale            String?
+  distractorRationale      Json?
+  reviewStatus             ItemReviewStatus        @default(NOT_REVIEWED)
+  psychometricStatus       PsychometricItemStatus  @default(DRAFT)
+  lastReviewedAt           DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  formMappings FormItemMapping[]
+  responses    Response[]
+
   psychometricMetrics ItemPsychometricMetric[]
   distractorMetrics   DistractorPsychometricMetric[]
   psychometricFlags   PsychometricFlag[]

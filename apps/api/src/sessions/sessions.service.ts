@@ -31,11 +31,12 @@ type CandidateItemOption = {
 type CandidateSafeAssessmentItem = {
   itemId: string;
   sectionId: string;
-  itemType:
-    | 'abstract_reasoning'
-    | 'numerical_reasoning'
-    | 'verbal_reasoning'
-    | 'situational_judgement';
+itemType:
+  | 'verbal_reasoning'
+  | 'numerical_reasoning'
+  | 'abstract_reasoning'
+  | 'logical_reasoning'
+  | 'analytical_problem_solving';
   position: number;
   stem: string;
   prompt?: string;
@@ -556,20 +557,29 @@ export class SessionsService {
     });
   }
 
-  private toCandidateItemType(
-    domain: AssessmentDomain,
-  ): CandidateSafeAssessmentItem['itemType'] {
-    switch (domain) {
-      case AssessmentDomain.ABSTRACT_REASONING:
-        return 'abstract_reasoning';
+ private toCandidateItemType(
+  domain: AssessmentDomain,
+): CandidateSafeAssessmentItem['itemType'] {
+  switch (domain) {
+    case AssessmentDomain.VERBAL_REASONING:
+      return 'verbal_reasoning';
 
-      case AssessmentDomain.NUMERICAL_REASONING:
-        return 'numerical_reasoning';
+    case AssessmentDomain.NUMERICAL_REASONING:
+      return 'numerical_reasoning';
 
-      default:
-        return 'abstract_reasoning';
-    }
+    case AssessmentDomain.ABSTRACT_REASONING:
+      return 'abstract_reasoning';
+
+    case AssessmentDomain.LOGICAL_REASONING:
+      return 'logical_reasoning';
+
+    case AssessmentDomain.ANALYTICAL_PROBLEM_SOLVING:
+      return 'analytical_problem_solving';
+
+    default:
+      return 'abstract_reasoning';
   }
+}
 
   private toCandidateStatus(
     status: SessionStatus,
