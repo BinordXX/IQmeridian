@@ -14,6 +14,14 @@ enum UserRole {
   RESEARCHER
 }
 
+enum PsychometricAnalysisStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
 enum CampaignStatus {
   DRAFT
   ACTIVE
@@ -105,10 +113,11 @@ model AssessmentForm {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  sections  AssessmentSection[]
-  items     FormItemMapping[]
-  campaigns Campaign[]
-  sessions  Session[]
+  sections                 AssessmentSection[]
+  items                    FormItemMapping[]
+  campaigns                Campaign[]
+  sessions                 Session[]
+  psychometricAnalysisRuns PsychometricAnalysisRun[]
 }
 
 model AssessmentSection {
@@ -138,8 +147,9 @@ model Item {
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
 
-  formMappings FormItemMapping[]
-  responses    Response[]
+  formMappings        FormItemMapping[]
+  responses           Response[]
+  psychometricMetrics ItemPsychometricMetric[]
 }
 
 model FormItemMapping {
@@ -260,6 +270,121 @@ model Report {
   @@index([sessionId])
   @@index([subjectUserId])
   @@index([visibility])
+}
+
+model PsychometricAnalysisRun {
+  id String @id @default(cuid())
+
+  formId String?
+  form   AssessmentForm? @relation(fields: [formId], references: [id], onDelete: SetNull)
+
+  formVersion    Int?
+  scoringVersion Int?
+  reportVersion  Int?
+
+  datasetScope   Json?
+  status         PsychometricAnalysisStatus @default(PENDING)
+  serviceVersion String
+
+  sampleSize   Int?
+  startedAt    DateTime  @default(now())
+  completedAt  DateTime?
+  errorMessage String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  itemMetrics   ItemPsychometricMetric[]
+  formMetrics   FormPsychometricMetric[]
+  domainMetrics DomainPsychometricMetric[]
+
+  @@index([formId])
+  @@index([status])
+  @@index([startedAt])
+}
+
+model ItemPsychometricMetric {
+  id String @id @default(cuid())
+
+  analysisRunId String
+  analysisRun   PsychometricAnalysisRun @relation(fields: [analysisRunId], references: [id], onDelete: Cascade)
+
+  itemId String
+  item   Item   @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  domain             AssessmentDomain
+  subdomain          String?
+  itemFamily         String?
+  intendedDifficulty String?
+
+  responseCount     Int    @default(0)
+  correctCount      Int    @default(0)
+  proportionCorrect Float?
+
+  averageResponseTimeSec Float?
+  medianResponseTimeSec  Float?
+
+  omissionRate        Float?
+  discriminationValue Float?
+
+  flags String[] @default([])
+
+  createdAt DateTime @default(now())
+
+  @@unique([analysisRunId, itemId])
+  @@index([itemId])
+  @@index([domain])
+}
+
+model FormPsychometricMetric {
+  id String @id @default(cuid())
+
+  analysisRunId String
+  analysisRun   PsychometricAnalysisRun @relation(fields: [analysisRunId], references: [id], onDelete: Cascade)
+
+  totalSessions     Int @default(0)
+  completedSessions Int @default(0)
+
+  completionRate Float?
+
+  meanTotalScore    Float?
+  medianTotalScore  Float?
+  standardDeviation Float?
+  minimumScore      Float?
+  maximumScore      Float?
+
+  reliabilityEstimate Float?
+
+  averageCompletionTimeSec Float?
+  scoreDistributionSummary Json?
+
+  createdAt DateTime @default(now())
+
+  @@unique([analysisRunId])
+}
+
+model DomainPsychometricMetric {
+  id String @id @default(cuid())
+
+  analysisRunId String
+  analysisRun   PsychometricAnalysisRun @relation(fields: [analysisRunId], references: [id], onDelete: Cascade)
+
+  domain AssessmentDomain
+
+  itemCount     Int @default(0)
+  responseCount Int @default(0)
+
+  meanScore   Float?
+  scoreSpread Float?
+
+  omissionRate           Float?
+  averageResponseTimeSec Float?
+  reliabilityEstimate    Float?
+
+  createdAt DateTime @default(now())
+
+  @@unique([analysisRunId, domain])
+  @@index([domain])
 }
 
 model AuditLog {
