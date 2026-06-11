@@ -12,6 +12,57 @@ function parseJsonSafely(value: string) {
   }
 }
 
+export async function GET(
+  _request: Request,
+  context: {
+    params: Promise<{
+      itemId: string;
+    }>;
+  }
+) {
+  try {
+    const { itemId } = await context.params;
+
+    const response = await fetch(
+      `${getInternalApiBaseUrl()}/internal/items/${encodeURIComponent(itemId)}`,
+      {
+        method: 'GET',
+        cache: 'no-store',
+        headers: {
+          'x-internal-role': 'RESEARCHER',
+        },
+      }
+    );
+
+    const responseText = await response.text();
+    const parsedBody = parseJsonSafely(responseText);
+
+    if (!response.ok) {
+      return NextResponse.json(
+        parsedBody ?? {
+          message:
+            responseText.length > 0
+              ? responseText
+              : 'Internal item could not be loaded.',
+        },
+        { status: response.status }
+      );
+    }
+
+    return NextResponse.json(parsedBody, { status: response.status });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Internal item detail proxy failed.',
+      },
+      { status: 500 }
+    );
+  }
+}
+
 export async function PATCH(
   request: Request,
   context: {
