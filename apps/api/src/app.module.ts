@@ -16,7 +16,7 @@ import { ReportsModule } from './reports/reports.module';
 import { AuditModule } from './audit/audit.module';
 import { DiagnosticsModule } from './diagnostics/diagnostics.module';
 import { InternalToolingModule } from './internal-tooling/internal-tooling.module';
-
+import { PsychometricsModule } from './psychometrics/psychometrics.module';
 @Module({
   imports: [
     PrismaModule,
@@ -34,6 +34,7 @@ import { InternalToolingModule } from './internal-tooling/internal-tooling.modul
     AuditModule,
     DiagnosticsModule,
     InternalToolingModule,
+    PsychometricsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

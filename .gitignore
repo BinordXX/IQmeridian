@@ -40,7 +40,7 @@ build/Release
 # Dependency directories
 node_modules/
 jspm_packages/
-
+_handoff/
 # Snowpack dependency directory (https://snowpack.dev/)
 web_modules/
 
@@ -158,3 +158,12 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# Python
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+
+# Local handoff/context bundles
+_handoff/
