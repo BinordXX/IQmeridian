@@ -34,7 +34,36 @@ services:
       - '9001:9001'
     volumes:
       - minio_data:/data
+  psychometrics:
+    build:
+      context: ../apps/psychometrics
+      dockerfile: Dockerfile
+    container_name: iqmeridian-psychometrics
+    restart: unless-stopped
+    environment:
+      PSYCHOMETRICS_ENVIRONMENT: development
+      PSYCHOMETRICS_SERVICE_VERSION: 0.1.0
+      PSYCHOMETRICS_PORT: 8001
+      PSYCHOMETRICS_INTERNAL_SERVICE_TOKEN: dev-psychometrics-token
+      PSYCHOMETRICS_DATA_ACCESS_MODE: nestjs_orchestrated
+      PSYCHOMETRICS_INTERNAL_API_URL: http://api:3001
+      PSYCHOMETRICS_OUTPUT_MODE: return_to_nestjs
+    expose:
+      - '8001'
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'python',
+          '-c',
+          'import os, urllib.request; req=urllib.request.Request("http://127.0.0.1:8001/health", headers={"x-internal-service-token": os.environ.get("PSYCHOMETRICS_INTERNAL_SERVICE_TOKEN", "")}); urllib.request.urlopen(req, timeout=5).read()',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
+      
 volumes:
   postgres_data:
   redis_data:

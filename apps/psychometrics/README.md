@@ -58,3 +58,16 @@ Outputs should be treated as pilot evidence, not final validation.
 Automated flags should remain reviewable by researchers.
 
 All analysis must preserve form, scoring, and report version traceability.
+
+
+## Data access decision
+
+For the MVP, NestJS remains the orchestration and permission layer.
+
+PostgreSQL stores raw assessment, session, response, score, report, and psychometric result data.
+
+The Python service does not become a second product backend. It receives controlled analysis datasets from NestJS or retrieves data only through a controlled internal path.
+
+The Python service returns structured psychometric outputs to NestJS. NestJS is responsible for persisting those outputs into the platform database and exposing them through internal researcher/admin tooling.
+
+This preserves one product authority while still allowing Python to perform specialised psychometric analysis.
