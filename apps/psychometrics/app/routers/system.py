@@ -1,10 +1,14 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
 from app.core.config import settings
 from app.schemas.capabilities import CapabilitiesResponse
 from app.schemas.health import HealthResponse, VersionResponse
+from app.security.internal_auth import require_internal_service_token
 
-router = APIRouter(tags=["system"])
+router = APIRouter(
+    tags=["system"],
+    dependencies=[Depends(require_internal_service_token)],
+)
 
 
 @router.get("/health", response_model=HealthResponse)

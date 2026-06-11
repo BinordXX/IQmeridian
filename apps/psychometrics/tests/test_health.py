@@ -4,9 +4,11 @@ from app.main import app
 
 client = TestClient(app)
 
+AUTH_HEADERS = {"x-internal-service-token": "dev-psychometrics-token"}
 
-def test_health_endpoint_returns_ok() -> None:
-    response = client.get("/health")
+
+def test_health_endpoint_returns_ok_with_internal_token() -> None:
+    response = client.get("/health", headers=AUTH_HEADERS)
 
     assert response.status_code == 200
     payload = response.json()
@@ -17,8 +19,8 @@ def test_health_endpoint_returns_ok() -> None:
     assert payload["environment"] == "development"
 
 
-def test_version_endpoint_returns_service_version() -> None:
-    response = client.get("/version")
+def test_version_endpoint_returns_service_version_with_internal_token() -> None:
+    response = client.get("/version", headers=AUTH_HEADERS)
 
     assert response.status_code == 200
     payload = response.json()
@@ -27,8 +29,8 @@ def test_version_endpoint_returns_service_version() -> None:
     assert payload["version"] == "0.1.0"
 
 
-def test_capabilities_endpoint_defines_service_boundary() -> None:
-    response = client.get("/capabilities")
+def test_capabilities_endpoint_defines_service_boundary_with_internal_token() -> None:
+    response = client.get("/capabilities", headers=AUTH_HEADERS)
 
     assert response.status_code == 200
     payload = response.json()
@@ -44,3 +46,20 @@ def test_capabilities_endpoint_defines_service_boundary() -> None:
     assert "Direct public access." in payload["non_responsibilities"]
 
     assert "NestJS internal psychometrics orchestration module." in payload["intended_consumers"]
+
+
+def test_health_endpoint_rejects_missing_internal_token() -> None:
+    response = client.get("/health")
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Missing internal service token."
+
+
+def test_health_endpoint_rejects_invalid_internal_token() -> None:
+    response = client.get(
+        "/health",
+        headers={"x-internal-service-token": "wrong-token"},
+    )
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Invalid internal service token."
