@@ -9,8 +9,12 @@ import { randomUUID } from 'node:crypto';
 import {
   CampaignStatus,
   FormItemMappingStatus,
+  ItemIntendedDifficulty,
+  ItemReviewStatus,
   ItemStatus,
   Prisma,
+  PsychometricFlagReviewStatus,
+  PsychometricItemStatus,
   SessionStatus,
   AssessmentDomain,
 } from '@prisma/client';
@@ -77,6 +81,21 @@ const itemInclude = {
     include: {
       session: true,
     },
+  },
+  psychometricMetrics: {
+    orderBy: {
+      createdAt: 'desc',
+    },
+    take: 1,
+  },
+  psychometricFlags: {
+    where: {
+      status: PsychometricFlagReviewStatus.OPEN,
+    },
+    orderBy: {
+      createdAt: 'desc',
+    },
+    take: 10,
   },
 } satisfies Prisma.ItemInclude;
 
@@ -302,6 +321,81 @@ export class InternalToolingService {
       changedFields.push('difficulty');
     }
 
+        if (input.subdomain !== undefined) {
+      updateData.subdomain = this.normaliseNullableString(input.subdomain);
+      changedFields.push('subdomain');
+    }
+
+    if (input.itemFamily !== undefined) {
+      updateData.itemFamily = this.normaliseNullableString(input.itemFamily);
+      changedFields.push('itemFamily');
+    }
+
+    if (input.stimulusType !== undefined) {
+      updateData.stimulusType = this.normaliseNullableString(input.stimulusType);
+      changedFields.push('stimulusType');
+    }
+
+    if (input.scoringRule !== undefined) {
+      updateData.scoringRule =
+        this.normaliseNullableString(input.scoringRule) ?? null;
+      changedFields.push('scoringRule');
+    }
+
+    if (input.intendedDifficulty !== undefined) {
+      updateData.intendedDifficulty = this.parseIntendedDifficulty(
+        input.intendedDifficulty,
+      );
+      changedFields.push('intendedDifficulty');
+    }
+
+    if (input.estimatedResponseTimeSec !== undefined) {
+      if (
+        input.estimatedResponseTimeSec !== null &&
+        input.estimatedResponseTimeSec <= 0
+      ) {
+        throw new BadRequestException(
+          'Estimated response time must be greater than zero.',
+        );
+      }
+
+      updateData.estimatedResponseTimeSec = input.estimatedResponseTimeSec;
+      changedFields.push('estimatedResponseTimeSec');
+    }
+
+    if (input.cognitiveProcess !== undefined) {
+      updateData.cognitiveProcess = this.normaliseNullableString(
+        input.cognitiveProcess,
+      );
+      changedFields.push('cognitiveProcess');
+    }
+
+    if (input.itemRationale !== undefined) {
+      updateData.itemRationale = this.normaliseNullableString(
+        input.itemRationale,
+      );
+      changedFields.push('itemRationale');
+    }
+
+    if (input.distractorRationale !== undefined) {
+      updateData.distractorRationale = this.toJsonValue(
+        input.distractorRationale,
+      );
+      changedFields.push('distractorRationale');
+    }
+
+    if (input.reviewStatus !== undefined) {
+      updateData.reviewStatus = this.parseItemReviewStatus(input.reviewStatus);
+      changedFields.push('reviewStatus');
+    }
+
+    if (input.psychometricStatus !== undefined) {
+      updateData.psychometricStatus = this.parsePsychometricItemStatus(
+        input.psychometricStatus,
+      );
+      changedFields.push('psychometricStatus');
+    }
+
     if (changedFields.length === 0) {
       throw new BadRequestException('No editable item fields were provided.');
     }
@@ -309,6 +403,59 @@ export class InternalToolingService {
     updateData.version = {
       increment: 1,
     };
+
+
+        const mergedPilotReadyCandidate = {
+      domain:
+        updateData.domain !== undefined
+          ? (updateData.domain as AssessmentDomain)
+          : item.domain,
+      subdomain:
+        updateData.subdomain !== undefined
+          ? (updateData.subdomain as string | null)
+          : item.subdomain,
+      itemFamily:
+        updateData.itemFamily !== undefined
+          ? (updateData.itemFamily as string | null)
+          : item.itemFamily,
+      intendedDifficulty:
+        updateData.intendedDifficulty !== undefined
+          ? (updateData.intendedDifficulty as ItemIntendedDifficulty | null)
+          : item.intendedDifficulty,
+      estimatedResponseTimeSec:
+        updateData.estimatedResponseTimeSec !== undefined
+          ? (updateData.estimatedResponseTimeSec as number | null)
+          : item.estimatedResponseTimeSec,
+      correctAnswer:
+        updateData.correctAnswer !== undefined
+          ? input.correctAnswer
+          : item.correctAnswer,
+      options: updateData.options !== undefined ? input.options : item.options,
+      itemRationale:
+        updateData.itemRationale !== undefined
+          ? (updateData.itemRationale as string | null)
+          : item.itemRationale,
+      scoringRule:
+        updateData.scoringRule !== undefined
+          ? (updateData.scoringRule as string | null)
+          : item.scoringRule,
+      reviewStatus:
+        updateData.reviewStatus !== undefined
+          ? (updateData.reviewStatus as ItemReviewStatus)
+          : item.reviewStatus,
+      psychometricStatus:
+        updateData.psychometricStatus !== undefined
+          ? (updateData.psychometricStatus as PsychometricItemStatus)
+          : item.psychometricStatus,
+    };
+
+    if (
+      mergedPilotReadyCandidate.psychometricStatus ===
+      PsychometricItemStatus.PILOT_READY
+    ) {
+      this.assertPilotReadyItemMetadata(mergedPilotReadyCandidate);
+    }
+
 
     const updatedItem = await this.prisma.item.update({
       where: { id: item.id },
@@ -510,15 +657,76 @@ export class InternalToolingService {
         ? input.id.trim()
         : `draft-item-${randomUUID()}`;
 
+            const requestedPsychometricStatus =
+      this.parsePsychometricItemStatus(input.psychometricStatus) ??
+      PsychometricItemStatus.DRAFT;
+
+    if (requestedPsychometricStatus === PsychometricItemStatus.PILOT_READY) {
+      this.assertPilotReadyItemMetadata({
+        domain: input.domain as AssessmentDomain,
+        subdomain: this.normaliseNullableString(input.subdomain) ?? null,
+        itemFamily: this.normaliseNullableString(input.itemFamily) ?? null,
+        intendedDifficulty:
+          this.parseIntendedDifficulty(input.intendedDifficulty) ?? null,
+        estimatedResponseTimeSec:
+          input.estimatedResponseTimeSec ??
+          input.timeExpectationSeconds ??
+          null,
+        correctAnswer: input.correctAnswer,
+        options: input.options,
+        itemRationale:
+          this.normaliseNullableString(input.itemRationale) ??
+          this.normaliseNullableString(input.explanationNotes) ??
+          null,
+        scoringRule:
+          this.normaliseNullableString(input.scoringRule) ??
+          'BINARY_CORRECT',
+        reviewStatus:
+          this.parseItemReviewStatus(input.reviewStatus) ??
+          ItemReviewStatus.NOT_REVIEWED,
+        psychometricStatus: requestedPsychometricStatus,
+      });
+    }
+
     const item = await this.prisma.item.create({
       data: {
         id: itemId,
-        domain: input.domain,
+        domain: input.domain as AssessmentDomain,
+        subdomain: this.normaliseNullableString(input.subdomain) ?? null,
+        itemFamily: this.normaliseNullableString(input.itemFamily) ?? null,
         itemType: input.itemType,
+        stimulusType: this.normaliseNullableString(input.stimulusType) ?? null,
         prompt: input.prompt,
         options: this.toJsonValue(input.options),
         correctAnswer: this.toJsonValue(input.correctAnswer),
+        scoringRule:
+          this.normaliseNullableString(input.scoringRule) ??
+          'BINARY_CORRECT',
         difficulty: input.difficulty,
+        intendedDifficulty:
+          this.parseIntendedDifficulty(input.intendedDifficulty) ?? null,
+        estimatedResponseTimeSec:
+          input.estimatedResponseTimeSec ??
+          input.timeExpectationSeconds ??
+          null,
+        cognitiveProcess:
+          this.normaliseNullableString(input.cognitiveProcess) ?? null,
+        itemRationale:
+          this.normaliseNullableString(input.itemRationale) ??
+          this.normaliseNullableString(input.explanationNotes) ??
+          null,
+        distractorRationale:
+          input.distractorRationale !== undefined
+            ? this.toJsonValue(input.distractorRationale)
+            : input.distractorRationaleLegacy !== undefined
+              ? this.toJsonValue(input.distractorRationaleLegacy)
+              : undefined,
+        reviewStatus:
+          this.parseItemReviewStatus(input.reviewStatus) ??
+          ItemReviewStatus.NOT_REVIEWED,
+        psychometricStatus:
+          this.parsePsychometricItemStatus(input.psychometricStatus) ??
+          PsychometricItemStatus.DRAFT,
         status: ItemStatus.DRAFT,
         version: 1,
       } as Prisma.ItemCreateInput,
@@ -539,6 +747,20 @@ export class InternalToolingService {
           timeExpectationSeconds: input.timeExpectationSeconds ?? null,
           explanationNotes: input.explanationNotes ?? null,
           assetLinkage: input.assetLinkage ?? null,
+                    subdomain: input.subdomain ?? null,
+          itemFamily: input.itemFamily ?? null,
+          stimulusType: input.stimulusType ?? null,
+          intendedDifficulty: input.intendedDifficulty ?? null,
+          estimatedResponseTimeSec:
+            input.estimatedResponseTimeSec ??
+            input.timeExpectationSeconds ??
+            null,
+          cognitiveProcess: input.cognitiveProcess ?? null,
+          itemRationale: input.itemRationale ?? input.explanationNotes ?? null,
+          scoringRule: input.scoringRule ?? 'BINARY_CORRECT',
+          reviewStatus: input.reviewStatus ?? ItemReviewStatus.NOT_REVIEWED,
+          psychometricStatus:
+            input.psychometricStatus ?? PsychometricItemStatus.DRAFT,
         }),
       },
     });
@@ -1531,15 +1753,29 @@ export class InternalToolingService {
   ): Promise<InternalItemOutput> {
     const performance = await this.toInternalItemPerformance(item);
 
+    const latestPsychometricMetric = item.psychometricMetrics[0] ?? null;
+
     return {
       id: item.id,
       label: `${item.domain} ${item.itemType}`,
       domain: item.domain,
+      subdomain: item.subdomain,
+      itemFamily: item.itemFamily,
       itemType: item.itemType,
+      stimulusType: item.stimulusType,
       prompt: item.prompt,
       options: item.options,
       correctAnswer: item.correctAnswer,
+      scoringRule: item.scoringRule,
       difficulty: item.difficulty,
+      intendedDifficulty: item.intendedDifficulty,
+      estimatedResponseTimeSec: item.estimatedResponseTimeSec,
+      cognitiveProcess: item.cognitiveProcess,
+      itemRationale: item.itemRationale,
+      distractorRationale: item.distractorRationale,
+      reviewStatus: item.reviewStatus,
+      psychometricStatus: item.psychometricStatus,
+      lastReviewedAt: item.lastReviewedAt?.toISOString() ?? null,
       status: item.status,
       version: item.version,
       active: item.status === ItemStatus.ACTIVE,
@@ -1553,6 +1789,15 @@ export class InternalToolingService {
       activeFormAssociationCount: item.formMappings.filter(
         (mapping) => mapping.status === FormItemMappingStatus.ACTIVE,
       ).length,
+      empiricalDifficulty: latestPsychometricMetric?.proportionCorrect ?? null,
+      psychometricFlags: item.psychometricFlags.map((flag) => ({
+        id: flag.id,
+        flagType: flag.flagType,
+        severity: flag.severity,
+        status: flag.status,
+        message: flag.message,
+        createdAt: flag.createdAt.toISOString(),
+      })),
       performance,
     };
   }
@@ -1931,6 +2176,172 @@ export class InternalToolingService {
     }
 
     return {};
+  }
+
+    private normaliseNullableString(value: string | null | undefined) {
+    if (value === undefined) {
+      return undefined;
+    }
+
+    if (value === null) {
+      return null;
+    }
+
+    const trimmed = value.trim();
+
+    return trimmed.length === 0 ? null : trimmed;
+  }
+
+  private parseIntendedDifficulty(
+    value: string | null | undefined,
+  ): ItemIntendedDifficulty | null | undefined {
+    const normalised = this.normaliseNullableString(value);
+
+    if (normalised === undefined || normalised === null) {
+      return normalised;
+    }
+
+    if (
+      !Object.values(ItemIntendedDifficulty).includes(
+        normalised as ItemIntendedDifficulty,
+      )
+    ) {
+      throw new BadRequestException('Unsupported intended difficulty.');
+    }
+
+    return normalised as ItemIntendedDifficulty;
+  }
+
+  private parseItemReviewStatus(
+    value: string | null | undefined,
+  ): ItemReviewStatus | undefined {
+    const normalised = this.normaliseNullableString(value);
+
+    if (normalised === undefined) {
+      return undefined;
+    }
+
+    if (normalised === null) {
+      throw new BadRequestException('Review status cannot be empty.');
+    }
+
+    if (!Object.values(ItemReviewStatus).includes(normalised as ItemReviewStatus)) {
+      throw new BadRequestException('Unsupported item review status.');
+    }
+
+    return normalised as ItemReviewStatus;
+  }
+
+  private parsePsychometricItemStatus(
+    value: string | null | undefined,
+  ): PsychometricItemStatus | undefined {
+    const normalised = this.normaliseNullableString(value);
+
+    if (normalised === undefined) {
+      return undefined;
+    }
+
+    if (normalised === null) {
+      throw new BadRequestException('Psychometric item status cannot be empty.');
+    }
+
+    if (
+      !Object.values(PsychometricItemStatus).includes(
+        normalised as PsychometricItemStatus,
+      )
+    ) {
+      throw new BadRequestException('Unsupported psychometric item status.');
+    }
+
+    return normalised as PsychometricItemStatus;
+  }
+
+  private hasUsableJsonValue(value: unknown) {
+    if (value === null || value === undefined) {
+      return false;
+    }
+
+    if (Array.isArray(value)) {
+      return value.length > 0;
+    }
+
+    if (typeof value === 'object') {
+      return Object.keys(value as Record<string, unknown>).length > 0;
+    }
+
+    return true;
+  }
+
+  private assertPilotReadyItemMetadata(item: {
+    domain: AssessmentDomain;
+    subdomain: string | null;
+    itemFamily: string | null;
+    intendedDifficulty: ItemIntendedDifficulty | null;
+    estimatedResponseTimeSec: number | null;
+    correctAnswer: unknown;
+    options: unknown;
+    itemRationale: string | null;
+    scoringRule: string | null;
+    reviewStatus: ItemReviewStatus;
+    psychometricStatus: PsychometricItemStatus;
+  }) {
+    const missingFields: string[] = [];
+
+    if (!item.domain) {
+      missingFields.push('domain');
+    }
+
+    if (!item.subdomain || item.subdomain.trim().length === 0) {
+      missingFields.push('subdomain');
+    }
+
+    if (!item.itemFamily || item.itemFamily.trim().length === 0) {
+      missingFields.push('itemFamily');
+    }
+
+    if (!item.intendedDifficulty) {
+      missingFields.push('intendedDifficulty');
+    }
+
+    if (
+      item.estimatedResponseTimeSec === null ||
+      item.estimatedResponseTimeSec === undefined ||
+      item.estimatedResponseTimeSec <= 0
+    ) {
+      missingFields.push('estimatedResponseTimeSec');
+    }
+
+    if (!this.hasUsableJsonValue(item.correctAnswer)) {
+      missingFields.push('correctAnswer');
+    }
+
+    if (!this.hasUsableJsonValue(item.options)) {
+      missingFields.push('options');
+    }
+
+    if (!item.itemRationale || item.itemRationale.trim().length === 0) {
+      missingFields.push('itemRationale');
+    }
+
+    if (!item.scoringRule || item.scoringRule.trim().length === 0) {
+      missingFields.push('scoringRule');
+    }
+
+    if (item.reviewStatus !== ItemReviewStatus.APPROVED_FOR_PILOT) {
+      missingFields.push('reviewStatus must be APPROVED_FOR_PILOT');
+    }
+
+    if (item.psychometricStatus !== PsychometricItemStatus.PILOT_READY) {
+      missingFields.push('psychometricStatus must be PILOT_READY');
+    }
+
+    if (missingFields.length > 0) {
+      throw new BadRequestException(
+        `Item cannot be marked pilot-ready until required metadata is complete: ${missingFields.join(
+          ', ',
+        )}.`,
+      );
+    }
   }
 
   private toJsonValue(value: unknown): Prisma.InputJsonValue {

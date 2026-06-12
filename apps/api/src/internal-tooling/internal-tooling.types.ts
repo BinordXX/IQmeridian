@@ -112,11 +112,23 @@ export type InternalItemOutput = {
   id: string;
   label: string;
   domain: string;
+  subdomain: string | null;
+  itemFamily: string | null;
   itemType: string;
+  stimulusType: string | null;
   prompt: string;
   options: unknown;
   correctAnswer: unknown;
+  scoringRule: string | null;
   difficulty: string | null;
+  intendedDifficulty: string | null;
+  estimatedResponseTimeSec: number | null;
+  cognitiveProcess: string | null;
+  itemRationale: string | null;
+  distractorRationale: unknown;
+  reviewStatus: string;
+  psychometricStatus: string;
+  lastReviewedAt: string | null;
   status: string;
   version: number;
   active: boolean;
@@ -125,6 +137,15 @@ export type InternalItemOutput = {
   updatedAt: string;
   formAssociationCount: number;
   activeFormAssociationCount: number;
+  empiricalDifficulty: number | null;
+  psychometricFlags: {
+    id: string;
+    flagType: string;
+    severity: string;
+    status: string;
+    message: string;
+    createdAt: string;
+  }[];
   performance: InternalItemPerformanceOutput;
 };
 
@@ -274,12 +295,23 @@ export type InternalReportScoreAuditOutput = {
 export type CreateInternalDraftItemInput = {
   id?: string;
   domain: string;
+  subdomain?: string | null;
+  itemFamily?: string | null;
   itemType: string;
+  stimulusType?: string | null;
   prompt: string;
   options: unknown;
   correctAnswer: unknown;
+  scoringRule?: string | null;
   difficulty: string | null;
-  distractorRationale?: string | null;
+  intendedDifficulty?: string | null;
+  estimatedResponseTimeSec?: number | null;
+  cognitiveProcess?: string | null;
+  itemRationale?: string | null;
+  distractorRationale?: unknown;
+  reviewStatus?: string | null;
+  psychometricStatus?: string | null;
+  distractorRationaleLegacy?: string | null;
   timeExpectationSeconds?: number | null;
   explanationNotes?: string | null;
   assetLinkage?: string | null;
@@ -298,11 +330,22 @@ export type ActivateInternalItemInput = {
 
 export type UpdateInternalDraftItemInput = {
   domain?: string;
+  subdomain?: string | null;
+  itemFamily?: string | null;
   itemType?: string;
+  stimulusType?: string | null;
   prompt?: string;
   options?: unknown;
   correctAnswer?: unknown;
+  scoringRule?: string | null;
   difficulty?: string | null;
+  intendedDifficulty?: string | null;
+  estimatedResponseTimeSec?: number | null;
+  cognitiveProcess?: string | null;
+  itemRationale?: string | null;
+  distractorRationale?: unknown;
+  reviewStatus?: string | null;
+  psychometricStatus?: string | null;
   note?: string | null;
 };
 

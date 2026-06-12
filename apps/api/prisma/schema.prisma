@@ -211,6 +211,7 @@ model Item {
   itemType      String
   options       Json?
   correctAnswer Json?
+  scoringRule   String?          @default("BINARY_CORRECT")
   difficulty    String?
   status        ItemStatus       @default(DRAFT)
   version       Int              @default(1)
