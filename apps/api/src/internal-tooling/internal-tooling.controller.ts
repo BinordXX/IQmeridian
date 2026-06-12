@@ -19,6 +19,7 @@ import {
   ActivateInternalItemInput,
   UpdateInternalItemStatusInput,
   UpdateInternalDraftItemInput,
+  UpdatePilotFormStatusInput,
 } from './internal-tooling.types';
 
 type InternalApiRole = 'PLATFORM_ADMIN' | 'RESEARCHER';
@@ -52,6 +53,85 @@ export class InternalToolingController {
   constructor(
     private readonly internalToolingService: InternalToolingService,
   ) {}
+
+  @Post('pilot-forms/general-cognitive-ability-v0-1')
+  createFormalPilotForm(@Headers('x-internal-role') roleHeader?: string) {
+    assertInternalAccess({
+      roleHeader,
+      allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
+    });
+
+    return this.internalToolingService.createFormalPilotForm();
+  }
+
+  @Get('pilot-forms')
+  getInternalPilotForms(@Headers('x-internal-role') roleHeader?: string) {
+    assertInternalAccess({
+      roleHeader,
+      allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
+    });
+
+    return this.internalToolingService.getInternalPilotForms();
+  }
+
+  @Get('pilot-forms/:formId')
+  async getInternalPilotFormById(
+    @Param('formId') formId: string,
+    @Headers('x-internal-role') roleHeader?: string,
+  ) {
+    assertInternalAccess({
+      roleHeader,
+      allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
+    });
+
+    const form =
+      await this.internalToolingService.getInternalPilotFormById(formId);
+
+    if (!form) {
+      throw new NotFoundException('Pilot form was not found.');
+    }
+
+    return form;
+  }
+
+  @Get('pilot-forms/:formId/blueprint-validation')
+  validatePilotFormBlueprint(
+    @Param('formId') formId: string,
+    @Headers('x-internal-role') roleHeader?: string,
+  ) {
+    assertInternalAccess({
+      roleHeader,
+      allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
+    });
+
+    return this.internalToolingService.validatePilotFormBlueprint(formId);
+  }
+
+  @Patch('pilot-forms/:formId/status')
+  updatePilotFormStatus(
+    @Param('formId') formId: string,
+    @Body() input: UpdatePilotFormStatusInput,
+    @Headers('x-internal-role') roleHeader?: string,
+  ) {
+    assertInternalAccess({
+      roleHeader,
+      allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
+    });
+
+    const role = getInternalApiRole(roleHeader);
+
+    if (!role) {
+      throw new ForbiddenException(
+        'This internal tooling endpoint requires an authorised internal role.',
+      );
+    }
+
+    return this.internalToolingService.updatePilotFormStatus(
+      formId,
+      input,
+      role,
+    );
+  }
 
   @Post('items')
   createInternalDraftItem(
@@ -90,7 +170,19 @@ export class InternalToolingController {
       allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
     });
 
-    return this.internalToolingService.updateInternalDraftItem(itemId, input);
+    const role = getInternalApiRole(roleHeader);
+
+    if (!role) {
+      throw new ForbiddenException(
+        'This internal tooling endpoint requires an authorised internal role.',
+      );
+    }
+
+    return this.internalToolingService.updateInternalDraftItem(
+      itemId,
+      input,
+      role,
+    );
   }
 
   @Post('items/:itemId/status')
@@ -161,7 +253,19 @@ export class InternalToolingController {
       allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
     });
 
-    return this.internalToolingService.attachInternalItemToForm(itemId, input);
+    const role = getInternalApiRole(roleHeader);
+
+    if (!role) {
+      throw new ForbiddenException(
+        'This internal tooling endpoint requires an authorised internal role.',
+      );
+    }
+
+    return this.internalToolingService.attachInternalItemToForm(
+      itemId,
+      input,
+      role,
+    );
   }
 
   @Get('items/:itemId/traceability')

@@ -12,6 +12,7 @@ import {
   ItemIntendedDifficulty,
   ItemReviewStatus,
   ItemStatus,
+  PilotFormStatus,
   Prisma,
   PsychometricFlagReviewStatus,
   PsychometricItemStatus,
@@ -46,6 +47,9 @@ import {
   ActivateInternalItemInput,
   UpdateInternalItemStatusInput,
   UpdateInternalDraftItemInput,
+  InternalPilotFormBlueprintValidationOutput,
+  InternalPilotFormOutput,
+  UpdatePilotFormStatusInput,
 } from './internal-tooling.types';
 
 const sessionInclude = {
@@ -111,6 +115,54 @@ type ItemWithInternalRelations = Prisma.ItemGetPayload<{
   include: typeof itemInclude;
 }>;
 
+const pilotFormInclude = {
+  sections: true,
+  items: {
+    include: {
+      item: true,
+      section: true,
+    },
+    orderBy: {
+      orderIndex: 'asc',
+    },
+  },
+} satisfies Prisma.AssessmentFormInclude;
+
+type PilotFormWithInternalRelations = Prisma.AssessmentFormGetPayload<{
+  include: typeof pilotFormInclude;
+}>;
+
+type InternalApiRole = 'PLATFORM_ADMIN' | 'RESEARCHER';
+
+const IQMERIDIAN_PILOT_FORM_NAME =
+  'IQMeridian General Cognitive Ability Pilot Form';
+
+const IQMERIDIAN_PILOT_VERSION_LABEL = 'v0.1';
+
+const PILOT_BLUEPRINT: Record<AssessmentDomain, number> = {
+  [AssessmentDomain.VERBAL_REASONING]: 8,
+  [AssessmentDomain.NUMERICAL_REASONING]: 8,
+  [AssessmentDomain.ABSTRACT_REASONING]: 10,
+  [AssessmentDomain.LOGICAL_REASONING]: 8,
+  [AssessmentDomain.ANALYTICAL_PROBLEM_SOLVING]: 6,
+};
+
+const PILOT_TIMING_RULES = {
+  totalRecommendedMinutes: 45,
+  sectionTiming: {
+    VERBAL_REASONING: 480,
+    NUMERICAL_REASONING: 600,
+    ABSTRACT_REASONING: 720,
+    LOGICAL_REASONING: 600,
+    ANALYTICAL_PROBLEM_SOLVING: 480,
+  },
+};
+
+const LOCKED_FORM_STATUSES = [
+  PilotFormStatus.LOCKED_FOR_PILOT,
+  PilotFormStatus.ACTIVE_PILOT,
+] as const;
+
 const analyticsExportDefinitions: AnalyticsExportDefinition[] = [
   {
     dataset: 'ITEM_LEVEL',
@@ -157,6 +209,211 @@ const analyticsExportDefinitions: AnalyticsExportDefinition[] = [
 @Injectable()
 export class InternalToolingService {
   constructor(private readonly prisma: PrismaService) {}
+  async createFormalPilotForm(): Promise<InternalPilotFormOutput> {
+    const existing = await this.prisma.assessmentForm.findFirst({
+      where: {
+        name: IQMERIDIAN_PILOT_FORM_NAME,
+        versionLabel: IQMERIDIAN_PILOT_VERSION_LABEL,
+      },
+      include: pilotFormInclude,
+    });
+
+    if (existing) {
+      return this.toInternalPilotFormOutput(existing);
+    }
+
+    const form = await this.prisma.assessmentForm.create({
+      data: {
+        name: IQMERIDIAN_PILOT_FORM_NAME,
+        version: 1,
+        versionLabel: IQMERIDIAN_PILOT_VERSION_LABEL,
+        isActive: false,
+        pilotStatus: PilotFormStatus.DRAFT,
+        isLocked: false,
+        domainBlueprint: this.toJsonValue(PILOT_BLUEPRINT),
+        timingRules: this.toJsonValue(PILOT_TIMING_RULES),
+        scoringVersion: 1,
+        reportVersion: 1,
+        sections: {
+          create: [
+            {
+              type: 'VERBAL',
+              domain: AssessmentDomain.VERBAL_REASONING,
+              title: 'Verbal reasoning',
+              timeLimitSec: 480,
+              orderIndex: 1,
+            },
+            {
+              type: 'NUMERICAL',
+              domain: AssessmentDomain.NUMERICAL_REASONING,
+              title: 'Numerical reasoning',
+              timeLimitSec: 600,
+              orderIndex: 2,
+            },
+            {
+              type: 'ABSTRACT',
+              domain: AssessmentDomain.ABSTRACT_REASONING,
+              title: 'Abstract reasoning',
+              timeLimitSec: 720,
+              orderIndex: 3,
+            },
+            {
+              type: 'LOGICAL',
+              domain: AssessmentDomain.LOGICAL_REASONING,
+              title: 'Logical reasoning',
+              timeLimitSec: 600,
+              orderIndex: 4,
+            },
+            {
+              type: 'ANALYTICAL',
+              domain: AssessmentDomain.ANALYTICAL_PROBLEM_SOLVING,
+              title: 'Analytical problem-solving',
+              timeLimitSec: 480,
+              orderIndex: 5,
+            },
+          ],
+        },
+      },
+      include: pilotFormInclude,
+    });
+
+    await this.prisma.auditLog.create({
+      data: {
+        action: 'PILOT_FORM_CREATED',
+        entityType: 'AssessmentForm',
+        entityId: form.id,
+        metadata: this.toJsonValue({
+          name: form.name,
+          version: form.version,
+          versionLabel: form.versionLabel,
+          pilotStatus: form.pilotStatus,
+          blueprint: PILOT_BLUEPRINT,
+          timingRules: PILOT_TIMING_RULES,
+          scoringVersion: form.scoringVersion,
+          reportVersion: form.reportVersion,
+        }),
+      },
+    });
+
+    return this.toInternalPilotFormOutput(form);
+  }
+
+  async getInternalPilotForms(): Promise<InternalPilotFormOutput[]> {
+    const forms = await this.prisma.assessmentForm.findMany({
+      orderBy: {
+        createdAt: 'desc',
+      },
+      include: pilotFormInclude,
+    });
+
+    return forms.map((form) => this.toInternalPilotFormOutput(form));
+  }
+
+  async getInternalPilotFormById(
+    formId: string,
+  ): Promise<InternalPilotFormOutput | undefined> {
+    const form = await this.prisma.assessmentForm.findUnique({
+      where: { id: formId },
+      include: pilotFormInclude,
+    });
+
+    if (!form) {
+      return undefined;
+    }
+
+    return this.toInternalPilotFormOutput(form);
+  }
+
+  async validatePilotFormBlueprint(
+    formId: string,
+  ): Promise<InternalPilotFormBlueprintValidationOutput> {
+    const form = await this.prisma.assessmentForm.findUnique({
+      where: { id: formId },
+      include: pilotFormInclude,
+    });
+
+    if (!form) {
+      throw new NotFoundException('Pilot form was not found.');
+    }
+
+    return this.buildPilotBlueprintValidation(form);
+  }
+
+  async updatePilotFormStatus(
+    formId: string,
+    input: UpdatePilotFormStatusInput,
+    actorRole: InternalApiRole,
+  ): Promise<InternalPilotFormOutput> {
+    if (
+      !Object.values(PilotFormStatus).includes(input.status as PilotFormStatus)
+    ) {
+      throw new BadRequestException('Unsupported pilot form status.');
+    }
+
+    const nextStatus = input.status as PilotFormStatus;
+
+    const form = await this.prisma.assessmentForm.findUnique({
+      where: { id: formId },
+      include: pilotFormInclude,
+    });
+
+    if (!form) {
+      throw new NotFoundException('Pilot form was not found.');
+    }
+
+    const previousStatus = form.pilotStatus;
+    const validation = this.buildPilotBlueprintValidation(form);
+
+    if (this.isLockedPilotStatus(nextStatus) && !validation.isValid) {
+      throw new BadRequestException(
+        `Pilot form cannot be locked or activated until blueprint validation passes: ${validation.errors.join(
+          '; ',
+        )}`,
+      );
+    }
+
+    if (this.isLockedPilotForm(form) && previousStatus !== nextStatus) {
+      this.assertLockedFormOverrideAllowed({
+        actorRole,
+        overrideReason: input.overrideReason,
+        operation: 'changing locked pilot form status',
+      });
+    }
+
+    const shouldLock = this.isLockedPilotStatus(nextStatus);
+
+    const updatedForm = await this.prisma.assessmentForm.update({
+      where: { id: form.id },
+      data: {
+        pilotStatus: nextStatus,
+        isLocked: shouldLock || form.isLocked,
+        isActive: nextStatus === PilotFormStatus.ACTIVE_PILOT,
+        lockedAt: shouldLock && !form.lockedAt ? new Date() : form.lockedAt,
+        lockedBy: shouldLock && !form.lockedBy ? actorRole : form.lockedBy,
+      },
+      include: pilotFormInclude,
+    });
+
+    await this.prisma.auditLog.create({
+      data: {
+        action: this.isLockedPilotStatus(previousStatus)
+          ? 'LOCKED_PILOT_FORM_STATUS_OVERRIDDEN'
+          : 'PILOT_FORM_STATUS_UPDATED',
+        entityType: 'AssessmentForm',
+        entityId: form.id,
+        metadata: this.toJsonValue({
+          formId: form.id,
+          previousStatus,
+          newStatus: nextStatus,
+          isLocked: updatedForm.isLocked,
+          overrideReason: input.overrideReason ?? null,
+          validation,
+        }),
+      },
+    });
+
+    return this.toInternalPilotFormOutput(updatedForm);
+  }
   async getSectionPerformanceSummaries(): Promise<
     InternalSectionPerformanceSummary[]
   > {
@@ -245,6 +502,7 @@ export class InternalToolingService {
   async updateInternalDraftItem(
     itemId: string,
     input: UpdateInternalDraftItemInput,
+    actorRole: InternalApiRole,
   ): Promise<InternalItemDetailOutput> {
     const item = await this.prisma.item.findUnique({
       where: { id: itemId },
@@ -321,7 +579,7 @@ export class InternalToolingService {
       changedFields.push('difficulty');
     }
 
-        if (input.subdomain !== undefined) {
+    if (input.subdomain !== undefined) {
       updateData.subdomain = this.normaliseNullableString(input.subdomain);
       changedFields.push('subdomain');
     }
@@ -332,7 +590,9 @@ export class InternalToolingService {
     }
 
     if (input.stimulusType !== undefined) {
-      updateData.stimulusType = this.normaliseNullableString(input.stimulusType);
+      updateData.stimulusType = this.normaliseNullableString(
+        input.stimulusType,
+      );
       changedFields.push('stimulusType');
     }
 
@@ -404,8 +664,7 @@ export class InternalToolingService {
       increment: 1,
     };
 
-
-        const mergedPilotReadyCandidate = {
+    const mergedPilotReadyCandidate = {
       domain:
         updateData.domain !== undefined
           ? (updateData.domain as AssessmentDomain)
@@ -456,7 +715,38 @@ export class InternalToolingService {
       this.assertPilotReadyItemMetadata(mergedPilotReadyCandidate);
     }
 
+    const lockedFormAssociations = await this.prisma.formItemMapping.findMany({
+      where: {
+        itemId: item.id,
+        form: {
+          OR: [
+            { isLocked: true },
+            { pilotStatus: PilotFormStatus.LOCKED_FOR_PILOT },
+            { pilotStatus: PilotFormStatus.ACTIVE_PILOT },
+          ],
+        },
+      },
+      include: {
+        form: true,
+      },
+    });
 
+    const protectedLockedFormChanges = changedFields.filter((field) =>
+      ['correctAnswer', 'scoringRule'].includes(field),
+    );
+
+    if (
+      lockedFormAssociations.length > 0 &&
+      protectedLockedFormChanges.length > 0
+    ) {
+      this.assertLockedFormOverrideAllowed({
+        actorRole,
+        overrideReason: input.overrideReason,
+        operation: `changing ${protectedLockedFormChanges.join(
+          ', ',
+        )} for an item linked to a locked pilot form`,
+      });
+    }
     const updatedItem = await this.prisma.item.update({
       where: { id: item.id },
       data: updateData,
@@ -476,6 +766,14 @@ export class InternalToolingService {
           newVersion: updatedItem.version,
           changedFields,
           note: input.note ?? null,
+          lockedFormOverride:
+            lockedFormAssociations.length > 0 &&
+            protectedLockedFormChanges.length > 0,
+          lockedFormIds: lockedFormAssociations.map(
+            (mapping) => mapping.formId,
+          ),
+          protectedLockedFormChanges,
+          overrideReason: input.overrideReason ?? null,
         }),
       },
     });
@@ -657,7 +955,7 @@ export class InternalToolingService {
         ? input.id.trim()
         : `draft-item-${randomUUID()}`;
 
-            const requestedPsychometricStatus =
+    const requestedPsychometricStatus =
       this.parsePsychometricItemStatus(input.psychometricStatus) ??
       PsychometricItemStatus.DRAFT;
 
@@ -679,8 +977,7 @@ export class InternalToolingService {
           this.normaliseNullableString(input.explanationNotes) ??
           null,
         scoringRule:
-          this.normaliseNullableString(input.scoringRule) ??
-          'BINARY_CORRECT',
+          this.normaliseNullableString(input.scoringRule) ?? 'BINARY_CORRECT',
         reviewStatus:
           this.parseItemReviewStatus(input.reviewStatus) ??
           ItemReviewStatus.NOT_REVIEWED,
@@ -700,8 +997,7 @@ export class InternalToolingService {
         options: this.toJsonValue(input.options),
         correctAnswer: this.toJsonValue(input.correctAnswer),
         scoringRule:
-          this.normaliseNullableString(input.scoringRule) ??
-          'BINARY_CORRECT',
+          this.normaliseNullableString(input.scoringRule) ?? 'BINARY_CORRECT',
         difficulty: input.difficulty,
         intendedDifficulty:
           this.parseIntendedDifficulty(input.intendedDifficulty) ?? null,
@@ -747,7 +1043,7 @@ export class InternalToolingService {
           timeExpectationSeconds: input.timeExpectationSeconds ?? null,
           explanationNotes: input.explanationNotes ?? null,
           assetLinkage: input.assetLinkage ?? null,
-                    subdomain: input.subdomain ?? null,
+          subdomain: input.subdomain ?? null,
           itemFamily: input.itemFamily ?? null,
           stimulusType: input.stimulusType ?? null,
           intendedDifficulty: input.intendedDifficulty ?? null,
@@ -777,6 +1073,7 @@ export class InternalToolingService {
   async attachInternalItemToForm(
     itemId: string,
     input: CreateInternalItemFormMappingInput,
+    actorRole: InternalApiRole,
   ): Promise<InternalItemTraceabilityOutput> {
     if (!input.formId || input.formId.trim().length === 0) {
       throw new BadRequestException('Form ID is required.');
@@ -797,6 +1094,32 @@ export class InternalToolingService {
 
     if (!form) {
       throw new NotFoundException('Assessment form was not found.');
+    }
+
+    if (this.isLockedPilotForm(form)) {
+      this.assertLockedFormOverrideAllowed({
+        actorRole,
+        overrideReason: input.overrideReason,
+        operation: 'adding or replacing items on a locked pilot form',
+      });
+    }
+
+    if (
+      this.isLockedPilotForm(form) &&
+      item.psychometricStatus !== PsychometricItemStatus.PILOT_READY
+    ) {
+      throw new BadRequestException(
+        'Only pilot-ready items can be added to a locked or active pilot form.',
+      );
+    }
+
+    if (
+      this.isLockedPilotForm(form) &&
+      item.reviewStatus !== ItemReviewStatus.APPROVED_FOR_PILOT
+    ) {
+      throw new BadRequestException(
+        'Only content-approved items can be added to a locked or active pilot form.',
+      );
     }
 
     if (input.sectionId && input.sectionId.trim().length > 0) {
@@ -860,6 +1183,11 @@ export class InternalToolingService {
           sectionId: input.sectionId ?? null,
           orderIndex: input.orderIndex ?? 0,
           status: mappingStatus,
+          formPilotStatus: form.pilotStatus,
+          formLocked: form.isLocked,
+          itemPsychometricStatus: item.psychometricStatus,
+          itemReviewStatus: item.reviewStatus,
+          overrideReason: input.overrideReason ?? null,
         }),
       },
     });
@@ -1460,6 +1788,10 @@ export class InternalToolingService {
       sessionType: session.campaignId ? 'EMPLOYER_LINKED' : 'CONSUMER',
       formId: session.assessmentFormId,
       formLabel: session.assessmentForm.name,
+      formVersion: session.assessmentFormVersion,
+      formVersionLabel: session.assessmentFormVersionLabel,
+      scoringVersion: session.scoringVersion,
+      reportVersion: session.reportVersion,
       status: session.status,
       startedAt: session.startedAt?.toISOString() ?? null,
       endedAt: session.completedAt?.toISOString() ?? null,
@@ -2178,7 +2510,7 @@ export class InternalToolingService {
     return {};
   }
 
-    private normaliseNullableString(value: string | null | undefined) {
+  private normaliseNullableString(value: string | null | undefined) {
     if (value === undefined) {
       return undefined;
     }
@@ -2225,7 +2557,9 @@ export class InternalToolingService {
       throw new BadRequestException('Review status cannot be empty.');
     }
 
-    if (!Object.values(ItemReviewStatus).includes(normalised as ItemReviewStatus)) {
+    if (
+      !Object.values(ItemReviewStatus).includes(normalised as ItemReviewStatus)
+    ) {
       throw new BadRequestException('Unsupported item review status.');
     }
 
@@ -2242,7 +2576,9 @@ export class InternalToolingService {
     }
 
     if (normalised === null) {
-      throw new BadRequestException('Psychometric item status cannot be empty.');
+      throw new BadRequestException(
+        'Psychometric item status cannot be empty.',
+      );
     }
 
     if (
@@ -2343,7 +2679,159 @@ export class InternalToolingService {
       );
     }
   }
+  private isLockedPilotStatus(status: PilotFormStatus) {
+    return LOCKED_FORM_STATUSES.includes(
+      status as (typeof LOCKED_FORM_STATUSES)[number],
+    );
+  }
 
+  private isLockedPilotForm(form: {
+    isLocked: boolean;
+    pilotStatus: PilotFormStatus;
+  }) {
+    return form.isLocked || this.isLockedPilotStatus(form.pilotStatus);
+  }
+
+  private assertLockedFormOverrideAllowed({
+    actorRole,
+    overrideReason,
+    operation,
+  }: {
+    actorRole: InternalApiRole;
+    overrideReason?: string | null;
+    operation: string;
+  }) {
+    if (actorRole !== 'PLATFORM_ADMIN') {
+      throw new BadRequestException(
+        `Only platform admins can override locked pilot form governance when ${operation}.`,
+      );
+    }
+
+    if (!overrideReason || overrideReason.trim().length < 10) {
+      throw new BadRequestException(
+        `An override reason of at least 10 characters is required when ${operation}.`,
+      );
+    }
+  }
+
+  private buildPilotBlueprintValidation(
+    form: PilotFormWithInternalRelations,
+  ): InternalPilotFormBlueprintValidationOutput {
+    const actualBlueprint = Object.values(AssessmentDomain).reduce<
+      Record<string, number>
+    >((summary, domain) => {
+      summary[domain] = 0;
+      return summary;
+    }, {});
+
+    const errors: string[] = [];
+    const warnings: string[] = [];
+
+    const activeMappings = form.items.filter(
+      (mapping) => mapping.status === FormItemMappingStatus.ACTIVE,
+    );
+
+    activeMappings.forEach((mapping) => {
+      actualBlueprint[mapping.item.domain] =
+        (actualBlueprint[mapping.item.domain] ?? 0) + 1;
+
+      if (
+        mapping.item.psychometricStatus !== PsychometricItemStatus.PILOT_READY
+      ) {
+        errors.push(
+          `Item ${mapping.itemId} is not pilot-ready (${mapping.item.psychometricStatus}).`,
+        );
+      }
+
+      if (mapping.item.reviewStatus !== ItemReviewStatus.APPROVED_FOR_PILOT) {
+        errors.push(
+          `Item ${mapping.itemId} is not content-approved for pilot (${mapping.item.reviewStatus}).`,
+        );
+      }
+
+      if (mapping.item.status !== ItemStatus.ACTIVE) {
+        warnings.push(
+          `Item ${mapping.itemId} is not operationally active (${mapping.item.status}); candidate delivery may exclude it.`,
+        );
+      }
+    });
+
+    Object.entries(PILOT_BLUEPRINT).forEach(([domain, expectedCount]) => {
+      const actualCount = actualBlueprint[domain] ?? 0;
+
+      if (actualCount === 0) {
+        errors.push(`Pilot form is missing ${domain}.`);
+      }
+
+      if (actualCount < expectedCount) {
+        errors.push(
+          `${domain} is underrepresented: expected ${expectedCount}, found ${actualCount}.`,
+        );
+      }
+
+      if (actualCount > expectedCount) {
+        errors.push(
+          `${domain} is overrepresented: expected ${expectedCount}, found ${actualCount}.`,
+        );
+      }
+    });
+
+    const totalExpectedItems = Object.values(PILOT_BLUEPRINT).reduce(
+      (sum, count) => sum + count,
+      0,
+    );
+    const totalActualItems = activeMappings.length;
+
+    if (totalActualItems !== totalExpectedItems) {
+      errors.push(
+        `Pilot form item total is invalid: expected ${totalExpectedItems}, found ${totalActualItems}.`,
+      );
+    }
+
+    return {
+      formId: form.id,
+      formLabel: form.name,
+      formVersion: form.version,
+      formVersionLabel: form.versionLabel,
+      expectedBlueprint: PILOT_BLUEPRINT,
+      actualBlueprint,
+      totalExpectedItems,
+      totalActualItems,
+      isValid: errors.length === 0,
+      errors,
+      warnings,
+    };
+  }
+
+  private toInternalPilotFormOutput(
+    form: PilotFormWithInternalRelations,
+  ): InternalPilotFormOutput {
+    const activeItems = form.items.filter(
+      (mapping) => mapping.status === FormItemMappingStatus.ACTIVE,
+    );
+
+    return {
+      id: form.id,
+      name: form.name,
+      version: form.version,
+      versionLabel: form.versionLabel,
+      isActive: form.isActive,
+      pilotStatus: form.pilotStatus,
+      isLocked: form.isLocked,
+      domainBlueprint: form.domainBlueprint,
+      timingRules: form.timingRules,
+      scoringVersion: form.scoringVersion,
+      reportVersion: form.reportVersion,
+      lockedAt: form.lockedAt?.toISOString() ?? null,
+      lockedBy: form.lockedBy,
+      createdAt: form.createdAt.toISOString(),
+      updatedAt: form.updatedAt.toISOString(),
+      sectionCount: form.sections.length,
+      itemCount: form.items.length,
+      activeItemCount: activeItems.length,
+      blueprintValidation: this.buildPilotBlueprintValidation(form),
+    };
+  }
   private toJsonValue(value: unknown): Prisma.InputJsonValue {
     return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
   }

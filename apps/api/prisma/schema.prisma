@@ -116,6 +116,15 @@ enum PsychometricItemStatus {
   CALIBRATED
 }
 
+enum PilotFormStatus {
+  DRAFT
+  READY_FOR_REVIEW
+  LOCKED_FOR_PILOT
+  ACTIVE_PILOT
+  CLOSED
+  ARCHIVED
+}
+
 enum SessionStatus {
   NOT_STARTED
   IN_PROGRESS
@@ -176,10 +185,22 @@ model Campaign {
 }
 
 model AssessmentForm {
-  id        String   @id @default(cuid())
-  name      String
-  version   Int      @default(1)
-  isActive  Boolean  @default(false)
+  id           String          @id @default(cuid())
+  name         String
+  version      Int             @default(1)
+  versionLabel String?         @default("v0.1")
+  isActive     Boolean         @default(false)
+  pilotStatus  PilotFormStatus @default(DRAFT)
+  isLocked     Boolean         @default(false)
+
+  domainBlueprint Json?
+  timingRules     Json?
+  scoringVersion  Int   @default(1)
+  reportVersion   Int   @default(1)
+
+  lockedAt DateTime?
+  lockedBy String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -188,6 +209,10 @@ model AssessmentForm {
   campaigns                Campaign[]
   sessions                 Session[]
   psychometricAnalysisRuns PsychometricAnalysisRun[]
+
+  @@index([pilotStatus])
+  @@index([isLocked])
+  @@index([name, version])
 }
 
 model AssessmentSection {
@@ -272,25 +297,30 @@ model Invitation {
 }
 
 model Session {
-  id                  String             @id @default(cuid())
-  userId              String
-  user                User               @relation(fields: [userId], references: [id])
-  campaignId          String?
-  campaign            Campaign?          @relation(fields: [campaignId], references: [id])
-  invitationId        String?
-  invitation          Invitation?        @relation(fields: [invitationId], references: [id])
-  assessmentFormId    String
-  assessmentForm      AssessmentForm     @relation(fields: [assessmentFormId], references: [id])
-  status              SessionStatus      @default(NOT_STARTED)
-  startedAt           DateTime?
-  completedAt         DateTime?
-  currentSectionId    String?
-  currentSection      AssessmentSection? @relation("CurrentSessionSection", fields: [currentSectionId], references: [id])
-  currentSectionOrder Int?
-  sectionStartedAt    DateTime?
-  sectionEndsAt       DateTime?
-  createdAt           DateTime           @default(now())
-  updatedAt           DateTime           @updatedAt
+  id                         String             @id @default(cuid())
+  userId                     String
+  user                       User               @relation(fields: [userId], references: [id])
+  campaignId                 String?
+  campaign                   Campaign?          @relation(fields: [campaignId], references: [id])
+  invitationId               String?
+  invitation                 Invitation?        @relation(fields: [invitationId], references: [id])
+  assessmentFormId           String
+  assessmentForm             AssessmentForm     @relation(fields: [assessmentFormId], references: [id])
+  assessmentFormVersion      Int                @default(1)
+  assessmentFormVersionLabel String?
+  scoringVersion             Int                @default(1)
+  reportVersion              Int                @default(1)
+  formSnapshot               Json?
+  status                     SessionStatus      @default(NOT_STARTED)
+  startedAt                  DateTime?
+  completedAt                DateTime?
+  currentSectionId           String?
+  currentSection             AssessmentSection? @relation("CurrentSessionSection", fields: [currentSectionId], references: [id])
+  currentSectionOrder        Int?
+  sectionStartedAt           DateTime?
+  sectionEndsAt              DateTime?
+  createdAt                  DateTime           @default(now())
+  updatedAt                  DateTime           @updatedAt
 
   responses Response[]
   score     Score?

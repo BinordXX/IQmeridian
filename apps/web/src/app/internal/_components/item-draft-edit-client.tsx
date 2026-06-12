@@ -80,7 +80,9 @@ type EditableDraftForm = {
   psychometricStatus: string;
 };
 
-function toEditableDraftForm(item?: InternalItemDetailOutput): EditableDraftForm {
+function toEditableDraftForm(
+  item?: InternalItemDetailOutput
+): EditableDraftForm {
   return {
     domain: item?.domain ?? 'VERBAL_REASONING',
     subdomain: item?.subdomain ?? '',
@@ -444,7 +446,9 @@ export function ItemDraftEditClient({
                 Domain
                 <select
                   value={formState.domain}
-                  onChange={(event) => updateField('domain', event.target.value)}
+                  onChange={(event) =>
+                    updateField('domain', event.target.value)
+                  }
                   disabled={!isEditableDraft}
                   className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-950 disabled:bg-slate-100"
                 >
@@ -611,10 +615,7 @@ export function ItemDraftEditClient({
                 <input
                   value={formState.estimatedResponseTimeSec}
                   onChange={(event) =>
-                    updateField(
-                      'estimatedResponseTimeSec',
-                      event.target.value
-                    )
+                    updateField('estimatedResponseTimeSec', event.target.value)
                   }
                   disabled={!isEditableDraft}
                   type="number"

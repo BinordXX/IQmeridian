@@ -1,5 +1,4 @@
 import Link from 'next/link';
-
 import {
   fetchResearcherDashboardOverview,
   formatInternalDuration,
@@ -21,6 +20,22 @@ export default async function InternalResearcherDashboardPage() {
           Researcher analytics
         </span>
       </nav>
+
+      <Link
+  href="/internal/researcher/pilot-forms"
+  className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:border-slate-400"
+>
+  <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+    Pilot governance
+  </p>
+  <h2 className="mt-3 text-xl font-semibold text-slate-950">
+    Pilot forms
+  </h2>
+  <p className="mt-2 text-sm leading-6 text-slate-600">
+    Create and validate the IQMeridian General Cognitive Ability Pilot Form
+    v0.1, inspect blueprint gaps, and control pilot status transitions.
+  </p>
+</Link>
 
       <header className="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm lg:flex-row lg:items-start lg:justify-between">
         <div>

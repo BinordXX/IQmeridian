@@ -31,12 +31,12 @@ type CandidateItemOption = {
 type CandidateSafeAssessmentItem = {
   itemId: string;
   sectionId: string;
-itemType:
-  | 'verbal_reasoning'
-  | 'numerical_reasoning'
-  | 'abstract_reasoning'
-  | 'logical_reasoning'
-  | 'analytical_problem_solving';
+  itemType:
+    | 'verbal_reasoning'
+    | 'numerical_reasoning'
+    | 'abstract_reasoning'
+    | 'logical_reasoning'
+    | 'analytical_problem_solving';
   position: number;
   stem: string;
   prompt?: string;
@@ -188,6 +188,11 @@ export class SessionsService {
       data: {
         userId: input.userId,
         assessmentFormId: form.id,
+        assessmentFormVersion: form.version,
+        assessmentFormVersionLabel: form.versionLabel,
+        scoringVersion: form.scoringVersion,
+        reportVersion: form.reportVersion,
+        formSnapshot: this.toFormSnapshot(form),
         status: SessionStatus.NOT_STARTED,
       },
     });
@@ -200,6 +205,10 @@ export class SessionsService {
       metadata: {
         assessmentFormId: session.assessmentFormId,
         status: session.status,
+        assessmentFormVersion: session.assessmentFormVersion,
+        assessmentFormVersionLabel: session.assessmentFormVersionLabel,
+        scoringVersion: session.scoringVersion,
+        reportVersion: session.reportVersion,
       },
     });
 
@@ -213,7 +222,11 @@ export class SessionsService {
     const invitation = await this.prisma.invitation.findUnique({
       where: { token: input.invitationToken },
       include: {
-        campaign: true,
+        campaign: {
+          include: {
+            assessmentForm: true,
+          },
+        },
       },
     });
 
@@ -231,6 +244,16 @@ export class SessionsService {
 
     if (!invitation.campaign.assessmentFormId) {
       throw new BadRequestException('Campaign has no assessment form assigned');
+    }
+
+    const form = invitation.campaign.assessmentForm;
+
+    if (!form) {
+      throw new BadRequestException('Campaign assessment form was not found');
+    }
+
+    if (!form.isActive) {
+      throw new BadRequestException('Campaign assessment form is not active');
     }
 
     const existing = await this.prisma.session.findFirst({
@@ -255,7 +278,12 @@ export class SessionsService {
         userId: input.userId,
         campaignId: invitation.campaignId,
         invitationId: invitation.id,
-        assessmentFormId: invitation.campaign.assessmentFormId,
+        assessmentFormId: form.id,
+        assessmentFormVersion: form.version,
+        assessmentFormVersionLabel: form.versionLabel,
+        scoringVersion: form.scoringVersion,
+        reportVersion: form.reportVersion,
+        formSnapshot: this.toFormSnapshot(form),
         status: SessionStatus.NOT_STARTED,
       },
     });
@@ -270,6 +298,10 @@ export class SessionsService {
         invitationId: session.invitationId,
         assessmentFormId: session.assessmentFormId,
         status: session.status,
+        assessmentFormVersion: session.assessmentFormVersion,
+        assessmentFormVersionLabel: session.assessmentFormVersionLabel,
+        scoringVersion: session.scoringVersion,
+        reportVersion: session.reportVersion,
       },
     });
 
@@ -329,6 +361,10 @@ export class SessionsService {
         currentSectionOrder: startedSession.currentSectionOrder,
         startedAt: startedSession.startedAt,
         sectionEndsAt: startedSession.sectionEndsAt,
+        assessmentFormVersion: startedSession.assessmentFormVersion,
+        assessmentFormVersionLabel: startedSession.assessmentFormVersionLabel,
+        scoringVersion: startedSession.scoringVersion,
+        reportVersion: startedSession.reportVersion,
       },
     });
 
@@ -385,6 +421,10 @@ export class SessionsService {
         assessmentFormId: finalisedSession.assessmentFormId,
         completedAt: finalisedSession.completedAt,
         status: finalisedSession.status,
+        assessmentFormVersion: finalisedSession.assessmentFormVersion,
+        assessmentFormVersionLabel: finalisedSession.assessmentFormVersionLabel,
+        scoringVersion: finalisedSession.scoringVersion,
+        reportVersion: finalisedSession.reportVersion,
       },
     });
 
@@ -557,29 +597,29 @@ export class SessionsService {
     });
   }
 
- private toCandidateItemType(
-  domain: AssessmentDomain,
-): CandidateSafeAssessmentItem['itemType'] {
-  switch (domain) {
-    case AssessmentDomain.VERBAL_REASONING:
-      return 'verbal_reasoning';
+  private toCandidateItemType(
+    domain: AssessmentDomain,
+  ): CandidateSafeAssessmentItem['itemType'] {
+    switch (domain) {
+      case AssessmentDomain.VERBAL_REASONING:
+        return 'verbal_reasoning';
 
-    case AssessmentDomain.NUMERICAL_REASONING:
-      return 'numerical_reasoning';
+      case AssessmentDomain.NUMERICAL_REASONING:
+        return 'numerical_reasoning';
 
-    case AssessmentDomain.ABSTRACT_REASONING:
-      return 'abstract_reasoning';
+      case AssessmentDomain.ABSTRACT_REASONING:
+        return 'abstract_reasoning';
 
-    case AssessmentDomain.LOGICAL_REASONING:
-      return 'logical_reasoning';
+      case AssessmentDomain.LOGICAL_REASONING:
+        return 'logical_reasoning';
 
-    case AssessmentDomain.ANALYTICAL_PROBLEM_SOLVING:
-      return 'analytical_problem_solving';
+      case AssessmentDomain.ANALYTICAL_PROBLEM_SOLVING:
+        return 'analytical_problem_solving';
 
-    default:
-      return 'abstract_reasoning';
+      default:
+        return 'abstract_reasoning';
+    }
   }
-}
 
   private toCandidateStatus(
     status: SessionStatus,
@@ -604,7 +644,42 @@ export class SessionsService {
         return 'cancelled';
     }
   }
+  private toFormSnapshot(form: {
+    id: string;
+    name: string;
+    version: number;
+    versionLabel: string | null;
+    scoringVersion: number;
+    reportVersion: number;
+    domainBlueprint: Prisma.JsonValue | null;
+    timingRules: Prisma.JsonValue | null;
+    pilotStatus: string;
+    isLocked: boolean;
+  }): Prisma.InputJsonObject {
+    return {
+      id: form.id,
+      name: form.name,
+      version: form.version,
+      versionLabel: form.versionLabel,
+      scoringVersion: form.scoringVersion,
+      reportVersion: form.reportVersion,
+      domainBlueprint: this.toInputJsonValue(form.domainBlueprint),
+      timingRules: this.toInputJsonValue(form.timingRules),
+      pilotStatus: form.pilotStatus,
+      isLocked: form.isLocked,
+      capturedAt: new Date().toISOString(),
+    };
+  }
 
+  private toInputJsonValue(
+    value: Prisma.JsonValue | null,
+  ): Prisma.InputJsonValue | null {
+    if (value === null) {
+      return null;
+    }
+
+    return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
+  }
   private async getUsableForm(assessmentFormId: string) {
     const form = await this.prisma.assessmentForm.findUnique({
       where: { id: assessmentFormId },
