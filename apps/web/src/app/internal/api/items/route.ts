@@ -12,6 +12,45 @@ function parseJsonSafely(value: string) {
   }
 }
 
+export async function GET() {
+  try {
+    const response = await fetch(`${getInternalApiBaseUrl()}/internal/items`, {
+      method: 'GET',
+      cache: 'no-store',
+      headers: {
+        'x-internal-role': 'RESEARCHER',
+      },
+    });
+
+    const responseText = await response.text();
+    const parsedBody = parseJsonSafely(responseText);
+
+    if (!response.ok) {
+      return NextResponse.json(
+        parsedBody ?? {
+          message:
+            responseText.length > 0
+              ? responseText
+              : 'Internal items could not be loaded.',
+        },
+        { status: response.status }
+      );
+    }
+
+    return NextResponse.json(parsedBody, { status: response.status });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Internal item proxy failed.',
+      },
+      { status: 500 }
+    );
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as unknown;

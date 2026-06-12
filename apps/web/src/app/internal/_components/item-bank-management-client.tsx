@@ -202,8 +202,8 @@ export function ItemBankManagementClient({
         </label>
       </div>
 
-      <div className="mt-6 overflow-hidden rounded-xl border border-slate-200">
-        <table className="w-full min-w-[1280px] text-left text-sm">
+     <div className="mt-6 overflow-x-auto rounded-xl border border-slate-200">
+  <table className="min-w-[1320px] w-full text-left text-sm">
           <thead className="bg-slate-100 text-xs uppercase tracking-wide text-slate-600">
             <tr>
               <th className="px-4 py-3">Item</th>

@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Item" ADD COLUMN     "scoringRule" TEXT DEFAULT 'BINARY_CORRECT';

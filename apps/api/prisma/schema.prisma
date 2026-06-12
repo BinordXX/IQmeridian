@@ -22,6 +22,45 @@ enum PsychometricAnalysisStatus {
   CANCELLED
 }
 
+enum PsychometricFlagEntityType {
+  FORM
+  DOMAIN
+  ITEM
+  DISTRACTOR
+}
+
+enum PsychometricFlagType {
+  TOO_EASY
+  TOO_HARD
+  WEAK_DISCRIMINATION
+  NEGATIVE_DISCRIMINATION
+  HIGH_OMISSION
+  TOO_SLOW
+  TOO_FAST
+  WEAK_DISTRACTOR
+  OVERATTRACTIVE_DISTRACTOR
+  POSSIBLE_AMBIGUITY
+  POSSIBLE_ANSWER_KEY_ISSUE
+  LOW_DOMAIN_SPREAD
+  LOW_FORM_RELIABILITY
+  LOW_SCORE_SPREAD
+}
+
+enum PsychometricFlagSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum PsychometricFlagReviewStatus {
+  OPEN
+  ACCEPTED
+  DISMISSED
+  NEEDS_REVISION
+  RESOLVED
+}
+
 enum CampaignStatus {
   DRAFT
   ACTIVE
@@ -30,13 +69,19 @@ enum CampaignStatus {
 }
 
 enum AssessmentDomain {
-  ABSTRACT_REASONING
+  VERBAL_REASONING
   NUMERICAL_REASONING
+  ABSTRACT_REASONING
+  LOGICAL_REASONING
+  ANALYTICAL_PROBLEM_SOLVING
 }
 
 enum AssessmentSectionType {
-  ABSTRACT
+  VERBAL
   NUMERICAL
+  ABSTRACT
+  LOGICAL
+  ANALYTICAL
 }
 
 enum ItemStatus {
@@ -44,6 +89,31 @@ enum ItemStatus {
   ACTIVE
   RETIRED
   UNDER_REVIEW
+}
+
+enum ItemIntendedDifficulty {
+  EASY
+  MODERATE
+  HARD
+  VERY_HARD
+}
+
+enum ItemReviewStatus {
+  NOT_REVIEWED
+  REVIEW_IN_PROGRESS
+  APPROVED_FOR_PILOT
+  NEEDS_REVISION
+  REJECTED
+}
+
+enum PsychometricItemStatus {
+  DRAFT
+  CONTENT_REVIEWED
+  PILOT_READY
+  UNDER_REVIEW
+  FLAGGED_AFTER_PILOT
+  RETIRED
+  CALIBRATED
 }
 
 enum SessionStatus {
@@ -141,15 +211,32 @@ model Item {
   itemType      String
   options       Json?
   correctAnswer Json?
+  scoringRule   String?          @default("BINARY_CORRECT")
   difficulty    String?
   status        ItemStatus       @default(DRAFT)
   version       Int              @default(1)
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
 
-  formMappings        FormItemMapping[]
-  responses           Response[]
+  subdomain                String?
+  itemFamily               String?
+  stimulusType             String?
+  intendedDifficulty       ItemIntendedDifficulty?
+  estimatedResponseTimeSec Int?
+  cognitiveProcess         String?
+  itemRationale            String?
+  distractorRationale      Json?
+  reviewStatus             ItemReviewStatus        @default(NOT_REVIEWED)
+  psychometricStatus       PsychometricItemStatus  @default(DRAFT)
+  lastReviewedAt           DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  formMappings FormItemMapping[]
+  responses    Response[]
+
   psychometricMetrics ItemPsychometricMetric[]
+  distractorMetrics   DistractorPsychometricMetric[]
+  psychometricFlags   PsychometricFlag[]
 }
 
 model FormItemMapping {
@@ -294,9 +381,11 @@ model PsychometricAnalysisRun {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  itemMetrics   ItemPsychometricMetric[]
-  formMetrics   FormPsychometricMetric[]
-  domainMetrics DomainPsychometricMetric[]
+  itemMetrics       ItemPsychometricMetric[]
+  formMetrics       FormPsychometricMetric[]
+  domainMetrics     DomainPsychometricMetric[]
+  distractorMetrics DistractorPsychometricMetric[]
+  flags             PsychometricFlag[]
 
   @@index([formId])
   @@index([status])
@@ -385,6 +474,70 @@ model DomainPsychometricMetric {
 
   @@unique([analysisRunId, domain])
   @@index([domain])
+}
+
+model DistractorPsychometricMetric {
+  id String @id @default(cuid())
+
+  analysisRunId String
+  analysisRun   PsychometricAnalysisRun @relation(fields: [analysisRunId], references: [id], onDelete: Cascade)
+
+  itemId String
+  item   Item   @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  optionKey   String
+  optionLabel String?
+
+  selectionCount      Int    @default(0)
+  selectionPercentage Float?
+
+  highPerformerSelectionRate Float?
+  lowPerformerSelectionRate  Float?
+
+  isCorrectOption Boolean @default(false)
+
+  flags String[] @default([])
+
+  createdAt DateTime @default(now())
+
+  @@unique([analysisRunId, itemId, optionKey])
+  @@index([itemId])
+  @@index([analysisRunId])
+}
+
+model PsychometricFlag {
+  id String @id @default(cuid())
+
+  analysisRunId String
+  analysisRun   PsychometricAnalysisRun @relation(fields: [analysisRunId], references: [id], onDelete: Cascade)
+
+  entityType PsychometricFlagEntityType
+  flagType   PsychometricFlagType
+  severity   PsychometricFlagSeverity     @default(MEDIUM)
+  status     PsychometricFlagReviewStatus @default(OPEN)
+
+  itemId String?
+  item   Item?   @relation(fields: [itemId], references: [id], onDelete: SetNull)
+
+  domain    AssessmentDomain?
+  optionKey String?
+
+  message  String
+  evidence Json?
+
+  reviewedBy String?
+  reviewedAt DateTime?
+  reviewNote String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([analysisRunId])
+  @@index([itemId])
+  @@index([entityType])
+  @@index([flagType])
+  @@index([severity])
+  @@index([status])
 }
 
 model AuditLog {
