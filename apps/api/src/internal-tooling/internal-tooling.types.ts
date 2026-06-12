@@ -24,6 +24,10 @@ export type InternalSessionOutput = {
   sessionType: InternalSessionType;
   formId: string;
   formLabel: string;
+  formVersion: number;
+  formVersionLabel: string | null;
+  scoringVersion: number;
+  reportVersion: number;
   status: string;
   startedAt: string | null;
   endedAt: string | null;
@@ -202,6 +206,47 @@ export type InternalFormPerformanceSummary = {
   scoreSpread: ScoreDistributionBucket[];
 };
 
+export type InternalPilotFormBlueprintValidationOutput = {
+  formId: string;
+  formLabel: string;
+  formVersion: number;
+  formVersionLabel: string | null;
+  expectedBlueprint: Record<string, number>;
+  actualBlueprint: Record<string, number>;
+  totalExpectedItems: number;
+  totalActualItems: number;
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+};
+
+export type InternalPilotFormOutput = {
+  id: string;
+  name: string;
+  version: number;
+  versionLabel: string | null;
+  isActive: boolean;
+  pilotStatus: string;
+  isLocked: boolean;
+  domainBlueprint: unknown;
+  timingRules: unknown;
+  scoringVersion: number;
+  reportVersion: number;
+  lockedAt: string | null;
+  lockedBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+  sectionCount: number;
+  itemCount: number;
+  activeItemCount: number;
+  blueprintValidation: InternalPilotFormBlueprintValidationOutput;
+};
+
+export type UpdatePilotFormStatusInput = {
+  status: string;
+  overrideReason?: string | null;
+};
+
 export type InternalResearcherDashboardOverview = {
   totalItemsByStatus: Record<string, number>;
   activeItemsByDomain: {
@@ -322,6 +367,7 @@ export type CreateInternalItemFormMappingInput = {
   sectionId?: string | null;
   orderIndex?: number | null;
   status?: string;
+  overrideReason?: string | null;
 };
 
 export type ActivateInternalItemInput = {
@@ -347,6 +393,7 @@ export type UpdateInternalDraftItemInput = {
   reviewStatus?: string | null;
   psychometricStatus?: string | null;
   note?: string | null;
+  overrideReason?: string | null;
 };
 
 export type UpdateInternalItemStatusInput = {
