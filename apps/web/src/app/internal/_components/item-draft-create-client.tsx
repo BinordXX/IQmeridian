@@ -12,8 +12,6 @@ import {
   type InternalItemDetailOutput,
 } from '../_lib/internal-api';
 
-
-
 const domainOptions = [
   'VERBAL_REASONING',
   'NUMERICAL_REASONING',
@@ -72,8 +70,8 @@ export function ItemDraftCreateClient() {
   const [itemId, setItemId] = useState('');
   const [domain, setDomain] = useState('ABSTRACT_REASONING');
   const [subdomain, setSubdomain] = useState('');
-const [itemFamily, setItemFamily] = useState('');
-const [stimulusType, setStimulusType] = useState('text');
+  const [itemFamily, setItemFamily] = useState('');
+  const [stimulusType, setStimulusType] = useState('text');
   const [itemType, setItemType] = useState('MULTIPLE_CHOICE');
   const [prompt, setPrompt] = useState('');
   const [options, setOptions] = useState('');
@@ -81,11 +79,12 @@ const [stimulusType, setStimulusType] = useState('text');
   const [scoringRule, setScoringRule] = useState('BINARY_CORRECT');
   const [difficulty, setDifficulty] = useState('MEDIUM');
   const [intendedDifficulty, setIntendedDifficulty] = useState('MODERATE');
-const [estimatedResponseTimeSec, setEstimatedResponseTimeSec] = useState('60');
-const [cognitiveProcess, setCognitiveProcess] = useState('');
-const [itemRationale, setItemRationale] = useState('');
-const [reviewStatus, setReviewStatus] = useState('NOT_REVIEWED');
-const [psychometricStatus, setPsychometricStatus] = useState('DRAFT');
+  const [estimatedResponseTimeSec, setEstimatedResponseTimeSec] =
+    useState('60');
+  const [cognitiveProcess, setCognitiveProcess] = useState('');
+  const [itemRationale, setItemRationale] = useState('');
+  const [reviewStatus, setReviewStatus] = useState('NOT_REVIEWED');
+  const [psychometricStatus, setPsychometricStatus] = useState('DRAFT');
   const [distractorRationale, setDistractorRationale] = useState('');
   const [explanationNotes, setExplanationNotes] = useState('');
   const [assetLinkage, setAssetLinkage] = useState('');
@@ -115,46 +114,48 @@ const [psychometricStatus, setPsychometricStatus] = useState('DRAFT');
         throw new Error('Correct answer is required.');
       }
 
-  const parsedEstimatedResponseTime =
-  estimatedResponseTimeSec.trim().length > 0
-    ? Number(estimatedResponseTimeSec)
-    : null;
+      const parsedEstimatedResponseTime =
+        estimatedResponseTimeSec.trim().length > 0
+          ? Number(estimatedResponseTimeSec)
+          : null;
 
-if (
-  parsedEstimatedResponseTime !== null &&
-  (Number.isNaN(parsedEstimatedResponseTime) ||
-    parsedEstimatedResponseTime <= 0)
-) {
-  throw new Error('Estimated response time must be a positive number.');
-}
-const created = await createInternalDraftItem({
-  id: itemId.trim().length > 0 ? itemId.trim() : undefined,
-  domain,
-  subdomain: subdomain.trim().length > 0 ? subdomain.trim() : null,
-  itemFamily: itemFamily.trim().length > 0 ? itemFamily.trim() : null,
-  itemType,
-  stimulusType: stimulusType.trim().length > 0 ? stimulusType.trim() : null,
-  prompt: prompt.trim(),
-  options: parsedOptions,
-  correctAnswer: correctAnswer.trim(),
-  scoringRule: scoringRule.trim().length > 0 ? scoringRule.trim() : null,
-  difficulty,
-  intendedDifficulty,
-  estimatedResponseTimeSec: parsedEstimatedResponseTime,
-  cognitiveProcess:
-    cognitiveProcess.trim().length > 0 ? cognitiveProcess.trim() : null,
-  itemRationale:
-    itemRationale.trim().length > 0 ? itemRationale.trim() : null,
-  distractorRationale:
-    distractorRationale.trim().length > 0
-      ? distractorRationale.trim()
-      : null,
-  reviewStatus,
-  psychometricStatus,
-  explanationNotes:
-    explanationNotes.trim().length > 0 ? explanationNotes.trim() : null,
-  assetLinkage: assetLinkage.trim().length > 0 ? assetLinkage.trim() : null,
-});
+      if (
+        parsedEstimatedResponseTime !== null &&
+        (Number.isNaN(parsedEstimatedResponseTime) ||
+          parsedEstimatedResponseTime <= 0)
+      ) {
+        throw new Error('Estimated response time must be a positive number.');
+      }
+      const created = await createInternalDraftItem({
+        id: itemId.trim().length > 0 ? itemId.trim() : undefined,
+        domain,
+        subdomain: subdomain.trim().length > 0 ? subdomain.trim() : null,
+        itemFamily: itemFamily.trim().length > 0 ? itemFamily.trim() : null,
+        itemType,
+        stimulusType:
+          stimulusType.trim().length > 0 ? stimulusType.trim() : null,
+        prompt: prompt.trim(),
+        options: parsedOptions,
+        correctAnswer: correctAnswer.trim(),
+        scoringRule: scoringRule.trim().length > 0 ? scoringRule.trim() : null,
+        difficulty,
+        intendedDifficulty,
+        estimatedResponseTimeSec: parsedEstimatedResponseTime,
+        cognitiveProcess:
+          cognitiveProcess.trim().length > 0 ? cognitiveProcess.trim() : null,
+        itemRationale:
+          itemRationale.trim().length > 0 ? itemRationale.trim() : null,
+        distractorRationale:
+          distractorRationale.trim().length > 0
+            ? distractorRationale.trim()
+            : null,
+        reviewStatus,
+        psychometricStatus,
+        explanationNotes:
+          explanationNotes.trim().length > 0 ? explanationNotes.trim() : null,
+        assetLinkage:
+          assetLinkage.trim().length > 0 ? assetLinkage.trim() : null,
+      });
 
       setCreatedItem(created);
     } catch (error) {
@@ -206,24 +207,24 @@ const created = await createInternalDraftItem({
         </label>
 
         <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
-  Subdomain
-  <input
-    value={subdomain}
-    onChange={(event) => setSubdomain(event.target.value)}
-    placeholder="Example: analogy, inference, matrix reasoning"
-    className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-950"
-  />
-</label>
+          Subdomain
+          <input
+            value={subdomain}
+            onChange={(event) => setSubdomain(event.target.value)}
+            placeholder="Example: analogy, inference, matrix reasoning"
+            className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-950"
+          />
+        </label>
 
-<label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
-  Item family
-  <input
-    value={itemFamily}
-    onChange={(event) => setItemFamily(event.target.value)}
-    placeholder="Example: verbal_analogy, number_series"
-    className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-950"
-  />
-</label>
+        <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
+          Item family
+          <input
+            value={itemFamily}
+            onChange={(event) => setItemFamily(event.target.value)}
+            placeholder="Example: verbal_analogy, number_series"
+            className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-950"
+          />
+        </label>
 
         <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
           Item type
@@ -239,25 +240,25 @@ const created = await createInternalDraftItem({
             ))}
           </select>
         </label>
-<label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
-  Stimulus type
-  <input
-    value={stimulusType}
-    onChange={(event) => setStimulusType(event.target.value)}
-    placeholder="text, image, table, matrix, symbolic"
-    className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-950"
-  />
-</label>
+        <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
+          Stimulus type
+          <input
+            value={stimulusType}
+            onChange={(event) => setStimulusType(event.target.value)}
+            placeholder="text, image, table, matrix, symbolic"
+            className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-950"
+          />
+        </label>
 
-<label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
-  Scoring rule
-  <input
-    value={scoringRule}
-    onChange={(event) => setScoringRule(event.target.value)}
-    placeholder="BINARY_CORRECT"
-    className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-950"
-  />
-</label>
+        <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
+          Scoring rule
+          <input
+            value={scoringRule}
+            onChange={(event) => setScoringRule(event.target.value)}
+            placeholder="BINARY_CORRECT"
+            className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-950"
+          />
+        </label>
         <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
           Difficulty estimate
           <select
@@ -274,19 +275,19 @@ const created = await createInternalDraftItem({
         </label>
 
         <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
-  Intended difficulty
-  <select
-    value={intendedDifficulty}
-    onChange={(event) => setIntendedDifficulty(event.target.value)}
-    className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-950"
-  >
-    {intendedDifficultyOptions.map((option) => (
-      <option key={option} value={option}>
-        {itemIntendedDifficultyLabels[option] ?? option}
-      </option>
-    ))}
-  </select>
-</label>
+          Intended difficulty
+          <select
+            value={intendedDifficulty}
+            onChange={(event) => setIntendedDifficulty(event.target.value)}
+            className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-950"
+          >
+            {intendedDifficultyOptions.map((option) => (
+              <option key={option} value={option}>
+                {itemIntendedDifficultyLabels[option] ?? option}
+              </option>
+            ))}
+          </select>
+        </label>
 
         <label className="flex flex-col gap-2 text-sm font-medium text-slate-700 lg:col-span-2">
           Prompt or visual stem
@@ -322,26 +323,26 @@ const created = await createInternalDraftItem({
         </label>
 
         <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
-  Cognitive process tested
-  <textarea
-    value={cognitiveProcess}
-    onChange={(event) => setCognitiveProcess(event.target.value)}
-    rows={3}
-    placeholder="Example: verbal relational reasoning; rule induction; proportional reasoning."
-    className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-950"
-  />
-</label>
+          Cognitive process tested
+          <textarea
+            value={cognitiveProcess}
+            onChange={(event) => setCognitiveProcess(event.target.value)}
+            rows={3}
+            placeholder="Example: verbal relational reasoning; rule induction; proportional reasoning."
+            className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-950"
+          />
+        </label>
 
-<label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
-  Item rationale
-  <textarea
-    value={itemRationale}
-    onChange={(event) => setItemRationale(event.target.value)}
-    rows={4}
-    placeholder="Explain why the correct answer is correct."
-    className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-950"
-  />
-</label>
+        <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
+          Item rationale
+          <textarea
+            value={itemRationale}
+            onChange={(event) => setItemRationale(event.target.value)}
+            rows={4}
+            placeholder="Explain why the correct answer is correct."
+            className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-950"
+          />
+        </label>
 
         <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
           Distractor rationale
@@ -365,15 +366,17 @@ const created = await createInternalDraftItem({
           />
         </label>
 
-<label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
-  Estimated response time in seconds
-  <input
-    value={estimatedResponseTimeSec}
-    onChange={(event) => setEstimatedResponseTimeSec(event.target.value)}
-    inputMode="numeric"
-    className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-950"
-  />
-</label>
+        <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
+          Estimated response time in seconds
+          <input
+            value={estimatedResponseTimeSec}
+            onChange={(event) =>
+              setEstimatedResponseTimeSec(event.target.value)
+            }
+            inputMode="numeric"
+            className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-950"
+          />
+        </label>
 
         <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
           Asset upload linkage
@@ -387,36 +390,36 @@ const created = await createInternalDraftItem({
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-  <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
-    Review status
-    <select
-      value={reviewStatus}
-      onChange={(event) => setReviewStatus(event.target.value)}
-      className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-950"
-    >
-      {reviewStatusOptions.map((option) => (
-        <option key={option} value={option}>
-          {itemReviewStatusLabels[option] ?? option}
-        </option>
-      ))}
-    </select>
-  </label>
+        <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
+          Review status
+          <select
+            value={reviewStatus}
+            onChange={(event) => setReviewStatus(event.target.value)}
+            className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-950"
+          >
+            {reviewStatusOptions.map((option) => (
+              <option key={option} value={option}>
+                {itemReviewStatusLabels[option] ?? option}
+              </option>
+            ))}
+          </select>
+        </label>
 
-  <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
-    Psychometric status
-    <select
-      value={psychometricStatus}
-      onChange={(event) => setPsychometricStatus(event.target.value)}
-      className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-950"
-    >
-      {psychometricStatusOptions.map((option) => (
-        <option key={option} value={option}>
-          {psychometricItemStatusLabels[option] ?? option}
-        </option>
-      ))}
-    </select>
-  </label>
-</div>
+        <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
+          Psychometric status
+          <select
+            value={psychometricStatus}
+            onChange={(event) => setPsychometricStatus(event.target.value)}
+            className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-950"
+          >
+            {psychometricStatusOptions.map((option) => (
+              <option key={option} value={option}>
+                {psychometricItemStatusLabels[option] ?? option}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
 
       <div className="mt-6 flex flex-wrap gap-3">
         <button

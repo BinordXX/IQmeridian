@@ -158,6 +158,56 @@ export type InternalFormPerformanceSummary = {
   scoreSpread: ScoreDistributionBucket[];
 };
 
+export type InternalPilotFormBlueprintValidationOutput = {
+  formId: string;
+  formLabel: string;
+  formVersion: number;
+  formVersionLabel: string | null;
+  expectedBlueprint: Record<string, number>;
+  actualBlueprint: Record<string, number>;
+  totalExpectedItems: number;
+  totalActualItems: number;
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+};
+
+export type InternalPilotFormOutput = {
+  id: string;
+  name: string;
+  version: number;
+  versionLabel: string | null;
+  isActive: boolean;
+  pilotStatus: string;
+  isLocked: boolean;
+  domainBlueprint: unknown;
+  timingRules: unknown;
+  scoringVersion: number;
+  reportVersion: number;
+  lockedAt: string | null;
+  lockedBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+  sectionCount: number;
+  itemCount: number;
+  activeItemCount: number;
+  blueprintValidation: InternalPilotFormBlueprintValidationOutput;
+};
+
+export type UpdatePilotFormStatusInput = {
+  status: string;
+  overrideReason?: string | null;
+};
+
+export const pilotFormStatusLabels: Record<string, string> = {
+  DRAFT: 'Draft',
+  READY_FOR_REVIEW: 'Ready for review',
+  LOCKED_FOR_PILOT: 'Locked for pilot',
+  ACTIVE_PILOT: 'Active pilot',
+  CLOSED: 'Closed',
+  ARCHIVED: 'Archived',
+};
+
 export type InternalResearcherDashboardOverview = {
   totalItemsByStatus: Record<string, number>;
   activeItemsByDomain: {
@@ -674,6 +724,53 @@ export function updateInternalDraftItem({
 }) {
   return writeInternalApi<InternalItemDetailOutput>({
     path: `/internal/api/items/${encodeURIComponent(itemId)}`,
+    method: 'PATCH',
+    role: 'RESEARCHER',
+    body: input,
+  });
+}
+
+export function fetchInternalPilotForms() {
+  return fetchInternalApi<InternalPilotFormOutput[]>({
+    path: '/internal/pilot-forms',
+    role: 'RESEARCHER',
+  });
+}
+
+export function fetchInternalPilotFormById(formId: string) {
+  return fetchInternalApi<InternalPilotFormOutput>({
+    path: `/internal/pilot-forms/${encodeURIComponent(formId)}`,
+    role: 'RESEARCHER',
+  });
+}
+
+export function fetchPilotFormBlueprintValidation(formId: string) {
+  return fetchInternalApi<InternalPilotFormBlueprintValidationOutput>({
+    path: `/internal/pilot-forms/${encodeURIComponent(
+      formId
+    )}/blueprint-validation`,
+    role: 'RESEARCHER',
+  });
+}
+
+export function createFormalPilotForm() {
+  return writeInternalApi<InternalPilotFormOutput>({
+    path: '/internal/api/pilot-forms/general-cognitive-ability-v0-1',
+    method: 'POST',
+    role: 'RESEARCHER',
+    body: {},
+  });
+}
+
+export function updatePilotFormStatus({
+  formId,
+  input,
+}: {
+  formId: string;
+  input: UpdatePilotFormStatusInput;
+}) {
+  return writeInternalApi<InternalPilotFormOutput>({
+    path: `/internal/api/pilot-forms/${encodeURIComponent(formId)}/status`,
     method: 'PATCH',
     role: 'RESEARCHER',
     body: input,
