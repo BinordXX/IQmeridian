@@ -1,4 +1,5 @@
 import Link from 'next/link';
+
 import {
   fetchResearcherDashboardOverview,
   formatInternalDuration,
@@ -21,22 +22,6 @@ export default async function InternalResearcherDashboardPage() {
         </span>
       </nav>
 
-      <Link
-  href="/internal/researcher/pilot-forms"
-  className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:border-slate-400"
->
-  <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-    Pilot governance
-  </p>
-  <h2 className="mt-3 text-xl font-semibold text-slate-950">
-    Pilot forms
-  </h2>
-  <p className="mt-2 text-sm leading-6 text-slate-600">
-    Create and validate the IQMeridian General Cognitive Ability Pilot Form
-    v0.1, inspect blueprint gaps, and control pilot status transitions.
-  </p>
-</Link>
-
       <header className="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm lg:flex-row lg:items-start lg:justify-between">
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.25em] text-slate-500">
@@ -46,8 +31,9 @@ export default async function InternalResearcherDashboardPage() {
             Internal quality-monitoring surface
           </h1>
           <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
-            This dashboard now reads aggregate researcher metrics from the
-            backend rather than frontend mock constants.
+            This dashboard reads aggregate researcher metrics from the backend
+            and provides direct access to item, form, and pilot-governance
+            workflows.
           </p>
         </div>
 
@@ -58,6 +44,14 @@ export default async function InternalResearcherDashboardPage() {
           >
             Open item bank
           </Link>
+
+          <Link
+            href="/internal/researcher/forms"
+            className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800"
+          >
+            Assessment forms
+          </Link>
+
           <Link
             href="/internal/researcher/performance"
             className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800"
@@ -66,6 +60,40 @@ export default async function InternalResearcherDashboardPage() {
           </Link>
         </div>
       </header>
+
+      <section className="grid gap-4 md:grid-cols-2">
+        <Link
+          href="/internal/researcher/forms"
+          className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:border-slate-400"
+        >
+          <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+            Form management
+          </p>
+          <h2 className="mt-3 text-xl font-semibold text-slate-950">
+            Assessment forms
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            Create reusable forms, define blueprints, and prepare forms for
+            item placement, validation, locking, and governance.
+          </p>
+        </Link>
+
+        <Link
+          href="/internal/researcher/pilot-forms"
+          className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:border-slate-400"
+        >
+          <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+            Pilot governance
+          </p>
+          <h2 className="mt-3 text-xl font-semibold text-slate-950">
+            Pilot forms
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            Validate pilot-form blueprints, inspect item-count gaps, control
+            pilot status transitions, and lock forms when ready.
+          </p>
+        </Link>
+      </section>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {Object.entries(overview.totalItemsByStatus).map(([status, count]) => (
@@ -125,14 +153,17 @@ export default async function InternalResearcherDashboardPage() {
               <dt className="text-slate-500">Forms in use</dt>
               <dd className="font-semibold">{overview.formsInUse}</dd>
             </div>
+
             <div className="flex justify-between rounded-xl bg-slate-50 px-4 py-3">
               <dt className="text-slate-500">Recent session volume</dt>
               <dd className="font-semibold">{overview.recentSessionVolume}</dd>
             </div>
+
             <div className="flex justify-between rounded-xl bg-slate-50 px-4 py-3">
               <dt className="text-slate-500">Flagged sessions</dt>
               <dd className="font-semibold">{overview.flaggedSessionCount}</dd>
             </div>
+
             <div className="flex justify-between rounded-xl bg-slate-50 px-4 py-3">
               <dt className="text-slate-500">Average section time</dt>
               <dd className="font-semibold">

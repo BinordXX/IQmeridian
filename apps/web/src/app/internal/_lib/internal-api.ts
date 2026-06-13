@@ -156,6 +156,7 @@ export type InternalSectionPerformanceSummary = {
   scoreDistribution: ScoreDistributionBucket[];
 };
 
+
 export type InternalFormPerformanceSummary = {
   formId: string;
   formLabel: string;
@@ -164,6 +165,19 @@ export type InternalFormPerformanceSummary = {
   completionRate: number;
   averageCompletionTimeMinutes: number | null;
   scoreSpread: ScoreDistributionBucket[];
+};
+
+export type CreateInternalAssessmentFormInput = {
+  name: string;
+  version?: number | null;
+  versionLabel?: string | null;
+  isActive?: boolean | null;
+  pilotStatus?: string | null;
+  domainBlueprint?: unknown;
+  timingRules?: unknown;
+  scoringVersion?: number | null;
+  reportVersion?: number | null;
+  createStandardSections?: boolean | null;
 };
 
 export type InternalPilotFormBlueprintValidationOutput = {
@@ -758,6 +772,24 @@ export function updateInternalDraftItem({
   return writeInternalApi<InternalItemDetailOutput>({
     path: `/internal/api/items/${encodeURIComponent(itemId)}`,
     method: 'PATCH',
+    role: 'RESEARCHER',
+    body: input,
+  });
+}
+
+export function fetchInternalAssessmentForms() {
+  return fetchInternalApi<InternalPilotFormOutput[]>({
+    path: '/internal/forms',
+    role: 'RESEARCHER',
+  });
+}
+
+export function createInternalAssessmentForm(
+  input: CreateInternalAssessmentFormInput
+) {
+  return writeInternalApi<InternalPilotFormOutput>({
+    path: '/internal/api/forms',
+    method: 'POST',
     role: 'RESEARCHER',
     body: input,
   });

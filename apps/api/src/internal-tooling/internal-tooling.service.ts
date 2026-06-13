@@ -18,6 +18,8 @@ import {
   PsychometricItemStatus,
   SessionStatus,
   AssessmentDomain,
+  AssessmentSectionType,
+  
 } from '@prisma/client';
 
 import { PrismaService } from '../prisma/prisma.service';
@@ -50,6 +52,8 @@ import {
   InternalPilotFormBlueprintValidationOutput,
   InternalPilotFormOutput,
   UpdatePilotFormStatusInput,
+  CreateInternalAssessmentFormInput,
+  
 } from './internal-tooling.types';
 
 const sessionInclude = {
@@ -301,7 +305,173 @@ export class InternalToolingService {
 
     return this.toInternalPilotFormOutput(form);
   }
+  async getInternalAssessmentForms() {
+    const forms = await this.prisma.assessmentForm.findMany({
+      include: pilotFormInclude,
+      orderBy: [
+        {
+          updatedAt: 'desc',
+        },
+        {
+          createdAt: 'desc',
+        },
+      ],
+    });
 
+    return forms.map((form) => this.toInternalPilotFormOutput(form));
+  }
+
+  async createInternalAssessmentForm(input: CreateInternalAssessmentFormInput) {
+    const name = input.name.trim();
+
+    if (!name) {
+      throw new BadRequestException('Form name is required.');
+    }
+
+    const version =
+      typeof input.version === 'number' && input.version > 0
+        ? input.version
+        : 1;
+
+    const versionLabel =
+      input.versionLabel && input.versionLabel.trim().length > 0
+        ? input.versionLabel.trim()
+        : `v${version}`;
+
+    const scoringVersion =
+      typeof input.scoringVersion === 'number' && input.scoringVersion > 0
+        ? input.scoringVersion
+        : 1;
+
+    const reportVersion =
+      typeof input.reportVersion === 'number' && input.reportVersion > 0
+        ? input.reportVersion
+        : 1;
+
+    const pilotStatus = this.parsePilotFormStatus(
+      input.pilotStatus ?? PilotFormStatus.DRAFT
+    );
+
+    const sections =
+      input.sections && input.sections.length > 0
+        ? input.sections.map((section, index) => ({
+            type: this.parseAssessmentSectionType(section.type),
+            domain: this.parseAssessmentDomain(section.domain),
+            title: section.title.trim(),
+            timeLimitSec:
+              typeof section.timeLimitSec === 'number' &&
+              section.timeLimitSec > 0
+                ? section.timeLimitSec
+                : 600,
+            orderIndex:
+              typeof section.orderIndex === 'number' && section.orderIndex > 0
+                ? section.orderIndex
+                : index + 1,
+          }))
+        : input.createStandardSections === false
+          ? []
+          : [
+              {
+                type: AssessmentSectionType.VERBAL,
+                domain: AssessmentDomain.VERBAL_REASONING,
+                title: 'Verbal reasoning',
+                timeLimitSec: 480,
+                orderIndex: 1,
+              },
+              {
+                type: AssessmentSectionType.NUMERICAL,
+                domain: AssessmentDomain.NUMERICAL_REASONING,
+                title: 'Numerical reasoning',
+                timeLimitSec: 600,
+                orderIndex: 2,
+              },
+              {
+                type: AssessmentSectionType.ABSTRACT,
+                domain: AssessmentDomain.ABSTRACT_REASONING,
+                title: 'Abstract reasoning',
+                timeLimitSec: 720,
+                orderIndex: 3,
+              },
+              {
+                type: AssessmentSectionType.LOGICAL,
+                domain: AssessmentDomain.LOGICAL_REASONING,
+                title: 'Logical reasoning',
+                timeLimitSec: 600,
+                orderIndex: 4,
+              },
+              {
+                type: AssessmentSectionType.ANALYTICAL,
+                domain: AssessmentDomain.ANALYTICAL_PROBLEM_SOLVING,
+                title: 'Analytical problem-solving',
+                timeLimitSec: 480,
+                orderIndex: 5,
+              },
+            ];
+
+    if (sections.some((section) => !section.title)) {
+      throw new BadRequestException('Every section must have a title.');
+    }
+
+    const createdForm = await this.prisma.assessmentForm.create({
+      data: {
+        name,
+        version,
+        versionLabel,
+        isActive: input.isActive === true,
+        pilotStatus,
+        isLocked: false,
+        domainBlueprint:
+          input.domainBlueprint === undefined
+            ? {
+                VERBAL_REASONING: 8,
+                NUMERICAL_REASONING: 8,
+                ABSTRACT_REASONING: 10,
+                LOGICAL_REASONING: 8,
+                ANALYTICAL_PROBLEM_SOLVING: 6,
+              }
+            : this.toInputJsonValue(input.domainBlueprint),
+        timingRules:
+          input.timingRules === undefined
+            ? {
+                totalRecommendedMinutes: 45,
+                sectionTiming: {
+                  VERBAL_REASONING: 480,
+                  NUMERICAL_REASONING: 600,
+                  ABSTRACT_REASONING: 720,
+                  LOGICAL_REASONING: 600,
+                  ANALYTICAL_PROBLEM_SOLVING: 480,
+                },
+              }
+            : this.toInputJsonValue(input.timingRules),
+        scoringVersion,
+        reportVersion,
+        sections: {
+          create: sections,
+        },
+      },
+      include: pilotFormInclude,
+    });
+
+    await this.recordInternalAuditEvent({
+      action: 'ASSESSMENT_FORM_CREATED',
+      entityType: 'AssessmentForm',
+      entityId: createdForm.id,
+      metadata: {
+        summary: `Created assessment form ${createdForm.name} ${
+          createdForm.versionLabel ?? `v${createdForm.version}`
+        }.`,
+        formId: createdForm.id,
+        name: createdForm.name,
+        version: createdForm.version,
+        versionLabel: createdForm.versionLabel,
+        pilotStatus: createdForm.pilotStatus,
+        sectionCount: createdForm.sections.length,
+      },
+    });
+
+    return this.toInternalPilotFormOutput(createdForm);
+  }
+  
   async getInternalPilotForms(): Promise<InternalPilotFormOutput[]> {
     const forms = await this.prisma.assessmentForm.findMany({
       orderBy: {
@@ -2528,6 +2698,42 @@ export class InternalToolingService {
     return trimmed.length === 0 ? null : trimmed;
   }
 
+    private parsePilotFormStatus(value: string) {
+    if (
+      Object.values(PilotFormStatus).includes(value as PilotFormStatus)
+    ) {
+      return value as PilotFormStatus;
+    }
+
+    throw new BadRequestException(`Unsupported pilot form status: ${value}`);
+  }
+
+  private parseAssessmentDomain(value: string) {
+    if (
+      Object.values(AssessmentDomain).includes(value as AssessmentDomain)
+    ) {
+      return value as AssessmentDomain;
+    }
+
+    throw new BadRequestException(`Unsupported assessment domain: ${value}`);
+  }
+
+  private parseAssessmentSectionType(value: string) {
+    if (
+      Object.values(AssessmentSectionType).includes(
+        value as AssessmentSectionType
+      )
+    ) {
+      return value as AssessmentSectionType;
+    }
+
+    throw new BadRequestException(`Unsupported assessment section type: ${value}`);
+  }
+
+  private toInputJsonValue(value: unknown): Prisma.InputJsonValue {
+    return value as Prisma.InputJsonValue;
+  }
+
   private parseIntendedDifficulty(
     value: string | null | undefined,
   ): ItemIntendedDifficulty | null | undefined {
@@ -2719,85 +2925,83 @@ export class InternalToolingService {
   }
 
   private buildPilotBlueprintValidation(
-    form: PilotFormWithInternalRelations,
+    form: PilotFormWithInternalRelations
   ): InternalPilotFormBlueprintValidationOutput {
-    const actualBlueprint = Object.values(AssessmentDomain).reduce<
-      Record<string, number>
-    >((summary, domain) => {
-      summary[domain] = 0;
-      return summary;
-    }, {});
+    const expectedBlueprint = this.getFormBlueprint(form);
+
+    const actualBlueprint = Object.fromEntries(
+      Object.keys(expectedBlueprint).map((domain) => [domain, 0])
+    ) as Record<string, number>;
 
     const errors: string[] = [];
     const warnings: string[] = [];
 
     const activeMappings = form.items.filter(
-      (mapping) => mapping.status === FormItemMappingStatus.ACTIVE,
+      (mapping) => mapping.status === 'ACTIVE'
     );
 
-    activeMappings.forEach((mapping) => {
-      actualBlueprint[mapping.item.domain] =
-        (actualBlueprint[mapping.item.domain] ?? 0) + 1;
+    for (const mapping of activeMappings) {
+      const domain = mapping.item.domain;
 
-      if (
-        mapping.item.psychometricStatus !== PsychometricItemStatus.PILOT_READY
-      ) {
+      actualBlueprint[domain] = (actualBlueprint[domain] ?? 0) + 1;
+
+      if (mapping.item.psychometricStatus !== PsychometricItemStatus.PILOT_READY) {
         errors.push(
-          `Item ${mapping.itemId} is not pilot-ready (${mapping.item.psychometricStatus}).`,
+          `Item ${mapping.itemId} is not pilot-ready (${mapping.item.psychometricStatus}).`
         );
       }
 
       if (mapping.item.reviewStatus !== ItemReviewStatus.APPROVED_FOR_PILOT) {
         errors.push(
-          `Item ${mapping.itemId} is not content-approved for pilot (${mapping.item.reviewStatus}).`,
+          `Item ${mapping.itemId} is not content-approved for pilot (${mapping.item.reviewStatus}).`
         );
       }
+    }
 
-      if (mapping.item.status !== ItemStatus.ACTIVE) {
-        warnings.push(
-          `Item ${mapping.itemId} is not operationally active (${mapping.item.status}); candidate delivery may exclude it.`,
-        );
-      }
-    });
-
-    Object.entries(PILOT_BLUEPRINT).forEach(([domain, expectedCount]) => {
+    for (const [domain, expectedCount] of Object.entries(expectedBlueprint)) {
       const actualCount = actualBlueprint[domain] ?? 0;
 
-      if (actualCount === 0) {
+      if (expectedCount > 0 && actualCount === 0) {
         errors.push(`Pilot form is missing ${domain}.`);
       }
 
       if (actualCount < expectedCount) {
         errors.push(
-          `${domain} is underrepresented: expected ${expectedCount}, found ${actualCount}.`,
+          `${domain} is underrepresented: expected ${expectedCount}, found ${actualCount}.`
         );
       }
 
       if (actualCount > expectedCount) {
-        errors.push(
-          `${domain} is overrepresented: expected ${expectedCount}, found ${actualCount}.`,
+        warnings.push(
+          `${domain} is overrepresented: expected ${expectedCount}, found ${actualCount}.`
         );
       }
-    });
-
-    const totalExpectedItems = Object.values(PILOT_BLUEPRINT).reduce(
-      (sum, count) => sum + count,
-      0,
-    );
-    const totalActualItems = activeMappings.length;
-
-    if (totalActualItems !== totalExpectedItems) {
-      errors.push(
-        `Pilot form item total is invalid: expected ${totalExpectedItems}, found ${totalActualItems}.`,
-      );
     }
+
+    for (const [domain, actualCount] of Object.entries(actualBlueprint)) {
+      if (expectedBlueprint[domain] === undefined && actualCount > 0) {
+        warnings.push(
+          `${domain} is not part of this form blueprint but has ${actualCount} active item(s).`
+        );
+      }
+    }
+
+    const totalExpectedItems = Object.values(expectedBlueprint).reduce(
+      (sum, count) => sum + count,
+      0
+    );
+
+    const totalActualItems = Object.values(actualBlueprint).reduce(
+      (sum, count) => sum + count,
+      0
+    );
 
     return {
       formId: form.id,
       formLabel: form.name,
       formVersion: form.version,
       formVersionLabel: form.versionLabel,
-      expectedBlueprint: PILOT_BLUEPRINT,
+      expectedBlueprint,
       actualBlueprint,
       totalExpectedItems,
       totalActualItems,
@@ -2805,6 +3009,35 @@ export class InternalToolingService {
       errors,
       warnings,
     };
+  }
+
+    private getFormBlueprint(
+    form: Pick<PilotFormWithInternalRelations, 'domainBlueprint'>
+  ): Record<string, number> {
+    if (
+      !form.domainBlueprint ||
+      typeof form.domainBlueprint !== 'object' ||
+      Array.isArray(form.domainBlueprint)
+    ) {
+      return { ...PILOT_BLUEPRINT };
+    }
+
+    const blueprint: Record<string, number> = {};
+
+    for (const [domain, value] of Object.entries(form.domainBlueprint)) {
+      const parsedValue =
+        typeof value === 'number' ? value : Number(value);
+
+      if (Number.isFinite(parsedValue) && parsedValue >= 0) {
+        blueprint[domain] = parsedValue;
+      }
+    }
+
+    if (Object.keys(blueprint).length === 0) {
+      return { ...PILOT_BLUEPRINT };
+    }
+
+    return blueprint;
   }
 
   private toInternalPilotFormOutput(

@@ -1,7 +1,7 @@
 import { ItemFormPlacementClient } from '../../../../_components/item-form-placement-client';
 import {
   fetchInternalItemById,
-  fetchInternalPilotForms,
+  fetchInternalAssessmentForms,
 } from '../../../../_lib/internal-api';
 
 export default async function AttachItemToFormPage({
@@ -15,7 +15,7 @@ export default async function AttachItemToFormPage({
 
   const [item, forms] = await Promise.all([
     fetchInternalItemById(itemId),
-    fetchInternalPilotForms(),
+    fetchInternalAssessmentForms(),
   ]);
 
   return (
