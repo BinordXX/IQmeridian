@@ -116,7 +116,11 @@ type ItemWithInternalRelations = Prisma.ItemGetPayload<{
 }>;
 
 const pilotFormInclude = {
-  sections: true,
+  sections: {
+  orderBy: {
+    orderIndex: 'asc',
+  },
+},
   items: {
     include: {
       item: true,
@@ -2829,6 +2833,14 @@ export class InternalToolingService {
       sectionCount: form.sections.length,
       itemCount: form.items.length,
       activeItemCount: activeItems.length,
+            sections: form.sections.map((section) => ({
+        id: section.id,
+        type: section.type,
+        domain: section.domain,
+        title: section.title,
+        timeLimitSec: section.timeLimitSec,
+        orderIndex: section.orderIndex,
+      })),
       blueprintValidation: this.buildPilotBlueprintValidation(form),
     };
   }

@@ -220,6 +220,16 @@ export type InternalPilotFormBlueprintValidationOutput = {
   warnings: string[];
 };
 
+export type InternalPilotFormSectionOutput = {
+  id: string;
+  type: string;
+  domain: string;
+  title: string;
+  timeLimitSec: number;
+  orderIndex: number;
+};
+
+
 export type InternalPilotFormOutput = {
   id: string;
   name: string;
@@ -240,6 +250,7 @@ export type InternalPilotFormOutput = {
   itemCount: number;
   activeItemCount: number;
   blueprintValidation: InternalPilotFormBlueprintValidationOutput;
+    sections: InternalPilotFormSectionOutput[];
 };
 
 export type UpdatePilotFormStatusInput = {

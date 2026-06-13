@@ -48,7 +48,7 @@ export async function POST(
           message:
             responseText.length > 0
               ? responseText
-              : 'Item could not be attached to the selected form.',
+              : 'Item could not be attached to form.',
         },
         { status: response.status }
       );
@@ -61,7 +61,7 @@ export async function POST(
         message:
           error instanceof Error
             ? error.message
-            : 'Internal item-to-form proxy failed.',
+            : 'Item form-mapping proxy failed.',
       },
       { status: 500 }
     );
