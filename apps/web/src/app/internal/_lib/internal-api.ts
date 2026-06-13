@@ -10,22 +10,29 @@ export type ActivateInternalItemInput = {
 
 export type UpdateInternalDraftItemInput = {
   domain?: string;
-  subdomain?: string | null;
-  itemFamily?: string | null;
   itemType?: string;
-  stimulusType?: string | null;
   prompt?: string;
   options?: unknown;
   correctAnswer?: unknown;
-  scoringRule?: string | null;
   difficulty?: string | null;
+  subdomain?: string | null;
+  itemFamily?: string | null;
+  stimulusType?: string | null;
   intendedDifficulty?: string | null;
   estimatedResponseTimeSec?: number | null;
   cognitiveProcess?: string | null;
   itemRationale?: string | null;
   distractorRationale?: unknown;
+  scoringRule?: string | null;
   reviewStatus?: string | null;
   psychometricStatus?: string | null;
+  note?: string | null;
+  overrideReason?: string | null;
+};
+
+export type UpdateInternalItemReviewReadinessInput = {
+  reviewStatus: string;
+  psychometricStatus: string;
   note?: string | null;
 };
 
@@ -74,6 +81,7 @@ export type CreateInternalItemFormMappingInput = {
   sectionId?: string | null;
   orderIndex?: number | null;
   status?: string;
+  overrideReason?: string | null;
 };
 
 export type AnalyticsExportDataset =
@@ -172,6 +180,15 @@ export type InternalPilotFormBlueprintValidationOutput = {
   warnings: string[];
 };
 
+export type InternalPilotFormSectionOutput = {
+  id: string;
+  type: string;
+  domain: string;
+  title: string;
+  timeLimitSec: number;
+  orderIndex: number;
+};
+
 export type InternalPilotFormOutput = {
   id: string;
   name: string;
@@ -191,6 +208,7 @@ export type InternalPilotFormOutput = {
   sectionCount: number;
   itemCount: number;
   activeItemCount: number;
+    sections: InternalPilotFormSectionOutput[];
   blueprintValidation: InternalPilotFormBlueprintValidationOutput;
 };
 
@@ -710,6 +728,21 @@ export function updateInternalItemStatus({
   return writeInternalApi<InternalItemDetailOutput>({
     path: `/internal/api/items/${encodeURIComponent(itemId)}/status`,
     method: 'POST',
+    role: 'RESEARCHER',
+    body: input,
+  });
+}
+
+export function updateInternalItemReviewReadiness({
+  itemId,
+  input,
+}: {
+  itemId: string;
+  input: UpdateInternalItemReviewReadinessInput;
+}) {
+  return writeInternalApi<InternalItemDetailOutput>({
+    path: `/internal/api/items/${encodeURIComponent(itemId)}`,
+    method: 'PATCH',
     role: 'RESEARCHER',
     body: input,
   });

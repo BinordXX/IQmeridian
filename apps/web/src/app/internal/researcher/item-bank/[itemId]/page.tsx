@@ -1,5 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+
+import { ItemReviewReadinessClient } from '../../../_components/item-review-readiness-client';
 import { ItemStatusActionsClient } from '../../../_components/item-status-actions-client';
 import {
   fetchInternalItemById,
@@ -47,51 +49,58 @@ export default async function InternalItemDetailPage({
         <p className="text-sm font-semibold uppercase tracking-[0.25em] text-slate-500">
           Item detail
         </p>
+
         <div className="mt-3 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <h1 className="text-3xl font-semibold tracking-tight">
               {item.label}
             </h1>
             <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
-              This detail view now reads item content, form associations,
-              performance indicators, and audit-derived history from the
-              internal API.
+              This detail view reads item content, form associations,
+              performance indicators, review readiness, and audit-derived
+              history from the internal API.
             </p>
           </div>
 
-          <Link
-            href={`/internal/researcher/item-bank/${encodeURIComponent(
-              item.id
-            )}/performance`}
-            className="rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white"
-          >
-            View performance
-          </Link>
-          <Link
-            href={`/internal/researcher/item-bank/${encodeURIComponent(
-              item.id
-            )}/traceability`}
-            className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800"
-          >
-            View traceability
-          </Link>
-          {item.status === 'DRAFT' ? (
+          <div className="flex flex-wrap gap-3">
             <Link
-              href={`/internal/researcher/item-bank/${encodeURIComponent(item.id)}/edit`}
+              href={`/internal/researcher/item-bank/${encodeURIComponent(
+                item.id
+              )}/performance`}
+              className="rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white"
+            >
+              View performance
+            </Link>
+
+            <Link
+              href={`/internal/researcher/item-bank/${encodeURIComponent(
+                item.id
+              )}/traceability`}
               className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800"
             >
-              Edit draft
+              View traceability
             </Link>
-          ) : null}
 
-          <Link
-            href={`/internal/researcher/item-bank/${encodeURIComponent(
-              item.id
-            )}/attach-form`}
-            className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800"
-          >
-            Attach to form
-          </Link>
+            {item.status === 'DRAFT' ? (
+              <Link
+                href={`/internal/researcher/item-bank/${encodeURIComponent(
+                  item.id
+                )}/edit`}
+                className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800"
+              >
+                Edit draft
+              </Link>
+            ) : null}
+
+            <Link
+              href={`/internal/researcher/item-bank/${encodeURIComponent(
+                item.id
+              )}/attach-form`}
+              className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800"
+            >
+              Attach to form
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -157,23 +166,44 @@ export default async function InternalItemDetailPage({
             <h2 className="text-lg font-semibold">Review notes</h2>
 
             <div className="mt-5 space-y-3">
-              {item.reviewNotes.map((note) => (
-                <p
-                  key={note}
-                  className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-700"
-                >
-                  {note}
+              {item.reviewNotes.length > 0 ? (
+                item.reviewNotes.map((note) => (
+                  <p
+                    key={note}
+                    className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-700"
+                  >
+                    {note}
+                  </p>
+                ))
+              ) : (
+                <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600">
+                  No review notes were returned by the internal API.
                 </p>
-              ))}
+              )}
             </div>
           </section>
         </div>
-        <ItemStatusActionsClient
-          itemId={item.id}
-          status={item.status}
-          activeFormAssociationCount={item.activeFormAssociationCount}
-        />
+
         <aside className="space-y-6">
+          <section className="rounded-2xl border border-slate-300 bg-slate-50 p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
+              Primary controls
+            </p>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Review/readiness controls are separate from operational item
+              status. Use both deliberately before attaching items to serious
+              pilot or production forms.
+            </p>
+          </section>
+
+          <ItemReviewReadinessClient item={item} />
+
+          <ItemStatusActionsClient
+            itemId={item.id}
+            status={item.status}
+            activeFormAssociationCount={item.activeFormAssociationCount}
+          />
+
           <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <h2 className="text-lg font-semibold">Metadata</h2>
 
@@ -184,26 +214,31 @@ export default async function InternalItemDetailPage({
                   {item.id}
                 </dd>
               </div>
+
               <div className="flex justify-between gap-4 rounded-xl bg-slate-50 px-4 py-3">
                 <dt className="text-slate-500">Domain</dt>
                 <dd className="font-semibold">
                   {itemDomainLabels[item.domain] ?? item.domain}
                 </dd>
               </div>
+
               <div className="flex justify-between gap-4 rounded-xl bg-slate-50 px-4 py-3">
                 <dt className="text-slate-500">Type</dt>
                 <dd className="font-semibold">{item.itemType}</dd>
               </div>
+
               <div className="flex justify-between gap-4 rounded-xl bg-slate-50 px-4 py-3">
-                <dt className="text-slate-500">Status</dt>
+                <dt className="text-slate-500">Operational status</dt>
                 <dd className="font-semibold">
                   {itemStatusLabels[item.status] ?? item.status}
                 </dd>
               </div>
+
               <div className="flex justify-between gap-4 rounded-xl bg-slate-50 px-4 py-3">
                 <dt className="text-slate-500">Version</dt>
                 <dd className="font-semibold">{item.version}</dd>
               </div>
+
               <div className="flex justify-between gap-4 rounded-xl bg-slate-50 px-4 py-3">
                 <dt className="text-slate-500">Difficulty</dt>
                 <dd className="font-semibold">
@@ -223,18 +258,21 @@ export default async function InternalItemDetailPage({
                   {item.performance.exposureCount}
                 </dd>
               </div>
+
               <div className="flex justify-between rounded-xl bg-slate-50 px-4 py-3">
                 <dt className="text-slate-500">Valid responses</dt>
                 <dd className="font-semibold">
                   {item.performance.validResponses}
                 </dd>
               </div>
+
               <div className="flex justify-between rounded-xl bg-slate-50 px-4 py-3">
                 <dt className="text-slate-500">Correct rate</dt>
                 <dd className="font-semibold">
                   {formatCorrectRate(item.performance.correctResponseRate)}
                 </dd>
               </div>
+
               <div className="flex justify-between rounded-xl bg-slate-50 px-4 py-3">
                 <dt className="text-slate-500">Omissions</dt>
                 <dd className="font-semibold">
