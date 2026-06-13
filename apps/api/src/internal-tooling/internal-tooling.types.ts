@@ -196,6 +196,28 @@ export type InternalSectionPerformanceSummary = {
   scoreDistribution: ScoreDistributionBucket[];
 };
 
+export type CreateInternalAssessmentFormSectionInput = {
+  type: string;
+  domain: string;
+  title: string;
+  timeLimitSec?: number | null;
+  orderIndex?: number | null;
+};
+
+export type CreateInternalAssessmentFormInput = {
+  name: string;
+  version?: number | null;
+  versionLabel?: string | null;
+  isActive?: boolean | null;
+  pilotStatus?: string | null;
+  domainBlueprint?: unknown;
+  timingRules?: unknown;
+  scoringVersion?: number | null;
+  reportVersion?: number | null;
+  createStandardSections?: boolean | null;
+  sections?: CreateInternalAssessmentFormSectionInput[] | null;
+};
+
 export type InternalFormPerformanceSummary = {
   formId: string;
   formLabel: string;

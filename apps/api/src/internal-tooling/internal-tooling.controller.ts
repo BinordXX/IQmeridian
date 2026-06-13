@@ -20,6 +20,7 @@ import {
   UpdateInternalItemStatusInput,
   UpdateInternalDraftItemInput,
   UpdatePilotFormStatusInput,
+  CreateInternalAssessmentFormInput,
 } from './internal-tooling.types';
 
 type InternalApiRole = 'PLATFORM_ADMIN' | 'RESEARCHER';
@@ -53,7 +54,16 @@ export class InternalToolingController {
   constructor(
     private readonly internalToolingService: InternalToolingService,
   ) {}
+  private assertInternalAccess(
+    role: string | undefined,
+    allowedRoles: string[]
+  ) {
+    const normalisedRole = role?.trim();
 
+    if (!normalisedRole || !allowedRoles.includes(normalisedRole)) {
+      throw new ForbiddenException('Internal access is required.');
+    }
+  }
   @Post('pilot-forms/general-cognitive-ability-v0-1')
   createFormalPilotForm(@Headers('x-internal-role') roleHeader?: string) {
     assertInternalAccess({
@@ -62,6 +72,23 @@ export class InternalToolingController {
     });
 
     return this.internalToolingService.createFormalPilotForm();
+  }
+
+    @Get('forms')
+  getInternalAssessmentForms(@Headers('x-internal-role') role?: string) {
+    this.assertInternalAccess(role, ['PLATFORM_ADMIN', 'RESEARCHER']);
+
+    return this.internalToolingService.getInternalAssessmentForms();
+  }
+
+  @Post('forms')
+  createInternalAssessmentForm(
+    @Headers('x-internal-role') role: string | undefined,
+    @Body() body: CreateInternalAssessmentFormInput
+  ) {
+    this.assertInternalAccess(role, ['PLATFORM_ADMIN', 'RESEARCHER']);
+
+    return this.internalToolingService.createInternalAssessmentForm(body);
   }
 
   @Get('pilot-forms')
