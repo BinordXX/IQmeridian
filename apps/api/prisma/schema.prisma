@@ -125,6 +125,16 @@ enum PilotFormStatus {
   ARCHIVED
 }
 
+enum AnalyticsExportRequestStatus {
+  REQUESTED
+  APPROVED
+  DECLINED
+  GENERATING
+  GENERATED
+  FAILED
+  CANCELLED
+}
+
 enum SessionStatus {
   NOT_STARTED
   IN_PROGRESS
@@ -150,11 +160,13 @@ model User {
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
-  auditLogs      AuditLog[]
-  sessions       Session[]
-  campaignsOwned Campaign[]   @relation("CampaignOwner")
-  reports        Report[]     @relation("ReportSubject")
-  invitations    Invitation[] @relation("InvitationCandidate")
+  auditLogs               AuditLog[]
+  sessions                Session[]
+  campaignsOwned          Campaign[]               @relation("CampaignOwner")
+  reports                 Report[]                 @relation("ReportSubject")
+  invitations             Invitation[]             @relation("InvitationCandidate")
+  exportRequestsReviewed  AnalyticsExportRequest[] @relation("ExportRequestReviewer")
+  exportRequestsRequested AnalyticsExportRequest[] @relation("ExportRequestRequester")
 }
 
 model Organisation {
@@ -568,6 +580,51 @@ model PsychometricFlag {
   @@index([flagType])
   @@index([severity])
   @@index([status])
+}
+
+model AnalyticsExportRequest {
+  id     String                       @id @default(cuid())
+  status AnalyticsExportRequestStatus @default(REQUESTED)
+
+  dataset String
+  format  String
+
+  dateFrom DateTime?
+  dateTo   DateTime?
+  scope    Json?
+
+  requestedById String?
+  requestedBy   User?   @relation("ExportRequestRequester", fields: [requestedById], references: [id])
+  requestedRole String?
+  requestReason String?
+
+  reviewedById   String?
+  reviewedBy     User?     @relation("ExportRequestReviewer", fields: [reviewedById], references: [id])
+  reviewedAt     DateTime?
+  reviewDecision String?
+  reviewReason   String?
+
+  generatedAt   DateTime?
+  fileKey       String?
+  failureReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([dataset])
+  @@index([requestedById])
+  @@index([reviewedById])
+  @@index([createdAt])
+}
+
+model AnalyticsExportGovernanceSetting {
+  id               String  @id @default("default")
+  approvalRequired Boolean @default(true)
+  updatedByRole    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model AuditLog {

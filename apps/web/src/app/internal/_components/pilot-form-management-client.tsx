@@ -53,9 +53,9 @@ function getPilotStatusTone(status: string): BadgeTone {
 function StatusBadge({ status }: { status: string }) {
   return (
     <span
-      className={`inline-flex w-fit rounded-full border px-3 py-1 text-xs font-semibold ${badgeToneClasses[getPilotStatusTone(
-        status
-      )]}`}
+      className={`inline-flex w-fit rounded-full border px-3 py-1 text-xs font-semibold ${
+        badgeToneClasses[getPilotStatusTone(status)]
+      }`}
     >
       {pilotFormStatusLabels[status] ?? status}
     </span>
@@ -70,9 +70,7 @@ function ValidationBadge({
   return (
     <span
       className={`inline-flex w-fit rounded-full border px-3 py-1 text-xs font-semibold ${
-        validation.isValid
-          ? badgeToneClasses.success
-          : badgeToneClasses.danger
+        validation.isValid ? badgeToneClasses.success : badgeToneClasses.danger
       }`}
     >
       {validation.isValid ? 'Blueprint valid' : 'Blueprint incomplete'}
@@ -209,9 +207,7 @@ export function PilotFormManagementClient({
         input: {
           status: selectedStatus,
           overrideReason:
-            overrideReason.trim().length > 0
-              ? overrideReason.trim()
-              : null,
+            overrideReason.trim().length > 0 ? overrideReason.trim() : null,
         },
       });
 
@@ -375,7 +371,9 @@ export function PilotFormManagementClient({
                     logical 8, analytical problem-solving 6.
                   </p>
                 </div>
-                <ValidationBadge validation={selectedForm.blueprintValidation} />
+                <ValidationBadge
+                  validation={selectedForm.blueprintValidation}
+                />
               </div>
 
               <div className="mt-5">
@@ -530,7 +528,6 @@ export function PilotFormManagementClient({
           initialise IQMeridian General Cognitive Ability Pilot Form v0.1.
         </div>
       )}
-      
     </section>
   );
 }

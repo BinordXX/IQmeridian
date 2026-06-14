@@ -19,7 +19,8 @@ import {
   SessionStatus,
   AssessmentDomain,
   AssessmentSectionType,
-  
+  AnalyticsExportRequestStatus,
+  AnalyticsExportGovernanceSetting,
 } from '@prisma/client';
 
 import { PrismaService } from '../prisma/prisma.service';
@@ -54,7 +55,13 @@ import {
   UpdatePilotFormStatusInput,
   CreateInternalAssessmentFormInput,
   CreateAnalyticsExportRequestInput,
-  
+  InternalAnalyticsExportRequestOutput,
+  ReviewAnalyticsExportRequestInput,
+  GenerateAnalyticsExportRequestInput,
+  InternalAnalyticsExportFileOutput,
+  DirectAnalyticsExportInput,
+  InternalAnalyticsExportGovernanceSettingOutput,
+  UpdateAnalyticsExportGovernanceSettingInput,
 } from './internal-tooling.types';
 
 const sessionInclude = {
@@ -108,6 +115,14 @@ const itemInclude = {
   },
 } satisfies Prisma.ItemInclude;
 
+type AnalyticsExportRequestWithRelations =
+  Prisma.AnalyticsExportRequestGetPayload<{
+    include: {
+      requestedBy: true;
+      reviewedBy: true;
+    };
+  }>;
+
 type SessionWithInternalRelations = Prisma.SessionGetPayload<{
   include: typeof sessionInclude;
 }>;
@@ -122,10 +137,10 @@ type ItemWithInternalRelations = Prisma.ItemGetPayload<{
 
 const pilotFormInclude = {
   sections: {
-  orderBy: {
-    orderIndex: 'asc',
+    orderBy: {
+      orderIndex: 'asc',
+    },
   },
-},
   items: {
     include: {
       item: true,
@@ -350,7 +365,7 @@ export class InternalToolingService {
         : 1;
 
     const pilotStatus = this.parsePilotFormStatus(
-      input.pilotStatus ?? PilotFormStatus.DRAFT
+      input.pilotStatus ?? PilotFormStatus.DRAFT,
     );
 
     const sections =
@@ -472,7 +487,7 @@ export class InternalToolingService {
 
     return this.toInternalPilotFormOutput(createdForm);
   }
-  
+
   async getInternalPilotForms(): Promise<InternalPilotFormOutput[]> {
     const forms = await this.prisma.assessmentForm.findMany({
       orderBy: {
@@ -1641,6 +1656,8 @@ export class InternalToolingService {
       activeCampaigns,
       userCountsByRole,
       recentAuditActivity,
+      exportRequestCounts,
+      pendingExportRequests,
     ] = await Promise.all([
       this.prisma.organisation.count(),
       this.prisma.campaign.count({
@@ -1650,6 +1667,8 @@ export class InternalToolingService {
       }),
       this.getUserCountsByRole(),
       this.getInternalAuditEvents(),
+      this.getAnalyticsExportRequestCounts(),
+      this.getPendingAnalyticsExportRequests(),
     ]);
 
     return {
@@ -1674,8 +1693,11 @@ export class InternalToolingService {
           event.action.includes('ITEM_RETURNED_TO_DRAFT') ||
           event.action.includes('ITEM_UPDATED'),
       ),
+      exportRequestCounts,
+      pendingExportRequests,
     };
   }
+
   async getInternalItems(): Promise<InternalItemOutput[]> {
     const items = await this.prisma.item.findMany({
       orderBy: {
@@ -1776,9 +1798,81 @@ export class InternalToolingService {
     return analyticsExportDefinitions;
   }
 
-    async recordAnalyticsExportRequest(
+  async getAnalyticsExportRequests(
+    roleHeader?: string,
+  ): Promise<InternalAnalyticsExportRequestOutput[]> {
+    const requests = await this.prisma.analyticsExportRequest.findMany({
+      where:
+        roleHeader === 'RESEARCHER'
+          ? {
+              requestedRole: 'RESEARCHER',
+            }
+          : undefined,
+      orderBy: {
+        createdAt: 'desc',
+      },
+      take: 100,
+      include: {
+        requestedBy: true,
+        reviewedBy: true,
+      },
+    });
+
+    return requests.map((request) =>
+      this.toInternalAnalyticsExportRequestOutput(request),
+    );
+  }
+
+  async getAnalyticsExportGovernanceSetting(): Promise<InternalAnalyticsExportGovernanceSettingOutput> {
+    const setting = await this.getOrCreateAnalyticsExportGovernanceSetting();
+
+    return this.toInternalAnalyticsExportGovernanceSettingOutput(setting);
+  }
+
+  async updateAnalyticsExportGovernanceSetting(
+    input: UpdateAnalyticsExportGovernanceSettingInput,
+    actorRole?: string,
+  ): Promise<InternalAnalyticsExportGovernanceSettingOutput> {
+    const currentSetting =
+      await this.getOrCreateAnalyticsExportGovernanceSetting();
+
+    const approvalRequired =
+      typeof input.approvalRequired === 'boolean'
+        ? input.approvalRequired
+        : currentSetting.approvalRequired;
+
+    const updatedSetting =
+      await this.prisma.analyticsExportGovernanceSetting.update({
+        where: {
+          id: currentSetting.id,
+        },
+        data: {
+          approvalRequired,
+          updatedByRole: actorRole ?? null,
+        },
+      });
+
+    await this.recordInternalAuditEvent({
+      action: 'ANALYTICS_EXPORT_GOVERNANCE_SETTING_UPDATED',
+      entityType: 'AnalyticsExportGovernanceSetting',
+      entityId: updatedSetting.id,
+      metadata: {
+        previousApprovalRequired: currentSetting.approvalRequired,
+        nextApprovalRequired: updatedSetting.approvalRequired,
+        actorRole: actorRole ?? null,
+        updatedAt: updatedSetting.updatedAt.toISOString(),
+      },
+    });
+
+    return this.toInternalAnalyticsExportGovernanceSettingOutput(
+      updatedSetting,
+    );
+  }
+
+  async recordAnalyticsExportRequest(
     input: CreateAnalyticsExportRequestInput,
-  ): Promise<InternalAuditEvent> {
+    requestedRole?: string,
+  ): Promise<InternalAnalyticsExportRequestOutput> {
     const definition = analyticsExportDefinitions.find(
       (candidate) => candidate.dataset === input.dataset,
     );
@@ -1793,19 +1887,462 @@ export class InternalToolingService {
       );
     }
 
-    return this.recordInternalAuditEvent({
-      action: 'ANALYTICS_EXPORT_REQUESTED',
-      entityType: 'AnalyticsExport',
-      entityId: input.dataset,
-      metadata: {
-        dataset: input.dataset,
-        label: definition.label,
-        format: input.format ?? definition.format,
-        dateFrom: input.dateFrom ?? null,
-        dateTo: input.dateTo ?? null,
-        requestedAt: new Date().toISOString(),
+    const requestedFormat = input.format ?? definition.format;
+
+    if (requestedFormat !== definition.format) {
+      throw new BadRequestException(
+        `Unsupported export format for ${definition.dataset}. Expected ${definition.format}.`,
+      );
+    }
+
+    const dateFrom = this.parseOptionalDate(input.dateFrom);
+    const dateTo = this.parseOptionalDate(input.dateTo);
+
+    if (dateFrom && dateTo && dateFrom > dateTo) {
+      throw new BadRequestException(
+        'Export start date cannot be after end date.',
+      );
+    }
+
+    const requestReason =
+      input.requestReason && input.requestReason.trim().length > 0
+        ? input.requestReason.trim()
+        : null;
+
+    if (!requestReason) {
+      throw new BadRequestException('An export request reason is required.');
+    }
+
+    const governanceSetting =
+      await this.getOrCreateAnalyticsExportGovernanceSetting();
+
+    const shouldAutoGenerate = !governanceSetting.approvalRequired;
+    const generatedAt = shouldAutoGenerate ? new Date() : null;
+    const safeDataset = definition.dataset.toLowerCase().replaceAll('_', '-');
+    const safeFormat = definition.format.toLowerCase();
+
+    const fileKey = shouldAutoGenerate
+      ? `exports/auto-approved/${safeDataset}-${generatedAt
+          ?.toISOString()
+          .replaceAll(':', '-')
+          .replaceAll('.', '-')}.${safeFormat}`
+      : null;
+
+    const exportRequest = await this.prisma.analyticsExportRequest.create({
+      data: {
+        dataset: definition.dataset,
+        format: definition.format,
+        status: shouldAutoGenerate
+          ? AnalyticsExportRequestStatus.GENERATED
+          : AnalyticsExportRequestStatus.REQUESTED,
+        dateFrom,
+        dateTo,
+        scope:
+          input.scope === undefined || input.scope === null
+            ? undefined
+            : this.toJsonValue(input.scope),
+        requestedRole: requestedRole ?? null,
+        requestReason,
+        reviewedAt: shouldAutoGenerate ? generatedAt : null,
+        reviewDecision: shouldAutoGenerate ? 'AUTO_APPROVED' : null,
+        reviewReason: shouldAutoGenerate
+          ? 'Approval requirement was disabled by platform governance setting.'
+          : null,
+        generatedAt,
+        fileKey,
+        failureReason: null,
+      },
+      include: {
+        requestedBy: true,
+        reviewedBy: true,
       },
     });
+
+    await this.recordInternalAuditEvent({
+      action: 'ANALYTICS_EXPORT_REQUESTED',
+      entityType: 'AnalyticsExportRequest',
+      entityId: exportRequest.id,
+      metadata: {
+        exportRequestId: exportRequest.id,
+        dataset: exportRequest.dataset,
+        label: definition.label,
+        format: exportRequest.format,
+        status: exportRequest.status,
+        requestedRole: requestedRole ?? null,
+        requestReason,
+        approvalRequired: governanceSetting.approvalRequired,
+        autoGenerated: shouldAutoGenerate,
+        dateFrom: exportRequest.dateFrom?.toISOString() ?? null,
+        dateTo: exportRequest.dateTo?.toISOString() ?? null,
+      },
+    });
+
+    if (shouldAutoGenerate) {
+      await this.recordInternalAuditEvent({
+        action: 'ANALYTICS_EXPORT_AUTO_APPROVED',
+        entityType: 'AnalyticsExportRequest',
+        entityId: exportRequest.id,
+        metadata: {
+          exportRequestId: exportRequest.id,
+          dataset: exportRequest.dataset,
+          format: exportRequest.format,
+          requestedRole: requestedRole ?? null,
+          reviewDecision: exportRequest.reviewDecision,
+          reviewReason: exportRequest.reviewReason,
+          generatedAt: exportRequest.generatedAt?.toISOString() ?? null,
+          fileKey: exportRequest.fileKey,
+        },
+      });
+
+      await this.recordInternalAuditEvent({
+        action: 'ANALYTICS_EXPORT_GENERATED',
+        entityType: 'AnalyticsExportRequest',
+        entityId: exportRequest.id,
+        metadata: {
+          exportRequestId: exportRequest.id,
+          dataset: exportRequest.dataset,
+          format: exportRequest.format,
+          requestedRole: requestedRole ?? null,
+          autoGenerated: true,
+          generatedAt: exportRequest.generatedAt?.toISOString() ?? null,
+          fileKey: exportRequest.fileKey,
+        },
+      });
+    }
+
+    return this.toInternalAnalyticsExportRequestOutput(exportRequest);
+  }
+
+  async reviewAnalyticsExportRequest(
+    requestId: string,
+    input: ReviewAnalyticsExportRequestInput,
+    reviewerRole?: string,
+  ): Promise<InternalAnalyticsExportRequestOutput> {
+    const exportRequest = await this.prisma.analyticsExportRequest.findUnique({
+      where: {
+        id: requestId,
+      },
+      include: {
+        requestedBy: true,
+        reviewedBy: true,
+      },
+    });
+
+    if (!exportRequest) {
+      throw new NotFoundException('Analytics export request was not found.');
+    }
+
+    if (exportRequest.status !== AnalyticsExportRequestStatus.REQUESTED) {
+      throw new BadRequestException(
+        `Only requested exports can be reviewed. Current status is ${exportRequest.status}.`,
+      );
+    }
+
+    if (input.decision !== 'APPROVED' && input.decision !== 'DECLINED') {
+      throw new BadRequestException(
+        'Export review decision must be APPROVED or DECLINED.',
+      );
+    }
+
+    const reviewReason =
+      input.reviewReason && input.reviewReason.trim().length > 0
+        ? input.reviewReason.trim()
+        : null;
+
+    if (input.decision === 'DECLINED' && !reviewReason) {
+      throw new BadRequestException(
+        'A review reason is required when declining an export request.',
+      );
+    }
+
+    const reviewedRequest = await this.prisma.analyticsExportRequest.update({
+      where: {
+        id: requestId,
+      },
+      data: {
+        status:
+          input.decision === 'APPROVED'
+            ? AnalyticsExportRequestStatus.APPROVED
+            : AnalyticsExportRequestStatus.DECLINED,
+        reviewedAt: new Date(),
+        reviewDecision: input.decision,
+        reviewReason,
+      },
+      include: {
+        requestedBy: true,
+        reviewedBy: true,
+      },
+    });
+
+    await this.recordInternalAuditEvent({
+      action:
+        input.decision === 'APPROVED'
+          ? 'ANALYTICS_EXPORT_APPROVED'
+          : 'ANALYTICS_EXPORT_DECLINED',
+      entityType: 'AnalyticsExportRequest',
+      entityId: reviewedRequest.id,
+      metadata: {
+        exportRequestId: reviewedRequest.id,
+        dataset: reviewedRequest.dataset,
+        format: reviewedRequest.format,
+        previousStatus: exportRequest.status,
+        nextStatus: reviewedRequest.status,
+        reviewerRole: reviewerRole ?? null,
+        reviewDecision: reviewedRequest.reviewDecision,
+        reviewReason: reviewedRequest.reviewReason,
+        reviewedAt: reviewedRequest.reviewedAt?.toISOString() ?? null,
+      },
+    });
+
+    return this.toInternalAnalyticsExportRequestOutput(reviewedRequest);
+  }
+  async generateAnalyticsExportRequest(
+    requestId: string,
+    input: GenerateAnalyticsExportRequestInput,
+    generatorRole?: string,
+  ): Promise<InternalAnalyticsExportRequestOutput> {
+    const exportRequest = await this.prisma.analyticsExportRequest.findUnique({
+      where: {
+        id: requestId,
+      },
+      include: {
+        requestedBy: true,
+        reviewedBy: true,
+      },
+    });
+
+    if (!exportRequest) {
+      throw new NotFoundException('Analytics export request was not found.');
+    }
+
+    if (exportRequest.status !== AnalyticsExportRequestStatus.APPROVED) {
+      throw new BadRequestException(
+        `Only approved exports can be generated. Current status is ${exportRequest.status}.`,
+      );
+    }
+
+    const generationReason =
+      input.generationReason && input.generationReason.trim().length > 0
+        ? input.generationReason.trim()
+        : null;
+
+    const generatedAt = new Date();
+    const safeDataset = exportRequest.dataset
+      .toLowerCase()
+      .replaceAll('_', '-');
+    const safeFormat = exportRequest.format.toLowerCase();
+    const fileKey = `exports/${exportRequest.id}/${safeDataset}-${generatedAt
+      .toISOString()
+      .replaceAll(':', '-')
+      .replaceAll('.', '-')}.${safeFormat}`;
+
+    await this.prisma.analyticsExportRequest.update({
+      where: {
+        id: exportRequest.id,
+      },
+      data: {
+        status: AnalyticsExportRequestStatus.GENERATING,
+      },
+    });
+
+    const generatedRequest = await this.prisma.analyticsExportRequest.update({
+      where: {
+        id: exportRequest.id,
+      },
+      data: {
+        status: AnalyticsExportRequestStatus.GENERATED,
+        generatedAt,
+        fileKey,
+        failureReason: null,
+      },
+      include: {
+        requestedBy: true,
+        reviewedBy: true,
+      },
+    });
+
+    await this.recordInternalAuditEvent({
+      action: 'ANALYTICS_EXPORT_GENERATED',
+      entityType: 'AnalyticsExportRequest',
+      entityId: generatedRequest.id,
+      metadata: {
+        exportRequestId: generatedRequest.id,
+        dataset: generatedRequest.dataset,
+        format: generatedRequest.format,
+        previousStatus: exportRequest.status,
+        nextStatus: generatedRequest.status,
+        generatorRole: generatorRole ?? null,
+        generationReason,
+        generatedAt: generatedRequest.generatedAt?.toISOString() ?? null,
+        fileKey: generatedRequest.fileKey,
+      },
+    });
+
+    return this.toInternalAnalyticsExportRequestOutput(generatedRequest);
+  }
+
+  async downloadGeneratedAnalyticsExportRequest(
+    requestId: string,
+    downloaderRole?: string,
+  ): Promise<InternalAnalyticsExportFileOutput> {
+    const exportRequest = await this.prisma.analyticsExportRequest.findUnique({
+      where: {
+        id: requestId,
+      },
+      include: {
+        requestedBy: true,
+        reviewedBy: true,
+      },
+    });
+
+    if (!exportRequest) {
+      throw new NotFoundException('Analytics export request was not found.');
+    }
+
+    if (exportRequest.status !== AnalyticsExportRequestStatus.GENERATED) {
+      throw new BadRequestException(
+        `Only generated exports can be downloaded. Current status is ${exportRequest.status}.`,
+      );
+    }
+
+    const file = await this.buildAnalyticsExportFile(exportRequest);
+
+    await this.recordInternalAuditEvent({
+      action: 'ANALYTICS_EXPORT_DOWNLOADED',
+      entityType: 'AnalyticsExportRequest',
+      entityId: exportRequest.id,
+      metadata: {
+        exportRequestId: exportRequest.id,
+        dataset: exportRequest.dataset,
+        format: exportRequest.format,
+        downloaderRole: downloaderRole ?? null,
+        fileName: file.fileName,
+        fileKey: exportRequest.fileKey,
+        downloadedAt: new Date().toISOString(),
+      },
+    });
+
+    return file;
+  }
+
+  async createDirectAnalyticsExport(
+    input: DirectAnalyticsExportInput,
+    actorRole?: string,
+  ): Promise<InternalAnalyticsExportFileOutput> {
+    const definition = analyticsExportDefinitions.find(
+      (candidate) => candidate.dataset === input.dataset,
+    );
+
+    if (!definition) {
+      throw new BadRequestException('Unsupported analytics export dataset.');
+    }
+
+    if (!definition.currentlyAvailable) {
+      throw new BadRequestException(
+        'This analytics export is not currently available.',
+      );
+    }
+
+    const directReason =
+      input.directReason && input.directReason.trim().length > 0
+        ? input.directReason.trim()
+        : null;
+
+    if (!directReason) {
+      throw new BadRequestException(
+        'A direct export reason is required for platform-admin exports.',
+      );
+    }
+
+    const requestedFormat = input.format ?? definition.format;
+
+    if (requestedFormat !== definition.format) {
+      throw new BadRequestException(
+        `Unsupported export format for ${definition.dataset}. Expected ${definition.format}.`,
+      );
+    }
+
+    const dateFrom = this.parseOptionalDate(input.dateFrom);
+    const dateTo = this.parseOptionalDate(input.dateTo);
+
+    if (dateFrom && dateTo && dateFrom > dateTo) {
+      throw new BadRequestException(
+        'Export start date cannot be after end date.',
+      );
+    }
+
+    const generatedAt = new Date();
+    const safeDataset = definition.dataset.toLowerCase().replaceAll('_', '-');
+    const safeFormat = definition.format.toLowerCase();
+    const fileKey = `exports/direct/${definition.dataset}/${safeDataset}-${generatedAt
+      .toISOString()
+      .replaceAll(':', '-')
+      .replaceAll('.', '-')}.${safeFormat}`;
+
+    const exportRequest = await this.prisma.analyticsExportRequest.create({
+      data: {
+        dataset: definition.dataset,
+        format: definition.format,
+        status: AnalyticsExportRequestStatus.GENERATED,
+        dateFrom,
+        dateTo,
+        scope:
+          input.scope === undefined || input.scope === null
+            ? undefined
+            : this.toJsonValue(input.scope),
+        requestedRole: actorRole ?? 'PLATFORM_ADMIN',
+        requestReason: directReason,
+        reviewedAt: generatedAt,
+        reviewDecision: 'ADMIN_DIRECT_EXPORT',
+        reviewReason: directReason,
+        generatedAt,
+        fileKey,
+        failureReason: null,
+      },
+      include: {
+        requestedBy: true,
+        reviewedBy: true,
+      },
+    });
+
+    await this.recordInternalAuditEvent({
+      action: 'ANALYTICS_EXPORT_DIRECT_GENERATED',
+      entityType: 'AnalyticsExportRequest',
+      entityId: exportRequest.id,
+      metadata: {
+        exportRequestId: exportRequest.id,
+        dataset: exportRequest.dataset,
+        label: definition.label,
+        format: exportRequest.format,
+        status: exportRequest.status,
+        actorRole: actorRole ?? null,
+        directReason,
+        dateFrom: exportRequest.dateFrom?.toISOString() ?? null,
+        dateTo: exportRequest.dateTo?.toISOString() ?? null,
+        generatedAt: exportRequest.generatedAt?.toISOString() ?? null,
+        fileKey: exportRequest.fileKey,
+      },
+    });
+
+    const file = await this.buildAnalyticsExportFile(exportRequest);
+
+    await this.recordInternalAuditEvent({
+      action: 'ANALYTICS_EXPORT_DOWNLOADED',
+      entityType: 'AnalyticsExportRequest',
+      entityId: exportRequest.id,
+      metadata: {
+        exportRequestId: exportRequest.id,
+        dataset: exportRequest.dataset,
+        format: exportRequest.format,
+        downloaderRole: actorRole ?? null,
+        directExport: true,
+        fileName: file.fileName,
+        fileKey: exportRequest.fileKey,
+        downloadedAt: new Date().toISOString(),
+      },
+    });
+
+    return file;
   }
 
   async getInternalAuditEvents(): Promise<InternalAuditEvent[]> {
@@ -1880,6 +2417,524 @@ export class InternalToolingService {
 
     return this.toInternalReviewStatusRecord(auditLog);
   }
+
+  private async getOrCreateAnalyticsExportGovernanceSetting(): Promise<AnalyticsExportGovernanceSetting> {
+    return this.prisma.analyticsExportGovernanceSetting.upsert({
+      where: {
+        id: 'default',
+      },
+      update: {},
+      create: {
+        id: 'default',
+      },
+    });
+  }
+
+  private toInternalAnalyticsExportGovernanceSettingOutput(
+    setting: AnalyticsExportGovernanceSetting,
+  ): InternalAnalyticsExportGovernanceSettingOutput {
+    return {
+      approvalRequired: setting.approvalRequired,
+      updatedByRole: setting.updatedByRole,
+      createdAt: setting.createdAt.toISOString(),
+      updatedAt: setting.updatedAt.toISOString(),
+    };
+  }
+
+  private async getAnalyticsExportRequestCounts() {
+    const groupedRequests = await this.prisma.analyticsExportRequest.groupBy({
+      by: ['status'],
+      _count: {
+        _all: true,
+      },
+    });
+
+    const counts = {
+      total: 0,
+      requested: 0,
+      approved: 0,
+      declined: 0,
+      generating: 0,
+      generated: 0,
+      failed: 0,
+      cancelled: 0,
+    };
+
+    for (const group of groupedRequests) {
+      const count = group._count._all;
+
+      counts.total += count;
+
+      if (group.status === AnalyticsExportRequestStatus.REQUESTED) {
+        counts.requested = count;
+      }
+
+      if (group.status === AnalyticsExportRequestStatus.APPROVED) {
+        counts.approved = count;
+      }
+
+      if (group.status === AnalyticsExportRequestStatus.DECLINED) {
+        counts.declined = count;
+      }
+
+      if (group.status === AnalyticsExportRequestStatus.GENERATING) {
+        counts.generating = count;
+      }
+
+      if (group.status === AnalyticsExportRequestStatus.GENERATED) {
+        counts.generated = count;
+      }
+
+      if (group.status === AnalyticsExportRequestStatus.FAILED) {
+        counts.failed = count;
+      }
+
+      if (group.status === AnalyticsExportRequestStatus.CANCELLED) {
+        counts.cancelled = count;
+      }
+    }
+
+    return counts;
+  }
+
+  private async getPendingAnalyticsExportRequests(): Promise<
+    InternalAnalyticsExportRequestOutput[]
+  > {
+    const requests = await this.prisma.analyticsExportRequest.findMany({
+      where: {
+        status: AnalyticsExportRequestStatus.REQUESTED,
+      },
+      orderBy: {
+        createdAt: 'asc',
+      },
+      take: 5,
+      include: {
+        requestedBy: true,
+        reviewedBy: true,
+      },
+    });
+
+    return requests.map((request) =>
+      this.toInternalAnalyticsExportRequestOutput(request),
+    );
+  }
+
+  private async buildAnalyticsExportFile(
+    request: AnalyticsExportRequestWithRelations,
+  ): Promise<InternalAnalyticsExportFileOutput> {
+    const safeDataset = request.dataset.toLowerCase().replaceAll('_', '-');
+    const safeTimestamp = new Date()
+      .toISOString()
+      .replaceAll(':', '-')
+      .replaceAll('.', '-');
+
+    if (request.dataset === 'CAMPAIGN_SUMMARY') {
+      const rows = await this.buildCampaignSummaryExportRows(request);
+
+      return {
+        fileName: `${safeDataset}-${safeTimestamp}.json`,
+        contentType: 'application/json',
+        content: JSON.stringify(rows, null, 2),
+      };
+    }
+
+    const rows = await this.buildCsvExportRows(request);
+
+    return {
+      fileName: `${safeDataset}-${safeTimestamp}.csv`,
+      contentType: 'text/csv',
+      content: this.toCsv(rows),
+    };
+  }
+
+  private async buildCsvExportRows(
+    request: AnalyticsExportRequestWithRelations,
+  ): Promise<Record<string, unknown>[]> {
+    if (request.dataset === 'ITEM_LEVEL') {
+      return this.buildItemLevelExportRows(request);
+    }
+
+    if (request.dataset === 'SESSION_LEVEL') {
+      return this.buildSessionLevelExportRows(request);
+    }
+
+    if (request.dataset === 'RESPONSE_LEVEL') {
+      return this.buildResponseLevelExportRows(request);
+    }
+
+    if (request.dataset === 'SCORE_LEVEL') {
+      return this.buildScoreLevelExportRows(request);
+    }
+
+    throw new BadRequestException(
+      `Unsupported export dataset: ${request.dataset}`,
+    );
+  }
+
+  private buildDateRangeWhere(
+    request: Pick<AnalyticsExportRequestWithRelations, 'dateFrom' | 'dateTo'>,
+  ): Prisma.DateTimeFilter | undefined {
+    const where: Prisma.DateTimeFilter = {};
+
+    if (request.dateFrom) {
+      where.gte = request.dateFrom;
+    }
+
+    if (request.dateTo) {
+      where.lte = request.dateTo;
+    }
+
+    return Object.keys(where).length === 0 ? undefined : where;
+  }
+
+  private async buildItemLevelExportRows(
+    request: AnalyticsExportRequestWithRelations,
+  ): Promise<Record<string, unknown>[]> {
+    const createdAt = this.buildDateRangeWhere(request);
+
+    const items = await this.prisma.item.findMany({
+      where: createdAt
+        ? {
+            createdAt,
+          }
+        : undefined,
+      orderBy: {
+        createdAt: 'desc',
+      },
+      include: {
+        formMappings: true,
+        psychometricFlags: true,
+      },
+    });
+
+    return items.map((item) => ({
+      itemId: item.id,
+      domain: item.domain,
+      subdomain: item.subdomain,
+      itemFamily: item.itemFamily,
+      itemType: item.itemType,
+      stimulusType: item.stimulusType,
+      status: item.status,
+      reviewStatus: item.reviewStatus,
+      psychometricStatus: item.psychometricStatus,
+      difficulty: item.difficulty,
+      intendedDifficulty: item.intendedDifficulty,
+      estimatedResponseTimeSec: item.estimatedResponseTimeSec,
+      cognitiveProcess: item.cognitiveProcess,
+      scoringRule: item.scoringRule,
+      version: item.version,
+      formAssociationCount: item.formMappings.length,
+      activeFormAssociationCount: item.formMappings.filter(
+        (mapping) => mapping.status === 'ACTIVE',
+      ).length,
+      openPsychometricFlagCount: item.psychometricFlags.filter(
+        (flag) => flag.status === 'OPEN',
+      ).length,
+      createdAt: item.createdAt.toISOString(),
+      updatedAt: item.updatedAt.toISOString(),
+    }));
+  }
+
+  private async buildSessionLevelExportRows(
+    request: AnalyticsExportRequestWithRelations,
+  ): Promise<Record<string, unknown>[]> {
+    const createdAt = this.buildDateRangeWhere(request);
+
+    const sessions = await this.prisma.session.findMany({
+      where: createdAt
+        ? {
+            createdAt,
+          }
+        : undefined,
+      orderBy: {
+        createdAt: 'desc',
+      },
+      include: sessionInclude,
+    });
+
+    return sessions.map((session) => ({
+      sessionId: session.id,
+      participantIdentifier:
+        session.user?.email ?? session.user?.name ?? session.userId,
+      status: session.status,
+      campaignId: session.campaignId,
+      campaignName: session.campaign?.name ?? null,
+      invitationId: session.invitationId,
+      assessmentFormId: session.assessmentFormId,
+      assessmentFormName: session.assessmentForm.name,
+      assessmentFormVersion: session.assessmentFormVersion,
+      assessmentFormVersionLabel: session.assessmentFormVersionLabel,
+      scoringVersion: session.scoringVersion,
+      reportVersion: session.reportVersion,
+      responseCount: session.responses.length,
+      overallRawScore: session.score?.overallRawScore ?? null,
+      overallMaxScore: session.score?.overallMaxScore ?? null,
+      overallComposite: session.score?.overallComposite ?? null,
+      overallBand: session.score?.overallBand ?? null,
+      startedAt: session.startedAt?.toISOString() ?? null,
+      completedAt: session.completedAt?.toISOString() ?? null,
+      createdAt: session.createdAt.toISOString(),
+      updatedAt: session.updatedAt.toISOString(),
+    }));
+  }
+
+  private async buildResponseLevelExportRows(
+    request: AnalyticsExportRequestWithRelations,
+  ): Promise<Record<string, unknown>[]> {
+    const createdAt = this.buildDateRangeWhere(request);
+
+    const responses = await this.prisma.response.findMany({
+      where: createdAt
+        ? {
+            createdAt,
+          }
+        : undefined,
+      orderBy: {
+        createdAt: 'desc',
+      },
+      include: {
+        item: true,
+        session: {
+          include: {
+            user: true,
+            assessmentForm: true,
+            campaign: true,
+          },
+        },
+      },
+    });
+
+    return responses.map((response) => ({
+      responseId: response.id,
+      sessionId: response.sessionId,
+      participantIdentifier:
+        response.session.user?.email ??
+        response.session.user?.name ??
+        response.session.userId,
+      campaignId: response.session.campaignId,
+      campaignName: response.session.campaign?.name ?? null,
+      assessmentFormId: response.session.assessmentFormId,
+      assessmentFormName: response.session.assessmentForm.name,
+      itemId: response.itemId,
+      itemDomain: response.item.domain,
+      itemStatus: response.item.status,
+      answer: this.stringifyExportValue(response.answer),
+      correctAnswer: this.stringifyExportValue(response.item.correctAnswer),
+      submittedAt: response.submittedAt?.toISOString() ?? null,
+      createdAt: response.createdAt.toISOString(),
+      updatedAt: response.updatedAt.toISOString(),
+    }));
+  }
+
+  private async buildScoreLevelExportRows(
+    request: AnalyticsExportRequestWithRelations,
+  ): Promise<Record<string, unknown>[]> {
+    const createdAt = this.buildDateRangeWhere(request);
+
+    const scores = await this.prisma.score.findMany({
+      where: createdAt
+        ? {
+            createdAt,
+          }
+        : undefined,
+      orderBy: {
+        createdAt: 'desc',
+      },
+      include: {
+        session: {
+          include: {
+            user: true,
+            assessmentForm: true,
+            campaign: true,
+          },
+        },
+      },
+    });
+
+    return scores.map((score) => ({
+      scoreId: score.id,
+      sessionId: score.sessionId,
+      participantIdentifier:
+        score.session.user?.email ??
+        score.session.user?.name ??
+        score.session.userId,
+      campaignId: score.session.campaignId,
+      campaignName: score.session.campaign?.name ?? null,
+      assessmentFormId: score.session.assessmentFormId,
+      assessmentFormName: score.session.assessmentForm.name,
+      abstractRawScore: score.abstractRawScore,
+      abstractMaxScore: score.abstractMaxScore,
+      numericalRawScore: score.numericalRawScore,
+      numericalMaxScore: score.numericalMaxScore,
+      overallRawScore: score.overallRawScore,
+      overallMaxScore: score.overallMaxScore,
+      overallComposite: score.overallComposite,
+      abstractBand: score.abstractBand,
+      numericalBand: score.numericalBand,
+      overallBand: score.overallBand,
+      domainScores: this.stringifyExportValue(score.domainScores),
+      scoringMetadata: this.stringifyExportValue(score.scoringMetadata),
+      scoringVersion: score.scoringVersion,
+      createdAt: score.createdAt.toISOString(),
+      updatedAt: score.updatedAt.toISOString(),
+    }));
+  }
+
+  private async buildCampaignSummaryExportRows(
+    request: AnalyticsExportRequestWithRelations,
+  ): Promise<Record<string, unknown>[]> {
+    const createdAt = this.buildDateRangeWhere(request);
+
+    const campaigns = await this.prisma.campaign.findMany({
+      where: createdAt
+        ? {
+            createdAt,
+          }
+        : undefined,
+      orderBy: {
+        createdAt: 'desc',
+      },
+      include: {
+        organisation: true,
+        assessmentForm: true,
+        invitations: true,
+        sessions: {
+          include: {
+            score: true,
+          },
+        },
+      },
+    });
+
+    return campaigns.map((campaign) => {
+      const completedSessions = campaign.sessions.filter(
+        (session) => session.status === 'COMPLETED',
+      );
+
+      return {
+        campaignId: campaign.id,
+        campaignName: campaign.name,
+        campaignStatus: campaign.status,
+        organisationId: campaign.organisationId,
+        organisationName: campaign.organisation.name,
+        assessmentFormId: campaign.assessmentFormId,
+        assessmentFormName: campaign.assessmentForm?.name ?? null,
+        invitationCount: campaign.invitations.length,
+        acceptedInvitationCount: campaign.invitations.filter(
+          (invitation) => invitation.status === 'ACCEPTED',
+        ).length,
+        sessionCount: campaign.sessions.length,
+        completedSessionCount: completedSessions.length,
+        completionRate:
+          campaign.sessions.length === 0
+            ? 0
+            : completedSessions.length / campaign.sessions.length,
+        averageOverallComposite:
+          completedSessions.length === 0
+            ? null
+            : completedSessions.reduce(
+                (sum, session) => sum + (session.score?.overallComposite ?? 0),
+                0,
+              ) / completedSessions.length,
+        createdAt: campaign.createdAt.toISOString(),
+        updatedAt: campaign.updatedAt.toISOString(),
+      };
+    });
+  }
+
+  private stringifyExportValue(value: unknown) {
+    if (value === null || value === undefined) {
+      return '';
+    }
+
+    if (typeof value === 'string') {
+      return value;
+    }
+
+    return JSON.stringify(value);
+  }
+  private toCsv(rows: Record<string, unknown>[]) {
+    const firstRow = rows.at(0);
+
+    if (!firstRow) {
+      return '';
+    }
+
+    const headers = Object.keys(firstRow);
+
+    return [
+      headers.join(','),
+      ...rows.map((row) =>
+        headers.map((header) => this.escapeCsvCell(row[header])).join(','),
+      ),
+    ].join('\n');
+  }
+  private escapeCsvCell(value: unknown) {
+    if (value === null || value === undefined) {
+      return '';
+    }
+
+    const stringValue =
+      typeof value === 'string' ? value : this.stringifyExportValue(value);
+
+    if (
+      stringValue.includes(',') ||
+      stringValue.includes('"') ||
+      stringValue.includes('\n') ||
+      stringValue.includes('\r')
+    ) {
+      return `"${stringValue.replaceAll('"', '""')}"`;
+    }
+
+    return stringValue;
+  }
+
+  private parseOptionalDate(value?: string | null) {
+    if (!value) {
+      return null;
+    }
+
+    const parsedDate = new Date(value);
+
+    if (Number.isNaN(parsedDate.getTime())) {
+      throw new BadRequestException(`Invalid date value: ${value}`);
+    }
+
+    return parsedDate;
+  }
+
+  private toInternalAnalyticsExportRequestOutput(
+    request: AnalyticsExportRequestWithRelations,
+  ): InternalAnalyticsExportRequestOutput {
+    return {
+      id: request.id,
+      dataset: request.dataset,
+      format: request.format,
+      status: request.status,
+      dateFrom: request.dateFrom?.toISOString() ?? null,
+      dateTo: request.dateTo?.toISOString() ?? null,
+      scope: request.scope,
+      requestedById: request.requestedById,
+      requestedBy:
+        request.requestedBy?.name ??
+        request.requestedBy?.email ??
+        request.requestedRole ??
+        'Internal user',
+      requestedRole: request.requestedRole,
+      requestReason: request.requestReason,
+      reviewedById: request.reviewedById,
+      reviewedBy: request.reviewedBy?.name ?? request.reviewedBy?.email ?? null,
+      reviewedAt: request.reviewedAt?.toISOString() ?? null,
+      reviewDecision: request.reviewDecision,
+      reviewReason: request.reviewReason,
+      generatedAt: request.generatedAt?.toISOString() ?? null,
+      fileKey: request.fileKey,
+      failureReason: request.failureReason,
+      createdAt: request.createdAt.toISOString(),
+      updatedAt: request.updatedAt.toISOString(),
+    };
+  }
+
   private getItemStatusAuditAction(status: ItemStatus) {
     if (status === ItemStatus.ACTIVE) {
       return 'ITEM_ACTIVATED';
@@ -2734,10 +3789,8 @@ export class InternalToolingService {
     return trimmed.length === 0 ? null : trimmed;
   }
 
-    private parsePilotFormStatus(value: string) {
-    if (
-      Object.values(PilotFormStatus).includes(value as PilotFormStatus)
-    ) {
+  private parsePilotFormStatus(value: string) {
+    if (Object.values(PilotFormStatus).includes(value as PilotFormStatus)) {
       return value as PilotFormStatus;
     }
 
@@ -2745,9 +3798,7 @@ export class InternalToolingService {
   }
 
   private parseAssessmentDomain(value: string) {
-    if (
-      Object.values(AssessmentDomain).includes(value as AssessmentDomain)
-    ) {
+    if (Object.values(AssessmentDomain).includes(value as AssessmentDomain)) {
       return value as AssessmentDomain;
     }
 
@@ -2757,13 +3808,15 @@ export class InternalToolingService {
   private parseAssessmentSectionType(value: string) {
     if (
       Object.values(AssessmentSectionType).includes(
-        value as AssessmentSectionType
+        value as AssessmentSectionType,
       )
     ) {
       return value as AssessmentSectionType;
     }
 
-    throw new BadRequestException(`Unsupported assessment section type: ${value}`);
+    throw new BadRequestException(
+      `Unsupported assessment section type: ${value}`,
+    );
   }
 
   private toInputJsonValue(value: unknown): Prisma.InputJsonValue {
@@ -2961,19 +4014,19 @@ export class InternalToolingService {
   }
 
   private buildPilotBlueprintValidation(
-    form: PilotFormWithInternalRelations
+    form: PilotFormWithInternalRelations,
   ): InternalPilotFormBlueprintValidationOutput {
     const expectedBlueprint = this.getFormBlueprint(form);
 
     const actualBlueprint = Object.fromEntries(
-      Object.keys(expectedBlueprint).map((domain) => [domain, 0])
+      Object.keys(expectedBlueprint).map((domain) => [domain, 0]),
     ) as Record<string, number>;
 
     const errors: string[] = [];
     const warnings: string[] = [];
 
     const activeMappings = form.items.filter(
-      (mapping) => mapping.status === 'ACTIVE'
+      (mapping) => mapping.status === 'ACTIVE',
     );
 
     for (const mapping of activeMappings) {
@@ -2981,15 +4034,17 @@ export class InternalToolingService {
 
       actualBlueprint[domain] = (actualBlueprint[domain] ?? 0) + 1;
 
-      if (mapping.item.psychometricStatus !== PsychometricItemStatus.PILOT_READY) {
+      if (
+        mapping.item.psychometricStatus !== PsychometricItemStatus.PILOT_READY
+      ) {
         errors.push(
-          `Item ${mapping.itemId} is not pilot-ready (${mapping.item.psychometricStatus}).`
+          `Item ${mapping.itemId} is not pilot-ready (${mapping.item.psychometricStatus}).`,
         );
       }
 
       if (mapping.item.reviewStatus !== ItemReviewStatus.APPROVED_FOR_PILOT) {
         errors.push(
-          `Item ${mapping.itemId} is not content-approved for pilot (${mapping.item.reviewStatus}).`
+          `Item ${mapping.itemId} is not content-approved for pilot (${mapping.item.reviewStatus}).`,
         );
       }
     }
@@ -3003,13 +4058,13 @@ export class InternalToolingService {
 
       if (actualCount < expectedCount) {
         errors.push(
-          `${domain} is underrepresented: expected ${expectedCount}, found ${actualCount}.`
+          `${domain} is underrepresented: expected ${expectedCount}, found ${actualCount}.`,
         );
       }
 
       if (actualCount > expectedCount) {
         warnings.push(
-          `${domain} is overrepresented: expected ${expectedCount}, found ${actualCount}.`
+          `${domain} is overrepresented: expected ${expectedCount}, found ${actualCount}.`,
         );
       }
     }
@@ -3017,19 +4072,19 @@ export class InternalToolingService {
     for (const [domain, actualCount] of Object.entries(actualBlueprint)) {
       if (expectedBlueprint[domain] === undefined && actualCount > 0) {
         warnings.push(
-          `${domain} is not part of this form blueprint but has ${actualCount} active item(s).`
+          `${domain} is not part of this form blueprint but has ${actualCount} active item(s).`,
         );
       }
     }
 
     const totalExpectedItems = Object.values(expectedBlueprint).reduce(
       (sum, count) => sum + count,
-      0
+      0,
     );
 
     const totalActualItems = Object.values(actualBlueprint).reduce(
       (sum, count) => sum + count,
-      0
+      0,
     );
 
     return {
@@ -3047,8 +4102,8 @@ export class InternalToolingService {
     };
   }
 
-    private getFormBlueprint(
-    form: Pick<PilotFormWithInternalRelations, 'domainBlueprint'>
+  private getFormBlueprint(
+    form: Pick<PilotFormWithInternalRelations, 'domainBlueprint'>,
   ): Record<string, number> {
     if (
       !form.domainBlueprint ||
@@ -3061,8 +4116,7 @@ export class InternalToolingService {
     const blueprint: Record<string, number> = {};
 
     for (const [domain, value] of Object.entries(form.domainBlueprint)) {
-      const parsedValue =
-        typeof value === 'number' ? value : Number(value);
+      const parsedValue = typeof value === 'number' ? value : Number(value);
 
       if (Number.isFinite(parsedValue) && parsedValue >= 0) {
         blueprint[domain] = parsedValue;
@@ -3102,7 +4156,7 @@ export class InternalToolingService {
       sectionCount: form.sections.length,
       itemCount: form.items.length,
       activeItemCount: activeItems.length,
-            sections: form.sections.map((section) => ({
+      sections: form.sections.map((section) => ({
         id: section.id,
         type: section.type,
         domain: section.domain,

@@ -12,18 +12,26 @@ function parseJsonSafely(value: string) {
   }
 }
 
-export async function POST() {
+export async function POST(
+  request: Request,
+  context: { params: Promise<{ requestId: string }> }
+) {
   try {
+    const { requestId } = await context.params;
+    const body = (await request.json()) as unknown;
+
     const response = await fetch(
-      `${getInternalApiBaseUrl()}/internal/pilot-forms/general-cognitive-ability-v0-1`,
+      `${getInternalApiBaseUrl()}/internal/exports/requests/${encodeURIComponent(
+        requestId
+      )}/generate`,
       {
         method: 'POST',
         cache: 'no-store',
         headers: {
           'Content-Type': 'application/json',
-          'x-internal-role': 'RESEARCHER',
+          'x-internal-role': 'PLATFORM_ADMIN',
         },
-        body: JSON.stringify({}),
+        body: JSON.stringify(body),
       }
     );
 
@@ -36,7 +44,7 @@ export async function POST() {
           message:
             responseText.length > 0
               ? responseText
-              : 'Formal pilot form could not be created.',
+              : 'Analytics export request could not be generated.',
         },
         { status: response.status }
       );
@@ -49,7 +57,7 @@ export async function POST() {
         message:
           error instanceof Error
             ? error.message
-            : 'Formal pilot-form proxy failed.',
+            : 'Analytics export generation proxy failed.',
       },
       { status: 500 }
     );

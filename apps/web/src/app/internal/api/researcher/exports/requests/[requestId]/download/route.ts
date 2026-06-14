@@ -1,5 +1,11 @@
 import { NextResponse } from 'next/server';
 
+type InternalAnalyticsExportFileOutput = {
+  fileName: string;
+  contentType: string;
+  content: string;
+};
+
 function getInternalApiBaseUrl() {
   return process.env.INTERNAL_API_BASE_URL ?? 'http://localhost:3001';
 }
@@ -12,18 +18,23 @@ function parseJsonSafely(value: string) {
   }
 }
 
-export async function POST() {
+export async function GET(
+  _request: Request,
+  context: { params: Promise<{ requestId: string }> }
+) {
   try {
+    const { requestId } = await context.params;
+
     const response = await fetch(
-      `${getInternalApiBaseUrl()}/internal/pilot-forms/general-cognitive-ability-v0-1`,
+      `${getInternalApiBaseUrl()}/internal/exports/requests/${encodeURIComponent(
+        requestId
+      )}/download`,
       {
-        method: 'POST',
+        method: 'GET',
         cache: 'no-store',
         headers: {
-          'Content-Type': 'application/json',
           'x-internal-role': 'RESEARCHER',
         },
-        body: JSON.stringify({}),
       }
     );
 
@@ -36,20 +47,29 @@ export async function POST() {
           message:
             responseText.length > 0
               ? responseText
-              : 'Formal pilot form could not be created.',
+              : 'Analytics export could not be downloaded.',
         },
         { status: response.status }
       );
     }
 
-    return NextResponse.json(parsedBody, { status: response.status });
+    const file = parsedBody as InternalAnalyticsExportFileOutput;
+
+    return new Response(file.content, {
+      status: 200,
+      headers: {
+        'Content-Type': file.contentType,
+        'Content-Disposition': `attachment; filename="${file.fileName}"`,
+        'Cache-Control': 'no-store',
+      },
+    });
   } catch (error) {
     return NextResponse.json(
       {
         message:
           error instanceof Error
             ? error.message
-            : 'Formal pilot-form proxy failed.',
+            : 'Researcher export download proxy failed.',
       },
       { status: 500 }
     );

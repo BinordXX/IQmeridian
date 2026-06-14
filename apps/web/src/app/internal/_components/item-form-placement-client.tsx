@@ -115,8 +115,9 @@ export function ItemFormPlacementClient({
 
   const selectedSection = useMemo(
     () =>
-      selectedForm?.sections.find((section) => section.id === selectedSectionId) ??
-      null,
+      selectedForm?.sections.find(
+        (section) => section.id === selectedSectionId
+      ) ?? null,
     [selectedForm, selectedSectionId]
   );
 
@@ -169,9 +170,7 @@ export function ItemFormPlacementClient({
           orderIndex: parsedOrderIndex,
           status: mappingStatus,
           overrideReason:
-            overrideReason.trim().length > 0
-              ? overrideReason.trim()
-              : null,
+            overrideReason.trim().length > 0 ? overrideReason.trim() : null,
         },
       });
 
@@ -353,8 +352,8 @@ export function ItemFormPlacementClient({
             </p>
             <p className="mt-1 text-sm text-slate-600">
               {selectedSection
-                ? itemDomainLabels[selectedSection.domain] ??
-                  selectedSection.domain
+                ? (itemDomainLabels[selectedSection.domain] ??
+                  selectedSection.domain)
                 : 'No domain'}
             </p>
           </div>

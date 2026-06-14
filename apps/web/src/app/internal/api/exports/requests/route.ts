@@ -26,7 +26,7 @@ export async function POST(request: Request) {
           'x-internal-role': 'RESEARCHER',
         },
         body: JSON.stringify(body),
-      },
+      }
     );
 
     const responseText = await response.text();
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
               ? responseText
               : 'Analytics export request could not be recorded.',
         },
-        { status: response.status },
+        { status: response.status }
       );
     }
 
@@ -53,7 +53,7 @@ export async function POST(request: Request) {
             ? error.message
             : 'Analytics export request proxy failed.',
       },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
