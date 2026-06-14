@@ -59,7 +59,6 @@ Automated flags should remain reviewable by researchers.
 
 All analysis must preserve form, scoring, and report version traceability.
 
-
 ## Data access decision
 
 For the MVP, NestJS remains the orchestration and permission layer.
