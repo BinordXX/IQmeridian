@@ -53,6 +53,7 @@ import {
   InternalPilotFormOutput,
   UpdatePilotFormStatusInput,
   CreateInternalAssessmentFormInput,
+  CreateAnalyticsExportRequestInput,
   
 } from './internal-tooling.types';
 
@@ -1668,7 +1669,10 @@ export class InternalToolingService {
       itemLifecycleEvents: recentAuditActivity.filter(
         (event) =>
           event.action.includes('ITEM_ACTIVATED') ||
-          event.action.includes('ITEM_RETIRED'),
+          event.action.includes('ITEM_RETIRED') ||
+          event.action.includes('ITEM_MARKED_UNDER_REVIEW') ||
+          event.action.includes('ITEM_RETURNED_TO_DRAFT') ||
+          event.action.includes('ITEM_UPDATED'),
       ),
     };
   }
@@ -1770,6 +1774,38 @@ export class InternalToolingService {
 
   getAnalyticsExportDefinitions(): AnalyticsExportDefinition[] {
     return analyticsExportDefinitions;
+  }
+
+    async recordAnalyticsExportRequest(
+    input: CreateAnalyticsExportRequestInput,
+  ): Promise<InternalAuditEvent> {
+    const definition = analyticsExportDefinitions.find(
+      (candidate) => candidate.dataset === input.dataset,
+    );
+
+    if (!definition) {
+      throw new BadRequestException('Unsupported analytics export dataset.');
+    }
+
+    if (!definition.currentlyAvailable) {
+      throw new BadRequestException(
+        'This analytics export is not currently available.',
+      );
+    }
+
+    return this.recordInternalAuditEvent({
+      action: 'ANALYTICS_EXPORT_REQUESTED',
+      entityType: 'AnalyticsExport',
+      entityId: input.dataset,
+      metadata: {
+        dataset: input.dataset,
+        label: definition.label,
+        format: input.format ?? definition.format,
+        dateFrom: input.dateFrom ?? null,
+        dateTo: input.dateTo ?? null,
+        requestedAt: new Date().toISOString(),
+      },
+    });
   }
 
   async getInternalAuditEvents(): Promise<InternalAuditEvent[]> {

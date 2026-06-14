@@ -57,6 +57,13 @@ export type AnalyticsExportDataset =
   | 'SCORE_LEVEL'
   | 'CAMPAIGN_SUMMARY';
 
+  export type CreateAnalyticsExportRequestInput = {
+  dataset: AnalyticsExportDataset;
+  dateFrom?: string | null;
+  dateTo?: string | null;
+  format?: 'CSV' | 'JSON' | null;
+};
+
 export type AnalyticsExportDefinition = {
   dataset: AnalyticsExportDataset;
   label: string;

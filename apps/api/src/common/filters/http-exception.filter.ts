@@ -7,6 +7,8 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 
+import { PrismaService } from '../../prisma/prisma.service';
+
 type ErrorResponseBody = {
   statusCode: number;
   error: string;
@@ -18,6 +20,8 @@ type ErrorResponseBody = {
 
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
+  constructor(private readonly prisma?: PrismaService) {}
+
   catch(exception: unknown, host: ArgumentsHost) {
     const context = host.switchToHttp();
     const response = context.getResponse<Response>();
@@ -43,7 +47,69 @@ export class HttpExceptionFilter implements ExceptionFilter {
       timestamp: new Date().toISOString(),
     };
 
+    if (request.url.startsWith('/internal') && status >= 400) {
+      void this.recordInternalFailureAudit({
+        request,
+        status,
+        error,
+        message,
+        exception,
+      });
+    }
+
     response.status(status).json(body);
+  }
+
+  private async recordInternalFailureAudit({
+    request,
+    status,
+    error,
+    message,
+    exception,
+  }: {
+    request: Request;
+    status: number;
+    error: string;
+    message: string | string[];
+    exception: unknown;
+  }) {
+    if (!this.prisma) {
+      return;
+    }
+
+    try {
+      await this.prisma.auditLog.create({
+        data: {
+          action:
+            status >= 500
+              ? 'PLATFORM_RUNTIME_ERROR'
+              : 'INTERNAL_API_REQUEST_FAILED',
+          entityType: 'InternalApiRequest',
+          entityId: request.url,
+          metadata: {
+            method: request.method,
+            path: request.url,
+            statusCode: status,
+            error,
+            message,
+            role: this.normaliseHeader(request.headers['x-internal-role']),
+            userAgent: this.normaliseHeader(request.headers['user-agent']),
+            exceptionName:
+              exception instanceof Error ? exception.name : 'UnknownException',
+          },
+        },
+      });
+    } catch {
+      // Do not let audit logging failure break the original error response.
+    }
+  }
+
+  private normaliseHeader(value: string | string[] | undefined) {
+    if (Array.isArray(value)) {
+      return value.join(', ');
+    }
+
+    return value ?? null;
   }
 
   private extractMessage(
