@@ -8,6 +8,15 @@ export type ActivateInternalItemInput = {
   note?: string | null;
 };
 
+
+export type CreateAnalyticsExportRequestInput = {
+  dataset: AnalyticsExportDataset;
+  dateFrom?: string | null;
+  dateTo?: string | null;
+  format?: 'CSV' | 'JSON' | null;
+};
+
+
 export type UpdateInternalDraftItemInput = {
   domain?: string;
   itemType?: string;
@@ -493,6 +502,15 @@ export function fetchInternalAuditEvents() {
   return fetchInternalApi<InternalAuditEvent[]>({
     path: '/internal/audit',
     role: 'PLATFORM_ADMIN',
+  });
+}
+
+export function requestAnalyticsExport(input: CreateAnalyticsExportRequestInput) {
+  return writeInternalApi<InternalAuditEvent>({
+    path: '/internal/api/exports/requests',
+    method: 'POST',
+    role: 'RESEARCHER',
+    body: input,
   });
 }
 

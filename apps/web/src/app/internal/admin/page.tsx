@@ -21,8 +21,8 @@ export default async function InternalAdminDashboardPage() {
             Operational oversight dashboard
           </h1>
           <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
-            This dashboard now reads operational aggregates from the internal
-            admin overview endpoint.
+            This dashboard reads operational aggregates, audit events, export
+            requests, and recorded internal API failures from the backend.
           </p>
         </div>
 
@@ -33,6 +33,7 @@ export default async function InternalAdminDashboardPage() {
           >
             Review sessions
           </Link>
+
           <Link
             href="/internal/admin/exports"
             className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800"
@@ -63,7 +64,9 @@ export default async function InternalAdminDashboardPage() {
         </article>
 
         <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-sm font-medium text-slate-500">Platform issues</p>
+          <p className="text-sm font-medium text-slate-500">
+            Runtime/internal API failures
+          </p>
           <p className="mt-3 text-3xl font-semibold">
             {overview.platformErrors.length}
           </p>
@@ -112,6 +115,7 @@ export default async function InternalAdminDashboardPage() {
                       {event.entityId ?? 'No entity ID'}
                     </p>
                   </div>
+
                   <span className="w-fit rounded-full border border-slate-300 bg-white px-2 py-1 text-xs font-semibold">
                     {event.actor}
                   </span>
@@ -132,7 +136,9 @@ export default async function InternalAdminDashboardPage() {
 
       <section className="grid gap-6 lg:grid-cols-3">
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold">Platform errors or failures</h2>
+          <h2 className="text-lg font-semibold">
+            Recorded runtime/internal API failures
+          </h2>
 
           <div className="mt-5 space-y-3">
             {overview.platformErrors.map((event) => (
@@ -145,19 +151,24 @@ export default async function InternalAdminDashboardPage() {
                   {event.entityType ?? 'Unknown entity'} ·{' '}
                   {event.entityId ?? 'No entity ID'}
                 </p>
+                <p className="mt-2 text-xs text-slate-500">
+                  {event.createdAt}
+                </p>
               </article>
             ))}
           </div>
 
           {overview.platformErrors.length === 0 ? (
-            <p className="mt-5 rounded-xl bg-slate-50 p-4 text-sm text-slate-600">
-              No platform error audit events are currently recorded.
+            <p className="mt-5 rounded-xl bg-slate-50 p-4 text-sm leading-6 text-slate-600">
+              No runtime internal API failure audit events are currently
+              recorded. Local TypeScript, Docker, or Next.js compile errors are
+              developer-environment failures and are not captured here.
             </p>
           ) : null}
         </section>
 
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold">Export events</h2>
+          <h2 className="text-lg font-semibold">Recorded export requests</h2>
 
           <div className="mt-5 space-y-3">
             {overview.exportEvents.map((event) => (
@@ -166,22 +177,26 @@ export default async function InternalAdminDashboardPage() {
                 className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm"
               >
                 <p className="font-semibold">{event.action}</p>
-                <p className="mt-2 text-slate-600">{event.createdAt}</p>
+                <p className="mt-2 text-slate-600">
+                  {event.entityType ?? 'Analytics export'} ·{' '}
+                  {event.entityId ?? 'No dataset ID'}
+                </p>
+                <p className="mt-2 text-xs text-slate-500">
+                  {event.createdAt}
+                </p>
               </article>
             ))}
           </div>
 
           {overview.exportEvents.length === 0 ? (
             <p className="mt-5 rounded-xl bg-slate-50 p-4 text-sm text-slate-600">
-              No export audit events are currently recorded.
+              No export request audit events are currently recorded.
             </p>
           ) : null}
         </section>
 
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold">
-            Item activations and retirements
-          </h2>
+          <h2 className="text-lg font-semibold">Item lifecycle events</h2>
 
           <div className="mt-5 space-y-3">
             {overview.itemLifecycleEvents.map((event) => (
@@ -191,7 +206,11 @@ export default async function InternalAdminDashboardPage() {
               >
                 <p className="font-semibold">{event.action}</p>
                 <p className="mt-2 text-slate-600">
+                  {event.entityType ?? 'Item'} ·{' '}
                   {event.entityId ?? 'No entity ID'}
+                </p>
+                <p className="mt-2 text-xs text-slate-500">
+                  {event.createdAt}
                 </p>
               </article>
             ))}
@@ -199,8 +218,7 @@ export default async function InternalAdminDashboardPage() {
 
           {overview.itemLifecycleEvents.length === 0 ? (
             <p className="mt-5 rounded-xl bg-slate-50 p-4 text-sm text-slate-600">
-              No item activation or retirement audit events are currently
-              recorded.
+              No item lifecycle audit events are currently recorded.
             </p>
           ) : null}
         </section>

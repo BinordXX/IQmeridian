@@ -21,6 +21,7 @@ import {
   UpdateInternalDraftItemInput,
   UpdatePilotFormStatusInput,
   CreateInternalAssessmentFormInput,
+  CreateAnalyticsExportRequestInput,
 } from './internal-tooling.types';
 
 type InternalApiRole = 'PLATFORM_ADMIN' | 'RESEARCHER';
@@ -413,6 +414,18 @@ export class InternalToolingController {
     return session;
   }
 
+    @Post('exports/requests')
+  recordAnalyticsExportRequest(
+    @Body() input: CreateAnalyticsExportRequestInput,
+    @Headers('x-internal-role') roleHeader?: string,
+  ) {
+    assertInternalAccess({
+      roleHeader,
+      allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
+    });
+
+    return this.internalToolingService.recordAnalyticsExportRequest(input);
+  }
   @Get('exports')
   getAnalyticsExportDefinitions(
     @Headers('x-internal-role') roleHeader?: string,
