@@ -9,7 +9,7 @@ export default async function InternalAdminDashboardPage() {
     (sum, count) => sum + count,
     0
   );
-
+  const pendingExportRequestCount = overview.exportRequestCounts.requested;
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm lg:flex-row lg:items-start lg:justify-between">
@@ -36,14 +36,71 @@ export default async function InternalAdminDashboardPage() {
 
           <Link
             href="/internal/admin/exports"
-            className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800"
+            className="relative rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800"
           >
-            Manage exports
+            Export governance
+            {pendingExportRequestCount > 0 ? (
+              <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900">
+                {pendingExportRequestCount}
+              </span>
+            ) : null}
           </Link>
         </div>
       </header>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      {pendingExportRequestCount > 0 ? (
+        <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5 shadow-sm">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-wide text-amber-800">
+                Pending export review
+              </p>
+              <h2 className="mt-2 text-xl font-semibold text-amber-950">
+                {pendingExportRequestCount} export request
+                {pendingExportRequestCount === 1 ? '' : 's'} awaiting admin
+                decision
+              </h2>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-amber-900">
+                Researcher export requests require platform-admin review before
+                they can be generated and downloaded.
+              </p>
+            </div>
+
+            <Link
+              href="/internal/admin/exports"
+              className="w-fit rounded-full bg-amber-950 px-4 py-2 text-sm font-semibold text-white"
+            >
+              Review export requests
+            </Link>
+          </div>
+
+          <div className="mt-5 grid gap-3">
+            {overview.pendingExportRequests.map((request) => (
+              <article
+                key={request.id}
+                className="rounded-xl border border-amber-200 bg-white px-4 py-3 text-sm"
+              >
+                <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                  <div>
+                    <p className="font-semibold text-slate-950">
+                      {request.dataset} · {request.format}
+                    </p>
+                    <p className="mt-1 text-slate-600">
+                      Requested by {request.requestedBy} · {request.createdAt}
+                    </p>
+                  </div>
+
+                  <span className="w-fit rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-900">
+                    {request.status}
+                  </span>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <p className="text-sm font-medium text-slate-500">Organisations</p>
           <p className="mt-3 text-3xl font-semibold">
@@ -55,6 +112,15 @@ export default async function InternalAdminDashboardPage() {
           <p className="text-sm font-medium text-slate-500">Active campaigns</p>
           <p className="mt-3 text-3xl font-semibold">
             {overview.activeCampaigns}
+          </p>
+        </article>
+
+        <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <p className="text-sm font-medium text-slate-500">
+            Pending export reviews
+          </p>
+          <p className="mt-3 text-3xl font-semibold">
+            {pendingExportRequestCount}
           </p>
         </article>
 
@@ -151,9 +217,7 @@ export default async function InternalAdminDashboardPage() {
                   {event.entityType ?? 'Unknown entity'} ·{' '}
                   {event.entityId ?? 'No entity ID'}
                 </p>
-                <p className="mt-2 text-xs text-slate-500">
-                  {event.createdAt}
-                </p>
+                <p className="mt-2 text-xs text-slate-500">{event.createdAt}</p>
               </article>
             ))}
           </div>
@@ -181,9 +245,7 @@ export default async function InternalAdminDashboardPage() {
                   {event.entityType ?? 'Analytics export'} ·{' '}
                   {event.entityId ?? 'No dataset ID'}
                 </p>
-                <p className="mt-2 text-xs text-slate-500">
-                  {event.createdAt}
-                </p>
+                <p className="mt-2 text-xs text-slate-500">{event.createdAt}</p>
               </article>
             ))}
           </div>
@@ -209,9 +271,7 @@ export default async function InternalAdminDashboardPage() {
                   {event.entityType ?? 'Item'} ·{' '}
                   {event.entityId ?? 'No entity ID'}
                 </p>
-                <p className="mt-2 text-xs text-slate-500">
-                  {event.createdAt}
-                </p>
+                <p className="mt-2 text-xs text-slate-500">{event.createdAt}</p>
               </article>
             ))}
           </div>

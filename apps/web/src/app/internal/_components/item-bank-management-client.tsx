@@ -9,7 +9,6 @@ import {
   itemIntendedDifficultyLabels,
   itemReviewStatusLabels,
   itemStatusLabels,
-  psychometricItemStatusLabels,
   type InternalItemOutput,
 } from '../_lib/internal-api';
 

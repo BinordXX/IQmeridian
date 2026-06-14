@@ -8,14 +8,72 @@ export type ActivateInternalItemInput = {
   note?: string | null;
 };
 
-
 export type CreateAnalyticsExportRequestInput = {
   dataset: AnalyticsExportDataset;
   dateFrom?: string | null;
   dateTo?: string | null;
   format?: 'CSV' | 'JSON' | null;
+  scope?: unknown;
+  requestReason?: string | null;
 };
 
+export type InternalAnalyticsExportFileOutput = {
+  fileName: string;
+  contentType: string;
+  content: string;
+};
+
+export type InternalAnalyticsExportGovernanceSettingOutput = {
+  approvalRequired: boolean;
+  updatedByRole: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type UpdateAnalyticsExportGovernanceSettingInput = {
+  approvalRequired?: boolean;
+};
+
+export type ReviewAnalyticsExportRequestInput = {
+  decision: 'APPROVED' | 'DECLINED';
+  reviewReason?: string | null;
+};
+
+export type GenerateAnalyticsExportRequestInput = {
+  generationReason?: string | null;
+};
+export type InternalAnalyticsExportRequestStatus =
+  | 'REQUESTED'
+  | 'APPROVED'
+  | 'DECLINED'
+  | 'GENERATING'
+  | 'GENERATED'
+  | 'FAILED'
+  | 'CANCELLED';
+
+export type InternalAnalyticsExportRequestOutput = {
+  id: string;
+  dataset: string;
+  format: string;
+  status: InternalAnalyticsExportRequestStatus;
+  dateFrom: string | null;
+  dateTo: string | null;
+  scope: unknown;
+  requestedById: string | null;
+  requestedBy: string;
+  requestedRole: string | null;
+  requestReason: string | null;
+  reviewedById: string | null;
+  reviewedBy: string | null;
+  reviewedAt: string | null;
+  reviewDecision: string | null;
+  reviewReason: string | null;
+  generatedAt: string | null;
+  fileKey: string | null;
+  failureReason: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
 
 export type UpdateInternalDraftItemInput = {
   domain?: string;
@@ -165,7 +223,6 @@ export type InternalSectionPerformanceSummary = {
   scoreDistribution: ScoreDistributionBucket[];
 };
 
-
 export type InternalFormPerformanceSummary = {
   formId: string;
   formLabel: string;
@@ -231,7 +288,7 @@ export type InternalPilotFormOutput = {
   sectionCount: number;
   itemCount: number;
   activeItemCount: number;
-    sections: InternalPilotFormSectionOutput[];
+  sections: InternalPilotFormSectionOutput[];
   blueprintValidation: InternalPilotFormBlueprintValidationOutput;
 };
 
@@ -277,6 +334,17 @@ export type InternalAdminOverview = {
   platformErrors: InternalAuditEvent[];
   exportEvents: InternalAuditEvent[];
   itemLifecycleEvents: InternalAuditEvent[];
+  exportRequestCounts: {
+    total: number;
+    requested: number;
+    approved: number;
+    declined: number;
+    generating: number;
+    generated: number;
+    failed: number;
+    cancelled: number;
+  };
+  pendingExportRequests: InternalAnalyticsExportRequestOutput[];
 };
 
 export const itemDomainLabels: Record<string, string> = {
@@ -324,6 +392,26 @@ export const psychometricItemStatusLabels: Record<string, string> = {
 
 export function formatCorrectRate(rate: number) {
   return `${Math.round(rate * 100)}%`;
+}
+
+export function fetchAnalyticsExportGovernanceSetting(
+  role: 'PLATFORM_ADMIN' | 'RESEARCHER' = 'PLATFORM_ADMIN'
+) {
+  return fetchInternalApi<InternalAnalyticsExportGovernanceSettingOutput>({
+    path: '/internal/exports/governance',
+    role,
+  });
+}
+
+export function updateAnalyticsExportGovernanceSetting(
+  input: UpdateAnalyticsExportGovernanceSettingInput
+) {
+  return writeInternalApi<InternalAnalyticsExportGovernanceSettingOutput>({
+    path: '/internal/api/exports/governance',
+    method: 'PATCH',
+    role: 'PLATFORM_ADMIN',
+    body: input,
+  });
 }
 
 export function formatJsonValue(value: unknown) {
@@ -505,11 +593,68 @@ export function fetchInternalAuditEvents() {
   });
 }
 
-export function requestAnalyticsExport(input: CreateAnalyticsExportRequestInput) {
-  return writeInternalApi<InternalAuditEvent>({
+export function requestAnalyticsExport(
+  input: CreateAnalyticsExportRequestInput
+) {
+  return writeInternalApi<InternalAnalyticsExportRequestOutput>({
     path: '/internal/api/exports/requests',
     method: 'POST',
     role: 'RESEARCHER',
+    body: input,
+  });
+}
+
+export function fetchAnalyticsExportRequests(
+  role: 'PLATFORM_ADMIN' | 'RESEARCHER' = 'PLATFORM_ADMIN'
+) {
+  return fetchInternalApi<InternalAnalyticsExportRequestOutput[]>({
+    path: '/internal/exports/requests',
+    role,
+  });
+}
+
+export type DirectAnalyticsExportInput = {
+  dataset: AnalyticsExportDataset;
+  dateFrom?: string | null;
+  dateTo?: string | null;
+  format?: 'CSV' | 'JSON' | null;
+  scope?: unknown;
+  directReason?: string | null;
+};
+
+export function createDirectAnalyticsExport(input: DirectAnalyticsExportInput) {
+  return writeInternalApi<InternalAnalyticsExportFileOutput>({
+    path: '/internal/api/exports/direct',
+    method: 'POST',
+    role: 'PLATFORM_ADMIN',
+    body: input,
+  });
+}
+
+export function generateAnalyticsExportRequest(
+  requestId: string,
+  input: GenerateAnalyticsExportRequestInput
+) {
+  return writeInternalApi<InternalAnalyticsExportRequestOutput>({
+    path: `/internal/api/exports/requests/${encodeURIComponent(
+      requestId
+    )}/generate`,
+    method: 'POST',
+    role: 'PLATFORM_ADMIN',
+    body: input,
+  });
+}
+
+export function reviewAnalyticsExportRequest(
+  requestId: string,
+  input: ReviewAnalyticsExportRequestInput
+) {
+  return writeInternalApi<InternalAnalyticsExportRequestOutput>({
+    path: `/internal/api/exports/requests/${encodeURIComponent(
+      requestId
+    )}/review`,
+    method: 'PATCH',
+    role: 'PLATFORM_ADMIN',
     body: input,
   });
 }

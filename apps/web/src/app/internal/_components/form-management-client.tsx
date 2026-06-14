@@ -56,13 +56,7 @@ export function FormManagementClient({
       parsePositiveInteger(abstractCount, 0) +
       parsePositiveInteger(logicalCount, 0) +
       parsePositiveInteger(analyticalCount, 0),
-    [
-      verbalCount,
-      numericalCount,
-      abstractCount,
-      logicalCount,
-      analyticalCount,
-    ]
+    [verbalCount, numericalCount, abstractCount, logicalCount, analyticalCount]
   );
 
   async function handleCreateForm() {
@@ -86,10 +80,22 @@ export function FormManagementClient({
         pilotStatus: 'DRAFT',
         createStandardSections,
         domainBlueprint: {
-          VERBAL_REASONING: parsePositiveInteger(verbalCount, defaultBlueprint.VERBAL_REASONING),
-          NUMERICAL_REASONING: parsePositiveInteger(numericalCount, defaultBlueprint.NUMERICAL_REASONING),
-          ABSTRACT_REASONING: parsePositiveInteger(abstractCount, defaultBlueprint.ABSTRACT_REASONING),
-          LOGICAL_REASONING: parsePositiveInteger(logicalCount, defaultBlueprint.LOGICAL_REASONING),
+          VERBAL_REASONING: parsePositiveInteger(
+            verbalCount,
+            defaultBlueprint.VERBAL_REASONING
+          ),
+          NUMERICAL_REASONING: parsePositiveInteger(
+            numericalCount,
+            defaultBlueprint.NUMERICAL_REASONING
+          ),
+          ABSTRACT_REASONING: parsePositiveInteger(
+            abstractCount,
+            defaultBlueprint.ABSTRACT_REASONING
+          ),
+          LOGICAL_REASONING: parsePositiveInteger(
+            logicalCount,
+            defaultBlueprint.LOGICAL_REASONING
+          ),
           ANALYTICAL_PROBLEM_SOLVING: parsePositiveInteger(
             analyticalCount,
             defaultBlueprint.ANALYTICAL_PROBLEM_SOLVING
@@ -108,7 +114,9 @@ export function FormManagementClient({
       });
 
       setForms((currentForms) => [form, ...currentForms]);
-      setMessage(`Created ${form.name} ${form.versionLabel ?? `v${form.version}`}.`);
+      setMessage(
+        `Created ${form.name} ${form.versionLabel ?? `v${form.version}`}.`
+      );
     } catch (error) {
       setErrorMessage(
         error instanceof Error

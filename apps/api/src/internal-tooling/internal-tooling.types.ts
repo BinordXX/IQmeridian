@@ -18,6 +18,17 @@ export type SuspiciousFlagEvaluation = {
   reasons: string[];
 };
 
+export type InternalAnalyticsExportGovernanceSettingOutput = {
+  approvalRequired: boolean;
+  updatedByRole: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type UpdateAnalyticsExportGovernanceSettingInput = {
+  approvalRequired?: boolean;
+};
+
 export type InternalSessionOutput = {
   sessionId: string;
   participantIdentifier: string;
@@ -57,11 +68,70 @@ export type AnalyticsExportDataset =
   | 'SCORE_LEVEL'
   | 'CAMPAIGN_SUMMARY';
 
-  export type CreateAnalyticsExportRequestInput = {
+export type DirectAnalyticsExportInput = {
   dataset: AnalyticsExportDataset;
   dateFrom?: string | null;
   dateTo?: string | null;
   format?: 'CSV' | 'JSON' | null;
+  scope?: unknown;
+  directReason?: string | null;
+};
+
+export type ReviewAnalyticsExportRequestInput = {
+  decision: 'APPROVED' | 'DECLINED';
+  reviewReason?: string | null;
+};
+
+export type GenerateAnalyticsExportRequestInput = {
+  generationReason?: string | null;
+};
+
+export type CreateAnalyticsExportRequestInput = {
+  dataset: AnalyticsExportDataset;
+  dateFrom?: string | null;
+  dateTo?: string | null;
+  format?: 'CSV' | 'JSON' | null;
+  scope?: unknown;
+  requestReason?: string | null;
+};
+
+export type InternalAnalyticsExportRequestStatus =
+  | 'REQUESTED'
+  | 'APPROVED'
+  | 'DECLINED'
+  | 'GENERATING'
+  | 'GENERATED'
+  | 'FAILED'
+  | 'CANCELLED';
+
+export type InternalAnalyticsExportFileOutput = {
+  fileName: string;
+  contentType: string;
+  content: string;
+};
+
+export type InternalAnalyticsExportRequestOutput = {
+  id: string;
+  dataset: string;
+  format: string;
+  status: InternalAnalyticsExportRequestStatus;
+  dateFrom: string | null;
+  dateTo: string | null;
+  scope: unknown;
+  requestedById: string | null;
+  requestedBy: string;
+  requestedRole: string | null;
+  requestReason: string | null;
+  reviewedById: string | null;
+  reviewedBy: string | null;
+  reviewedAt: string | null;
+  reviewDecision: string | null;
+  reviewReason: string | null;
+  generatedAt: string | null;
+  fileKey: string | null;
+  failureReason: string | null;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type AnalyticsExportDefinition = {
@@ -258,7 +328,6 @@ export type InternalPilotFormSectionOutput = {
   orderIndex: number;
 };
 
-
 export type InternalPilotFormOutput = {
   id: string;
   name: string;
@@ -279,7 +348,7 @@ export type InternalPilotFormOutput = {
   itemCount: number;
   activeItemCount: number;
   blueprintValidation: InternalPilotFormBlueprintValidationOutput;
-    sections: InternalPilotFormSectionOutput[];
+  sections: InternalPilotFormSectionOutput[];
 };
 
 export type UpdatePilotFormStatusInput = {
@@ -315,6 +384,17 @@ export type InternalAdminOverview = {
   platformErrors: InternalAuditEvent[];
   exportEvents: InternalAuditEvent[];
   itemLifecycleEvents: InternalAuditEvent[];
+  exportRequestCounts: {
+    total: number;
+    requested: number;
+    approved: number;
+    declined: number;
+    generating: number;
+    generated: number;
+    failed: number;
+    cancelled: number;
+  };
+  pendingExportRequests: InternalAnalyticsExportRequestOutput[];
 };
 
 export type InternalItemTraceabilityOutput = {

@@ -22,6 +22,10 @@ import {
   UpdatePilotFormStatusInput,
   CreateInternalAssessmentFormInput,
   CreateAnalyticsExportRequestInput,
+  ReviewAnalyticsExportRequestInput,
+  GenerateAnalyticsExportRequestInput,
+  DirectAnalyticsExportInput,
+  UpdateAnalyticsExportGovernanceSettingInput,
 } from './internal-tooling.types';
 
 type InternalApiRole = 'PLATFORM_ADMIN' | 'RESEARCHER';
@@ -57,7 +61,7 @@ export class InternalToolingController {
   ) {}
   private assertInternalAccess(
     role: string | undefined,
-    allowedRoles: string[]
+    allowedRoles: string[],
   ) {
     const normalisedRole = role?.trim();
 
@@ -75,7 +79,7 @@ export class InternalToolingController {
     return this.internalToolingService.createFormalPilotForm();
   }
 
-    @Get('forms')
+  @Get('forms')
   getInternalAssessmentForms(@Headers('x-internal-role') role?: string) {
     this.assertInternalAccess(role, ['PLATFORM_ADMIN', 'RESEARCHER']);
 
@@ -85,7 +89,7 @@ export class InternalToolingController {
   @Post('forms')
   createInternalAssessmentForm(
     @Headers('x-internal-role') role: string | undefined,
-    @Body() body: CreateInternalAssessmentFormInput
+    @Body() body: CreateInternalAssessmentFormInput,
   ) {
     this.assertInternalAccess(role, ['PLATFORM_ADMIN', 'RESEARCHER']);
 
@@ -414,18 +418,6 @@ export class InternalToolingController {
     return session;
   }
 
-    @Post('exports/requests')
-  recordAnalyticsExportRequest(
-    @Body() input: CreateAnalyticsExportRequestInput,
-    @Headers('x-internal-role') roleHeader?: string,
-  ) {
-    assertInternalAccess({
-      roleHeader,
-      allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
-    });
-
-    return this.internalToolingService.recordAnalyticsExportRequest(input);
-  }
   @Get('exports')
   getAnalyticsExportDefinitions(
     @Headers('x-internal-role') roleHeader?: string,
@@ -436,6 +428,94 @@ export class InternalToolingController {
     });
 
     return this.internalToolingService.getAnalyticsExportDefinitions();
+  }
+
+  @Get('exports/governance')
+  getAnalyticsExportGovernanceSetting(
+    @Headers('x-internal-role') roleHeader?: string,
+  ) {
+    assertInternalAccess({
+      roleHeader,
+      allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
+    });
+
+    return this.internalToolingService.getAnalyticsExportGovernanceSetting();
+  }
+
+  @Patch('exports/governance')
+  updateAnalyticsExportGovernanceSetting(
+    @Body() input: UpdateAnalyticsExportGovernanceSettingInput,
+    @Headers('x-internal-role') roleHeader?: string,
+  ) {
+    assertInternalAccess({
+      roleHeader,
+      allowedRoles: ['PLATFORM_ADMIN'],
+    });
+
+    return this.internalToolingService.updateAnalyticsExportGovernanceSetting(
+      input,
+      roleHeader,
+    );
+  }
+
+  @Post('exports/direct')
+  createDirectAnalyticsExport(
+    @Body() input: DirectAnalyticsExportInput,
+    @Headers('x-internal-role') roleHeader?: string,
+  ) {
+    assertInternalAccess({
+      roleHeader,
+      allowedRoles: ['PLATFORM_ADMIN'],
+    });
+
+    return this.internalToolingService.createDirectAnalyticsExport(
+      input,
+      roleHeader,
+    );
+  }
+
+  @Get('exports/requests')
+  getAnalyticsExportRequests(@Headers('x-internal-role') roleHeader?: string) {
+    assertInternalAccess({
+      roleHeader,
+      allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
+    });
+
+    return this.internalToolingService.getAnalyticsExportRequests(roleHeader);
+  }
+
+  @Post('exports/requests')
+  recordAnalyticsExportRequest(
+    @Body() input: CreateAnalyticsExportRequestInput,
+    @Headers('x-internal-role') roleHeader?: string,
+  ) {
+    assertInternalAccess({
+      roleHeader,
+      allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
+    });
+
+    return this.internalToolingService.recordAnalyticsExportRequest(
+      input,
+      roleHeader,
+    );
+  }
+
+  @Patch('exports/requests/:requestId/review')
+  reviewAnalyticsExportRequest(
+    @Param('requestId') requestId: string,
+    @Body() input: ReviewAnalyticsExportRequestInput,
+    @Headers('x-internal-role') roleHeader?: string,
+  ) {
+    assertInternalAccess({
+      roleHeader,
+      allowedRoles: ['PLATFORM_ADMIN'],
+    });
+
+    return this.internalToolingService.reviewAnalyticsExportRequest(
+      requestId,
+      input,
+      roleHeader,
+    );
   }
 
   @Get('audit')
@@ -484,5 +564,38 @@ export class InternalToolingController {
     });
 
     return this.internalToolingService.recordInternalReviewStatus(input);
+  }
+  @Post('exports/requests/:requestId/generate')
+  generateAnalyticsExportRequest(
+    @Param('requestId') requestId: string,
+    @Body() input: GenerateAnalyticsExportRequestInput,
+    @Headers('x-internal-role') roleHeader?: string,
+  ) {
+    assertInternalAccess({
+      roleHeader,
+      allowedRoles: ['PLATFORM_ADMIN'],
+    });
+
+    return this.internalToolingService.generateAnalyticsExportRequest(
+      requestId,
+      input,
+      roleHeader,
+    );
+  }
+
+  @Get('exports/requests/:requestId/download')
+  downloadGeneratedAnalyticsExportRequest(
+    @Param('requestId') requestId: string,
+    @Headers('x-internal-role') roleHeader?: string,
+  ) {
+    assertInternalAccess({
+      roleHeader,
+      allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
+    });
+
+    return this.internalToolingService.downloadGeneratedAnalyticsExportRequest(
+      requestId,
+      roleHeader,
+    );
   }
 }
