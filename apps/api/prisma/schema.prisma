@@ -14,6 +14,23 @@ enum UserRole {
   RESEARCHER
 }
 
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DISABLED
+}
+
+enum AuthProvider {
+  LOCAL
+  GOOGLE
+}
+
+enum AuthSessionStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
+}
+
 enum PsychometricAnalysisStatus {
   PENDING
   RUNNING
@@ -151,14 +168,21 @@ enum ReportVisibility {
 }
 
 model User {
-  id             String        @id @default(cuid())
-  email          String        @unique
-  name           String?
-  role           UserRole
-  organisationId String?
-  organisation   Organisation? @relation(fields: [organisationId], references: [id])
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  id              String        @id @default(cuid())
+  email           String        @unique
+  name            String?
+  role            UserRole
+  passwordHash    String?
+  emailVerifiedAt DateTime?
+  status          UserStatus    @default(ACTIVE)
+  lastLoginAt     DateTime?
+  organisationId  String?
+  organisation    Organisation? @relation(fields: [organisationId], references: [id])
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  authAccounts AuthAccount[]
+  authSessions AuthSession[]
 
   auditLogs               AuditLog[]
   sessions                Session[]
@@ -167,6 +191,51 @@ model User {
   invitations             Invitation[]             @relation("InvitationCandidate")
   exportRequestsReviewed  AnalyticsExportRequest[] @relation("ExportRequestReviewer")
   exportRequestsRequested AnalyticsExportRequest[] @relation("ExportRequestRequester")
+
+  @@index([role])
+  @@index([status])
+  @@index([organisationId])
+}
+
+model AuthAccount {
+  id                String       @id @default(cuid())
+  userId            String
+  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider          AuthProvider
+  providerAccountId String
+  email             String?
+  emailVerifiedAt   DateTime?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  authSessions AuthSession[]
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@index([email])
+}
+
+model AuthSession {
+  id               String            @id @default(cuid())
+  userId           String
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  authAccountId    String?
+  authAccount      AuthAccount?      @relation(fields: [authAccountId], references: [id], onDelete: SetNull)
+  refreshTokenHash String            @unique
+  status           AuthSessionStatus @default(ACTIVE)
+  ipAddress        String?
+  userAgent        String?
+  expiresAt        DateTime
+  lastUsedAt       DateTime?
+  revokedAt        DateTime?
+  revokedReason    String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  @@index([userId])
+  @@index([authAccountId])
+  @@index([status])
+  @@index([expiresAt])
 }
 
 model Organisation {
