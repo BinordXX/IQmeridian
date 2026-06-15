@@ -4,6 +4,7 @@ import { CurrentUser } from './current-user.decorator';
 import { LoginDto } from './dto/login.dto';
 import { LogoutDto } from './dto/logout.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { RegisterCandidateDto } from './dto/register-candidate.dto';
 import { RegisterDto } from './dto/register.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { RequestUser } from './request-user.type';
@@ -23,6 +24,17 @@ export class AuthController {
   @Post('register')
   register(@Body() body: RegisterDto, @Req() request: RequestMetadataSource) {
     return this.authService.register(body, this.getRequestMetadata(request));
+  }
+
+  @Post('register/candidate')
+  registerCandidate(
+    @Body() body: RegisterCandidateDto,
+    @Req() request: RequestMetadataSource,
+  ) {
+    return this.authService.registerCandidate(
+      body,
+      this.getRequestMetadata(request),
+    );
   }
 
   @Post('login')

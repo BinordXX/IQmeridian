@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
@@ -8,6 +9,7 @@ import {
   AuthProvider,
   AuthSession,
   AuthSessionStatus,
+  InvitationStatus,
   Prisma,
   User,
   UserRole,
@@ -17,6 +19,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { LogoutDto } from './dto/logout.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { RegisterCandidateDto } from './dto/register-candidate.dto';
 import { RegisterDto } from './dto/register.dto';
 import { PasswordService } from './password.service';
 import { RequestUser } from './request-user.type';
@@ -106,6 +109,154 @@ export class AuthService {
     return this.createAuthenticatedSession({
       user,
       authAccountId: user.authAccounts[0]?.id ?? null,
+      metadata,
+    });
+  }
+
+  async registerCandidate(
+    dto: RegisterCandidateDto,
+    metadata: RequestMetadata,
+  ): Promise<AuthResponse> {
+    const email = this.normaliseEmail(dto.email);
+
+    const invitation = await this.prisma.invitation.findUnique({
+      where: {
+        token: dto.invitationToken,
+      },
+      include: {
+        campaign: {
+          include: {
+            assessmentForm: true,
+          },
+        },
+        candidateUser: true,
+      },
+    });
+
+    if (!invitation) {
+      throw new BadRequestException('Invitation token is invalid.');
+    }
+
+    if (invitation.status !== InvitationStatus.PENDING) {
+      throw new BadRequestException('Invitation is no longer available.');
+    }
+
+    if (invitation.candidateUserId) {
+      throw new BadRequestException('Invitation is already assigned.');
+    }
+
+    if (invitation.expiresAt && invitation.expiresAt < new Date()) {
+      const expiredInvitation = await this.prisma.invitation.update({
+        where: {
+          id: invitation.id,
+        },
+        data: {
+          status: InvitationStatus.EXPIRED,
+        },
+      });
+
+      await this.recordAudit('auth.candidate_invitation_expired', null, {
+        invitationId: expiredInvitation.id,
+        campaignId: expiredInvitation.campaignId,
+        email: expiredInvitation.email,
+      });
+
+      throw new BadRequestException('Invitation has expired.');
+    }
+
+    if (this.normaliseEmail(invitation.email) !== email) {
+      throw new ForbiddenException(
+        'This invitation is assigned to a different email address.',
+      );
+    }
+
+    if (!invitation.campaign.assessmentFormId) {
+      throw new BadRequestException(
+        'Campaign has no assessment form assigned.',
+      );
+    }
+
+    if (!invitation.campaign.assessmentForm) {
+      throw new BadRequestException('Campaign assessment form was not found.');
+    }
+
+    if (!invitation.campaign.assessmentForm.isActive) {
+      throw new BadRequestException('Campaign assessment form is not active.');
+    }
+
+    const existingUser = await this.prisma.user.findUnique({
+      where: {
+        email,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (existingUser) {
+      throw new ConflictException(
+        'An account with this email already exists. Sign in before using this invitation.',
+      );
+    }
+
+    const passwordHash = await this.passwordService.hashPassword(dto.password);
+    const name = dto.name?.trim() || null;
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          email,
+          name,
+          role: UserRole.CANDIDATE,
+          passwordHash,
+          status: UserStatus.ACTIVE,
+        },
+      });
+
+      const authAccount = await tx.authAccount.create({
+        data: {
+          userId: user.id,
+          provider: AuthProvider.LOCAL,
+          providerAccountId: email,
+          email,
+        },
+      });
+
+      const invitationClaim = await tx.invitation.updateMany({
+        where: {
+          id: invitation.id,
+          status: InvitationStatus.PENDING,
+          candidateUserId: null,
+        },
+        data: {
+          candidateUserId: user.id,
+          status: InvitationStatus.ACCEPTED,
+          usedAt: new Date(),
+        },
+      });
+
+      if (invitationClaim.count !== 1) {
+        throw new ConflictException(
+          'Invitation could not be claimed. It may have already been used.',
+        );
+      }
+
+      return {
+        user,
+        authAccount,
+      };
+    });
+
+    await this.recordAudit('auth.register_candidate', result.user.id, {
+      provider: AuthProvider.LOCAL,
+      invitationId: invitation.id,
+      campaignId: invitation.campaignId,
+      role: result.user.role,
+    });
+
+    return this.createAuthenticatedSession({
+      user: result.user,
+      authAccountId: result.authAccount.id,
       metadata,
     });
   }

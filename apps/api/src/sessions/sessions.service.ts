@@ -7,6 +7,7 @@ import {
 import {
   AssessmentDomain,
   FormItemMappingStatus,
+  InvitationStatus,
   ItemStatus,
   Prisma,
   SessionStatus,
@@ -227,6 +228,7 @@ export class SessionsService {
             assessmentForm: true,
           },
         },
+        candidateUser: true,
       },
     });
 
@@ -234,12 +236,73 @@ export class SessionsService {
       throw new NotFoundException('Invitation not found');
     }
 
-    if (invitation.status !== 'PENDING') {
-      throw new BadRequestException('Invitation is not pending');
+    const candidate = await this.prisma.user.findUnique({
+      where: {
+        id: input.userId,
+      },
+      select: {
+        id: true,
+        email: true,
+      },
+    });
+
+    if (!candidate) {
+      throw new NotFoundException('Candidate user not found');
     }
 
-    if (invitation.expiresAt && invitation.expiresAt < new Date()) {
+    if (
+      invitation.email.trim().toLowerCase() !==
+      candidate.email.trim().toLowerCase()
+    ) {
+      throw new ForbiddenException(
+        'This invitation is assigned to a different email address',
+      );
+    }
+
+    if (
+      invitation.status === InvitationStatus.PENDING &&
+      invitation.expiresAt &&
+      invitation.expiresAt < new Date()
+    ) {
+      const expiredInvitation = await this.prisma.invitation.update({
+        where: {
+          id: invitation.id,
+        },
+        data: {
+          status: InvitationStatus.EXPIRED,
+        },
+      });
+
+      await this.auditService.record({
+        action: 'INVITATION_EXPIRED',
+        userId: null,
+        entityType: 'Invitation',
+        entityId: expiredInvitation.id,
+        metadata: {
+          campaignId: expiredInvitation.campaignId,
+          email: expiredInvitation.email,
+          status: expiredInvitation.status,
+          expiredAt: expiredInvitation.expiresAt,
+        },
+      });
+
       throw new BadRequestException('Invitation has expired');
+    }
+
+    if (
+      invitation.status !== InvitationStatus.PENDING &&
+      invitation.status !== InvitationStatus.ACCEPTED
+    ) {
+      throw new BadRequestException('Invitation is no longer available');
+    }
+
+    if (
+      invitation.candidateUserId &&
+      invitation.candidateUserId !== input.userId
+    ) {
+      throw new ForbiddenException(
+        'This invitation has already been assigned to another candidate',
+      );
     }
 
     if (!invitation.campaign.assessmentFormId) {
@@ -259,18 +322,54 @@ export class SessionsService {
     const existing = await this.prisma.session.findFirst({
       where: {
         invitationId: invitation.id,
-        status: {
-          in: [SessionStatus.NOT_STARTED, SessionStatus.IN_PROGRESS],
-        },
       },
     });
 
     if (existing) {
+      if (existing.userId !== input.userId) {
+        throw new ForbiddenException(
+          'This invitation session belongs to another user',
+        );
+      }
+
       return {
         sessionId: existing.id,
         assessmentId: existing.assessmentFormId,
         status: this.toCandidateStatus(existing.status),
       };
+    }
+
+    if (invitation.status === InvitationStatus.PENDING) {
+      const acceptedInvitation = await this.prisma.invitation.updateMany({
+        where: {
+          id: invitation.id,
+          status: InvitationStatus.PENDING,
+          candidateUserId: null,
+        },
+        data: {
+          candidateUserId: input.userId,
+          status: InvitationStatus.ACCEPTED,
+          usedAt: new Date(),
+        },
+      });
+
+      if (acceptedInvitation.count !== 1) {
+        throw new BadRequestException(
+          'Invitation could not be accepted. It may have already been used.',
+        );
+      }
+
+      await this.auditService.record({
+        action: 'INVITATION_ACCEPTED',
+        userId: input.userId,
+        entityType: 'Invitation',
+        entityId: invitation.id,
+        metadata: {
+          campaignId: invitation.campaignId,
+          email: invitation.email,
+          candidateUserId: input.userId,
+        },
+      });
     }
 
     const session = await this.prisma.session.create({
