@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { ListReportsQueryDto } from './dto/list-reports-query.dto';
 import { ReportVisibility } from '@prisma/client';
-import { DevAuthGuard } from '../auth/dev-auth.guard';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import {
@@ -26,7 +26,7 @@ type RequestUser = {
 };
 
 @Controller('reports')
-@UseGuards(DevAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class ReportsController {
   constructor(private readonly reportsService: ReportsService) {}
 
