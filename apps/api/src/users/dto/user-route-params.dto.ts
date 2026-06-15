@@ -5,3 +5,9 @@ export class OrganisationIdParamDto {
   @IsNotEmpty()
   organisationId!: string;
 }
+
+export class UserIdParamDto {
+  @IsString()
+  @IsNotEmpty()
+  userId!: string;
+}

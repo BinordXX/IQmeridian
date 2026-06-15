@@ -394,12 +394,9 @@ export function formatCorrectRate(rate: number) {
   return `${Math.round(rate * 100)}%`;
 }
 
-export function fetchAnalyticsExportGovernanceSetting(
-  
-) {
+export function fetchAnalyticsExportGovernanceSetting() {
   return fetchInternalApi<InternalAnalyticsExportGovernanceSettingOutput>({
     path: '/internal/exports/governance',
-    role,
   });
 }
 
@@ -485,7 +482,7 @@ async function fetchInternalApi<T>({
     cache: 'no-store',
     headers: accessToken
       ? {
-          Authorization: Bearer ,
+          Authorization: `Bearer ${accessToken}`,
         }
       : undefined,
   });
@@ -597,12 +594,9 @@ export function requestAnalyticsExport(
   });
 }
 
-export function fetchAnalyticsExportRequests(
-  
-) {
+export function fetchAnalyticsExportRequests() {
   return fetchInternalApi<InternalAnalyticsExportRequestOutput[]>({
     path: '/internal/exports/requests',
-    role,
   });
 }
 
@@ -971,4 +965,3 @@ export function updatePilotFormStatus({
     body: input,
   });
 }
-
