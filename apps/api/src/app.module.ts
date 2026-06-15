@@ -17,9 +17,11 @@ import { AuditModule } from './audit/audit.module';
 import { DiagnosticsModule } from './diagnostics/diagnostics.module';
 import { InternalToolingModule } from './internal-tooling/internal-tooling.module';
 import { PsychometricsModule } from './psychometrics/psychometrics.module';
+import { AuthModule } from './auth/auth.module';
 @Module({
   imports: [
     PrismaModule,
+    AuthModule,
     RedisModule,
     UsersModule,
     OrganisationsModule,
