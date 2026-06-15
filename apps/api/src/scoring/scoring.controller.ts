@@ -1,5 +1,5 @@
 import { Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
-import { DevAuthGuard } from '../auth/dev-auth.guard';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { ScoreSessionParamDto } from './dto/scoring-route-params.dto';
@@ -12,7 +12,7 @@ type RequestUser = {
 };
 
 @Controller('scoring')
-@UseGuards(DevAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class ScoringController {
   constructor(private readonly scoringService: ScoringService) {}
 

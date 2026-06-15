@@ -5,31 +5,49 @@ import {
   Param,
   Patch,
   Query,
-  Req,
   UseGuards,
 } from '@nestjs/common';
-import { DevAuthGuard } from '../auth/dev-auth.guard';
+import { CurrentUser } from '../auth/current-user.decorator';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RequestUser } from '../auth/request-user.type';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { ListUsersQueryDto } from './dto/list-users-query.dto';
 import { UpdateUserNameDto } from './dto/update-user-name.dto';
-import { OrganisationIdParamDto } from './dto/user-route-params.dto';
+import { UpdateUserOrganisationDto } from './dto/update-user-organisation.dto';
+import { UpdateUserRoleDto } from './dto/update-user-role.dto';
+import { UpdateUserStatusDto } from './dto/update-user-status.dto';
+import {
+  OrganisationIdParamDto,
+  UserIdParamDto,
+} from './dto/user-route-params.dto';
 import { UsersService } from './users.service';
 
-type RequestUser = {
-  id: string;
-  role: string;
-  organisationId?: string | null;
-};
-
 @Controller('users')
-@UseGuards(DevAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get('me')
-  getMe(@Req() req: { user: RequestUser }) {
-    return this.usersService.getCurrentUser(req.user.id);
+  getMe(@CurrentUser() user: RequestUser) {
+    return this.usersService.getCurrentUser(user.id);
+  }
+
+  @Patch('me')
+  updateMe(@CurrentUser() user: RequestUser, @Body() body: UpdateUserNameDto) {
+    return this.usersService.updateUserName(user.id, body.name);
+  }
+
+  @Roles('PLATFORM_ADMIN')
+  @Get()
+  listUsers(@Query() query: ListUsersQueryDto) {
+    return this.usersService.listUsers(query);
+  }
+
+  @Roles('PLATFORM_ADMIN')
+  @Get(':userId')
+  getUserById(@Param() params: UserIdParamDto) {
+    return this.usersService.getUserById(params.userId);
   }
 
   @Roles('PLATFORM_ADMIN')
@@ -44,8 +62,45 @@ export class UsersController {
     );
   }
 
-  @Patch('me')
-  updateMe(@Req() req: { user: RequestUser }, @Body() body: UpdateUserNameDto) {
-    return this.usersService.updateUserName(req.user.id, body.name);
+  @Roles('PLATFORM_ADMIN')
+  @Patch(':userId/role')
+  updateUserRole(
+    @CurrentUser() actor: RequestUser,
+    @Param() params: UserIdParamDto,
+    @Body() body: UpdateUserRoleDto,
+  ) {
+    return this.usersService.updateUserRole({
+      actor,
+      userId: params.userId,
+      role: body.role,
+    });
+  }
+
+  @Roles('PLATFORM_ADMIN')
+  @Patch(':userId/status')
+  updateUserStatus(
+    @CurrentUser() actor: RequestUser,
+    @Param() params: UserIdParamDto,
+    @Body() body: UpdateUserStatusDto,
+  ) {
+    return this.usersService.updateUserStatus({
+      actor,
+      userId: params.userId,
+      status: body.status,
+    });
+  }
+
+  @Roles('PLATFORM_ADMIN')
+  @Patch(':userId/organisation')
+  updateUserOrganisation(
+    @CurrentUser() actor: RequestUser,
+    @Param() params: UserIdParamDto,
+    @Body() body: UpdateUserOrganisationDto,
+  ) {
+    return this.usersService.updateUserOrganisation({
+      actor,
+      userId: params.userId,
+      organisationId: body.organisationId ?? null,
+    });
   }
 }

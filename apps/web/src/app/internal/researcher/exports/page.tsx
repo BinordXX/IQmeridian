@@ -10,8 +10,8 @@ import {
 export default async function InternalResearcherExportsPage() {
   const [definitions, requests, governanceSetting] = await Promise.all([
     fetchAnalyticsExportDefinitions(),
-    fetchAnalyticsExportRequests('RESEARCHER'),
-    fetchAnalyticsExportGovernanceSetting('RESEARCHER'),
+    fetchAnalyticsExportRequests(),
+    fetchAnalyticsExportGovernanceSetting(),
   ]);
 
   return (

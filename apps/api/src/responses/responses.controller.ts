@@ -7,7 +7,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { DevAuthGuard } from '../auth/dev-auth.guard';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { SaveItemResponseDto } from './dto/save-item-response.dto';
@@ -24,7 +24,7 @@ type RequestUser = {
 };
 
 @Controller('responses')
-@UseGuards(DevAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class ResponsesController {
   constructor(private readonly responsesService: ResponsesService) {}
 

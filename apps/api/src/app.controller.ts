@@ -1,6 +1,6 @@
 import { Controller, Get, UseGuards, Req } from '@nestjs/common';
 import { AppService } from './app.service';
-import { DevAuthGuard } from './auth/dev-auth.guard';
+import { JwtAuthGuard } from './auth/jwt-auth.guard';
 
 @Controller()
 export class AppController {
@@ -16,7 +16,7 @@ export class AppController {
     return this.appService.getHealth();
   }
 
-  @UseGuards(DevAuthGuard)
+  @UseGuards(JwtAuthGuard)
   @Get('protected')
   getProtected(@Req() req: { user: { email: string; role: string } }) {
     return {

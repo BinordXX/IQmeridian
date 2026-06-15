@@ -1,3 +1,4 @@
+import { getInternalAuthorizationHeaders } from '@/app/internal/api/_lib/internal-route-auth';
 import { NextResponse } from 'next/server';
 
 function getInternalApiBaseUrl() {
@@ -24,6 +25,16 @@ export async function PATCH(
     const { formId } = await context.params;
     const body = (await request.json()) as unknown;
 
+    const authContext = await getInternalAuthorizationHeaders({
+      includeJsonContentType: true,
+    });
+
+    if ('response' in authContext) {
+      return authContext.response;
+    }
+
+    const authHeaders = authContext.headers;
+
     const response = await fetch(
       `${getInternalApiBaseUrl()}/internal/pilot-forms/${encodeURIComponent(
         formId
@@ -31,10 +42,7 @@ export async function PATCH(
       {
         method: 'PATCH',
         cache: 'no-store',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-internal-role': 'RESEARCHER',
-        },
+        headers: authHeaders,
         body: JSON.stringify(body),
       }
     );

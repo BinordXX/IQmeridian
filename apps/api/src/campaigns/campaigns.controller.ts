@@ -9,7 +9,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { DevAuthGuard } from '../auth/dev-auth.guard';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { CampaignIdParamDto } from './dto/campaign-route-params.dto';
@@ -25,7 +25,7 @@ type RequestUser = {
 };
 
 @Controller('campaigns')
-@UseGuards(DevAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class CampaignsController {
   constructor(private readonly campaignsService: CampaignsService) {}
 

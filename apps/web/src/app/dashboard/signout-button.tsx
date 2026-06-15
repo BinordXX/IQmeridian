@@ -1,11 +1,12 @@
-'use client';
-
-import { signOut } from 'next-auth/react';
+import Link from 'next/link';
 
 export function SignOutButton() {
   return (
-    <button onClick={() => signOut({ callbackUrl: '/signin' })}>
+    <Link
+      href="/logout"
+      className="inline-flex rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white"
+    >
       Sign out
-    </button>
+    </Link>
   );
 }

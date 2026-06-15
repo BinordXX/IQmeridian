@@ -5,10 +5,11 @@ import {
   Param,
   Patch,
   Post,
-  Req,
   UseGuards,
 } from '@nestjs/common';
-import { DevAuthGuard } from '../auth/dev-auth.guard';
+import { CurrentUser } from '../auth/current-user.decorator';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RequestUser } from '../auth/request-user.type';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { AttachEmployerAdminDto } from './dto/attach-employer-admin.dto';
@@ -17,14 +18,8 @@ import { OrganisationIdParamDto } from './dto/organisation-route-params.dto';
 import { UpdateOrganisationDto } from './dto/update-organisation.dto';
 import { OrganisationsService } from './organisations.service';
 
-type RequestUser = {
-  id: string;
-  role: string;
-  organisationId?: string | null;
-};
-
 @Controller('organisations')
-@UseGuards(DevAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class OrganisationsController {
   constructor(private readonly organisationsService: OrganisationsService) {}
 
@@ -32,9 +27,9 @@ export class OrganisationsController {
   @Post()
   createOrganisation(
     @Body() body: CreateOrganisationDto,
-    @Req() req: { user: RequestUser },
+    @CurrentUser() user: RequestUser,
   ) {
-    return this.organisationsService.createOrganisation(body.name, req.user.id);
+    return this.organisationsService.createOrganisation(body.name, user.id);
   }
 
   @Roles('PLATFORM_ADMIN')
@@ -45,8 +40,11 @@ export class OrganisationsController {
 
   @Roles('PLATFORM_ADMIN', 'EMPLOYER_ADMIN')
   @Get(':id')
-  findOrganisationById(@Param() params: OrganisationIdParamDto) {
-    return this.organisationsService.findOrganisationById(params.id);
+  findOrganisationById(
+    @Param() params: OrganisationIdParamDto,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.organisationsService.findOrganisationById(params.id, user);
   }
 
   @Roles('PLATFORM_ADMIN')
@@ -54,12 +52,12 @@ export class OrganisationsController {
   updateOrganisation(
     @Param() params: OrganisationIdParamDto,
     @Body() body: UpdateOrganisationDto,
-    @Req() req: { user: RequestUser },
+    @CurrentUser() user: RequestUser,
   ) {
     return this.organisationsService.updateOrganisation(
       params.id,
       body.name,
-      req.user.id,
+      user.id,
     );
   }
 
@@ -68,12 +66,12 @@ export class OrganisationsController {
   attachEmployerAdmin(
     @Param() params: OrganisationIdParamDto,
     @Body() body: AttachEmployerAdminDto,
-    @Req() req: { user: RequestUser },
+    @CurrentUser() user: RequestUser,
   ) {
     return this.organisationsService.attachEmployerAdminToOrganisation(
       params.id,
       body.userId,
-      req.user.id,
+      user.id,
     );
   }
 }
