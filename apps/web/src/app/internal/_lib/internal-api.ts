@@ -1,3 +1,5 @@
+import { auth } from '@/auth';
+
 export type InternalSessionType = 'EMPLOYER_LINKED' | 'CONSUMER';
 
 export type InternalCompletionStatus = 'NOT_STARTED' | 'PARTIAL' | 'COMPLETE';
@@ -477,10 +479,11 @@ async function fetchInternalApi<T>({
   accessToken?: string;
 }): Promise<T> {
   const url = `${getInternalApiBaseUrl()}${path}`;
-
+  const session = accessToken ? null : await auth();
+  const resolvedAccessToken = accessToken ?? session?.accessToken;
   const response = await fetch(url, {
     cache: 'no-store',
-    headers: accessToken
+    headers: resolvedAccessToken
       ? {
           Authorization: `Bearer ${accessToken}`,
         }
@@ -525,12 +528,15 @@ async function writeInternalApi<T>({
 }): Promise<T> {
   const url =
     typeof window === 'undefined' ? `${getInternalApiBaseUrl()}${path}` : path;
-
+  const session = await auth();
+  const resolvedAccessToken = session?.accessToken;
   const response = await fetch(url, {
     method,
     headers: {
       'Content-Type': 'application/json',
+      Authorization: `Bearer ${resolvedAccessToken}`,
     },
+
     body: JSON.stringify(body),
   });
 
