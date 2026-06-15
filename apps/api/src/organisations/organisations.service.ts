@@ -1,5 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { UserRole } from '@prisma/client';
+import { RequestUser } from '../auth/request-user.type';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -32,17 +37,45 @@ export class OrganisationsService {
     return this.prisma.organisation.findMany({
       orderBy: { createdAt: 'desc' },
       include: {
-        users: true,
+        users: {
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            role: true,
+            status: true,
+            organisationId: true,
+            emailVerifiedAt: true,
+            lastLoginAt: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
         campaigns: true,
       },
     });
   }
 
-  async findOrganisationById(id: string) {
+  async findOrganisationById(id: string, user: RequestUser) {
+    this.assertCanReadOrganisation(user, id);
+
     const organisation = await this.prisma.organisation.findUnique({
       where: { id },
       include: {
-        users: true,
+        users: {
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            role: true,
+            status: true,
+            organisationId: true,
+            emailVerifiedAt: true,
+            lastLoginAt: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
         campaigns: true,
       },
     });
@@ -55,7 +88,15 @@ export class OrganisationsService {
   }
 
   async updateOrganisation(id: string, name: string, actorUserId: string) {
-    await this.findOrganisationById(id);
+    await this.findOrganisationById(id, {
+      id: actorUserId,
+      email: '',
+      name: null,
+      role: UserRole.PLATFORM_ADMIN,
+      status: 'ACTIVE',
+      organisationId: null,
+      authSessionId: '',
+    });
 
     const organisation = await this.prisma.organisation.update({
       where: { id },
@@ -80,7 +121,15 @@ export class OrganisationsService {
     userId: string,
     actorUserId: string,
   ) {
-    await this.findOrganisationById(organisationId);
+    await this.findOrganisationById(organisationId, {
+      id: actorUserId,
+      email: '',
+      name: null,
+      role: UserRole.PLATFORM_ADMIN,
+      status: 'ACTIVE',
+      organisationId: null,
+      authSessionId: '',
+    });
 
     const user = await this.prisma.user.update({
       where: { id: userId },
@@ -88,7 +137,17 @@ export class OrganisationsService {
         organisationId,
         role: UserRole.EMPLOYER_ADMIN,
       },
-      include: {
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        status: true,
+        organisationId: true,
+        emailVerifiedAt: true,
+        lastLoginAt: true,
+        createdAt: true,
+        updatedAt: true,
         organisation: true,
       },
     });
@@ -105,5 +164,20 @@ export class OrganisationsService {
     });
 
     return user;
+  }
+
+  private assertCanReadOrganisation(user: RequestUser, organisationId: string) {
+    if (user.role === UserRole.PLATFORM_ADMIN) {
+      return;
+    }
+
+    if (
+      user.role === UserRole.EMPLOYER_ADMIN &&
+      user.organisationId === organisationId
+    ) {
+      return;
+    }
+
+    throw new ForbiddenException('Not authorised for this organisation');
   }
 }

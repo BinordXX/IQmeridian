@@ -183,6 +183,11 @@ export class UsersService {
     role: UserRole;
   }) {
     const targetUser = await this.getExistingUser(input.userId);
+    if (input.role === UserRole.EMPLOYER_ADMIN && !targetUser.organisationId) {
+      throw new BadRequestException(
+        'Employer admins must be attached to an organisation before the role is assigned.',
+      );
+    }
 
     if (targetUser.role === UserRole.PLATFORM_ADMIN) {
       await this.assertNotRemovingLastActivePlatformAdmin({
@@ -294,6 +299,12 @@ export class UsersService {
       input.organisationId && input.organisationId.trim().length > 0
         ? input.organisationId.trim()
         : null;
+
+    if (targetUser.role === UserRole.EMPLOYER_ADMIN && !nextOrganisationId) {
+      throw new BadRequestException(
+        'Employer admins must remain attached to an organisation.',
+      );
+    }
 
     if (nextOrganisationId) {
       const organisation = await this.prisma.organisation.findUnique({

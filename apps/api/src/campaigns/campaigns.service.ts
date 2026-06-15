@@ -28,10 +28,16 @@ export class CampaignsService {
     assessmentFormId?: string;
     requestingUser: RequestUser;
   }) {
-    this.assertCanManageOrganisation(
-      input.requestingUser,
-      input.organisationId,
-    );
+    const organisationId =
+      input.requestingUser.role === UserRole.PLATFORM_ADMIN
+        ? input.organisationId
+        : input.requestingUser.organisationId;
+
+    if (!organisationId) {
+      throw new ForbiddenException('User is not attached to an organisation');
+    }
+
+    this.assertCanManageOrganisation(input.requestingUser, organisationId);
 
     if (input.assessmentFormId) {
       const form = await this.prisma.assessmentForm.findUnique({
@@ -47,11 +53,16 @@ export class CampaignsService {
       }
     }
 
+    const ownerId =
+      input.requestingUser.role === UserRole.PLATFORM_ADMIN
+        ? (input.ownerId ?? input.requestingUser.id)
+        : input.requestingUser.id;
+
     const campaign = await this.prisma.campaign.create({
       data: {
         name: input.name,
-        organisationId: input.organisationId,
-        ownerId: input.ownerId ?? input.requestingUser.id,
+        organisationId,
+        ownerId,
         assessmentFormId: input.assessmentFormId,
       },
       include: {
@@ -121,6 +132,15 @@ export class CampaignsService {
         take: limit,
         include: {
           organisation: true,
+          owner: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              role: true,
+              organisationId: true,
+            },
+          },
           assessmentForm: true,
         },
       }),
@@ -142,7 +162,15 @@ export class CampaignsService {
       where: { id },
       include: {
         organisation: true,
-        owner: true,
+        owner: {
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            role: true,
+            organisationId: true,
+          },
+        },
         assessmentForm: true,
         invitations: {
           orderBy: {
@@ -154,7 +182,15 @@ export class CampaignsService {
             createdAt: 'desc',
           },
           include: {
-            user: true,
+            user: {
+              select: {
+                id: true,
+                email: true,
+                name: true,
+                role: true,
+                organisationId: true,
+              },
+            },
             invitation: true,
             responses: true,
             score: true,
