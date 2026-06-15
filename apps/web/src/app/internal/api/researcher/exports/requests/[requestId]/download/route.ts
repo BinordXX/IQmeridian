@@ -1,3 +1,4 @@
+import { getInternalAuthorizationHeaders } from '@/app/internal/api/_lib/internal-route-auth';
 import { NextResponse } from 'next/server';
 
 type InternalAnalyticsExportFileOutput = {
@@ -25,6 +26,16 @@ export async function GET(
   try {
     const { requestId } = await context.params;
 
+    const authContext = await getInternalAuthorizationHeaders({
+      includeJsonContentType: true,
+    });
+
+    if ('response' in authContext) {
+      return authContext.response;
+    }
+
+    const authHeaders = authContext.headers;
+
     const response = await fetch(
       `${getInternalApiBaseUrl()}/internal/exports/requests/${encodeURIComponent(
         requestId
@@ -32,9 +43,7 @@ export async function GET(
       {
         method: 'GET',
         cache: 'no-store',
-        headers: {
-          'x-internal-role': 'RESEARCHER',
-        },
+        headers: authHeaders,
       }
     );
 

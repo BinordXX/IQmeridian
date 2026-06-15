@@ -1,121 +1,74 @@
 import {
   Body,
   Controller,
-  ForbiddenException,
   Get,
-  Headers,
   NotFoundException,
   Param,
   Patch,
   Post,
+  UseGuards,
 } from '@nestjs/common';
-
+import { CurrentUser } from '../auth/current-user.decorator';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RequestUser } from '../auth/request-user.type';
+import { Roles } from '../auth/roles.decorator';
+import { RolesGuard } from '../auth/roles.guard';
 import { InternalToolingService } from './internal-tooling.service';
 import {
+  ActivateInternalItemInput,
+  CreateAnalyticsExportRequestInput,
+  CreateInternalAssessmentFormInput,
   CreateInternalAuditEventInput,
   CreateInternalDraftItemInput,
-  CreateInternalReviewStatusInput,
   CreateInternalItemFormMappingInput,
-  ActivateInternalItemInput,
-  UpdateInternalItemStatusInput,
-  UpdateInternalDraftItemInput,
-  UpdatePilotFormStatusInput,
-  CreateInternalAssessmentFormInput,
-  CreateAnalyticsExportRequestInput,
-  ReviewAnalyticsExportRequestInput,
-  GenerateAnalyticsExportRequestInput,
+  CreateInternalReviewStatusInput,
   DirectAnalyticsExportInput,
+  GenerateAnalyticsExportRequestInput,
+  ReviewAnalyticsExportRequestInput,
   UpdateAnalyticsExportGovernanceSettingInput,
+  UpdateInternalDraftItemInput,
+  UpdateInternalItemStatusInput,
+  UpdatePilotFormStatusInput,
 } from './internal-tooling.types';
 
 type InternalApiRole = 'PLATFORM_ADMIN' | 'RESEARCHER';
 
-function getInternalApiRole(roleHeader?: string): InternalApiRole | null {
-  if (roleHeader === 'PLATFORM_ADMIN' || roleHeader === 'RESEARCHER') {
-    return roleHeader;
-  }
-
-  return null;
-}
-
-function assertInternalAccess({
-  roleHeader,
-  allowedRoles,
-}: {
-  roleHeader?: string;
-  allowedRoles: InternalApiRole[];
-}) {
-  const role = getInternalApiRole(roleHeader);
-
-  if (!role || !allowedRoles.includes(role)) {
-    throw new ForbiddenException(
-      'This internal tooling endpoint requires an authorised internal role.',
-    );
-  }
-}
-
 @Controller('internal')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('PLATFORM_ADMIN', 'RESEARCHER')
 export class InternalToolingController {
   constructor(
     private readonly internalToolingService: InternalToolingService,
   ) {}
-  private assertInternalAccess(
-    role: string | undefined,
-    allowedRoles: string[],
-  ) {
-    const normalisedRole = role?.trim();
 
-    if (!normalisedRole || !allowedRoles.includes(normalisedRole)) {
-      throw new ForbiddenException('Internal access is required.');
-    }
+  private getInternalActorRole(user: RequestUser): InternalApiRole {
+    return user.role as InternalApiRole;
   }
-  @Post('pilot-forms/general-cognitive-ability-v0-1')
-  createFormalPilotForm(@Headers('x-internal-role') roleHeader?: string) {
-    assertInternalAccess({
-      roleHeader,
-      allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
-    });
 
+  @Post('pilot-forms/general-cognitive-ability-v0-1')
+  createFormalPilotForm() {
     return this.internalToolingService.createFormalPilotForm();
   }
 
   @Get('forms')
-  getInternalAssessmentForms(@Headers('x-internal-role') role?: string) {
-    this.assertInternalAccess(role, ['PLATFORM_ADMIN', 'RESEARCHER']);
-
+  getInternalAssessmentForms() {
     return this.internalToolingService.getInternalAssessmentForms();
   }
 
   @Post('forms')
   createInternalAssessmentForm(
-    @Headers('x-internal-role') role: string | undefined,
     @Body() body: CreateInternalAssessmentFormInput,
   ) {
-    this.assertInternalAccess(role, ['PLATFORM_ADMIN', 'RESEARCHER']);
-
     return this.internalToolingService.createInternalAssessmentForm(body);
   }
 
   @Get('pilot-forms')
-  getInternalPilotForms(@Headers('x-internal-role') roleHeader?: string) {
-    assertInternalAccess({
-      roleHeader,
-      allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
-    });
-
+  getInternalPilotForms() {
     return this.internalToolingService.getInternalPilotForms();
   }
 
   @Get('pilot-forms/:formId')
-  async getInternalPilotFormById(
-    @Param('formId') formId: string,
-    @Headers('x-internal-role') roleHeader?: string,
-  ) {
-    assertInternalAccess({
-      roleHeader,
-      allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
-    });
-
+  async getInternalPilotFormById(@Param('formId') formId: string) {
     const form =
       await this.internalToolingService.getInternalPilotFormById(formId);
 
@@ -127,15 +80,7 @@ export class InternalToolingController {
   }
 
   @Get('pilot-forms/:formId/blueprint-validation')
-  validatePilotFormBlueprint(
-    @Param('formId') formId: string,
-    @Headers('x-internal-role') roleHeader?: string,
-  ) {
-    assertInternalAccess({
-      roleHeader,
-      allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
-    });
-
+  validatePilotFormBlueprint(@Param('formId') formId: string) {
     return this.internalToolingService.validatePilotFormBlueprint(formId);
   }
 
@@ -143,51 +88,25 @@ export class InternalToolingController {
   updatePilotFormStatus(
     @Param('formId') formId: string,
     @Body() input: UpdatePilotFormStatusInput,
-    @Headers('x-internal-role') roleHeader?: string,
+    @CurrentUser() user: RequestUser,
   ) {
-    assertInternalAccess({
-      roleHeader,
-      allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
-    });
-
-    const role = getInternalApiRole(roleHeader);
-
-    if (!role) {
-      throw new ForbiddenException(
-        'This internal tooling endpoint requires an authorised internal role.',
-      );
-    }
-
     return this.internalToolingService.updatePilotFormStatus(
       formId,
       input,
-      role,
+      this.getInternalActorRole(user),
     );
   }
 
   @Post('items')
-  createInternalDraftItem(
-    @Body() input: CreateInternalDraftItemInput,
-    @Headers('x-internal-role') roleHeader?: string,
-  ) {
-    assertInternalAccess({
-      roleHeader,
-      allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
-    });
-
+  createInternalDraftItem(@Body() input: CreateInternalDraftItemInput) {
     return this.internalToolingService.createInternalDraftItem(input);
   }
+
   @Post('items/:itemId/activate')
   activateInternalItem(
     @Param('itemId') itemId: string,
     @Body() input: ActivateInternalItemInput,
-    @Headers('x-internal-role') roleHeader?: string,
   ) {
-    assertInternalAccess({
-      roleHeader,
-      allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
-    });
-
     return this.internalToolingService.activateInternalItem(itemId, input);
   }
 
@@ -195,25 +114,12 @@ export class InternalToolingController {
   updateInternalDraftItem(
     @Param('itemId') itemId: string,
     @Body() input: UpdateInternalDraftItemInput,
-    @Headers('x-internal-role') roleHeader?: string,
+    @CurrentUser() user: RequestUser,
   ) {
-    assertInternalAccess({
-      roleHeader,
-      allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
-    });
-
-    const role = getInternalApiRole(roleHeader);
-
-    if (!role) {
-      throw new ForbiddenException(
-        'This internal tooling endpoint requires an authorised internal role.',
-      );
-    }
-
     return this.internalToolingService.updateInternalDraftItem(
       itemId,
       input,
-      role,
+      this.getInternalActorRole(user),
     );
   }
 
@@ -221,95 +127,46 @@ export class InternalToolingController {
   updateInternalItemStatus(
     @Param('itemId') itemId: string,
     @Body() input: UpdateInternalItemStatusInput,
-    @Headers('x-internal-role') roleHeader?: string,
   ) {
-    assertInternalAccess({
-      roleHeader,
-      allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
-    });
-
     return this.internalToolingService.updateInternalItemStatus(itemId, input);
   }
 
   @Get('performance/sections')
-  getSectionPerformanceSummaries(
-    @Headers('x-internal-role') roleHeader?: string,
-  ) {
-    assertInternalAccess({
-      roleHeader,
-      allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
-    });
-
+  getSectionPerformanceSummaries() {
     return this.internalToolingService.getSectionPerformanceSummaries();
   }
 
   @Get('performance/forms')
-  getFormPerformanceSummaries(@Headers('x-internal-role') roleHeader?: string) {
-    assertInternalAccess({
-      roleHeader,
-      allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
-    });
-
+  getFormPerformanceSummaries() {
     return this.internalToolingService.getFormPerformanceSummaries();
   }
 
   @Get('researcher/dashboard')
-  getResearcherDashboardOverview(
-    @Headers('x-internal-role') roleHeader?: string,
-  ) {
-    assertInternalAccess({
-      roleHeader,
-      allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
-    });
-
+  getResearcherDashboardOverview() {
     return this.internalToolingService.getResearcherDashboardOverview();
   }
 
+  @Roles('PLATFORM_ADMIN')
   @Get('admin/overview')
-  getAdminOverview(@Headers('x-internal-role') roleHeader?: string) {
-    assertInternalAccess({
-      roleHeader,
-      allowedRoles: ['PLATFORM_ADMIN'],
-    });
-
+  getAdminOverview() {
     return this.internalToolingService.getAdminOverview();
   }
+
   @Post('items/:itemId/form-mappings')
   attachInternalItemToForm(
     @Param('itemId') itemId: string,
     @Body() input: CreateInternalItemFormMappingInput,
-    @Headers('x-internal-role') roleHeader?: string,
+    @CurrentUser() user: RequestUser,
   ) {
-    assertInternalAccess({
-      roleHeader,
-      allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
-    });
-
-    const role = getInternalApiRole(roleHeader);
-
-    if (!role) {
-      throw new ForbiddenException(
-        'This internal tooling endpoint requires an authorised internal role.',
-      );
-    }
-
     return this.internalToolingService.attachInternalItemToForm(
       itemId,
       input,
-      role,
+      this.getInternalActorRole(user),
     );
   }
 
   @Get('items/:itemId/traceability')
-  async getInternalItemTraceability(
-    @Param('itemId') itemId: string,
-    @Headers('x-internal-role') roleHeader?: string,
-  ) {
-    assertInternalAccess({
-      roleHeader,
-      allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
-    });
-
+  async getInternalItemTraceability(@Param('itemId') itemId: string) {
     const traceability =
       await this.internalToolingService.getInternalItemTraceability(itemId);
 
@@ -321,35 +178,17 @@ export class InternalToolingController {
   }
 
   @Get('reports/score-audit')
-  getReportScoreAuditRecords(@Headers('x-internal-role') roleHeader?: string) {
-    assertInternalAccess({
-      roleHeader,
-      allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
-    });
-
+  getReportScoreAuditRecords() {
     return this.internalToolingService.getReportScoreAuditRecords();
   }
 
   @Get('items')
-  getInternalItems(@Headers('x-internal-role') roleHeader?: string) {
-    assertInternalAccess({
-      roleHeader,
-      allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
-    });
-
+  getInternalItems() {
     return this.internalToolingService.getInternalItems();
   }
 
   @Get('items/:itemId/performance')
-  async getInternalItemPerformance(
-    @Param('itemId') itemId: string,
-    @Headers('x-internal-role') roleHeader?: string,
-  ) {
-    assertInternalAccess({
-      roleHeader,
-      allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
-    });
-
+  async getInternalItemPerformance(@Param('itemId') itemId: string) {
     const performance =
       await this.internalToolingService.getInternalItemPerformance(itemId);
 
@@ -361,15 +200,7 @@ export class InternalToolingController {
   }
 
   @Get('items/:itemId')
-  async getInternalItemById(
-    @Param('itemId') itemId: string,
-    @Headers('x-internal-role') roleHeader?: string,
-  ) {
-    assertInternalAccess({
-      roleHeader,
-      allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
-    });
-
+  async getInternalItemById(@Param('itemId') itemId: string) {
     const item = await this.internalToolingService.getInternalItemById(itemId);
 
     if (!item) {
@@ -379,36 +210,21 @@ export class InternalToolingController {
     return item;
   }
 
+  @Roles('PLATFORM_ADMIN')
   @Get('sessions')
-  getSessionReviewRecords(@Headers('x-internal-role') roleHeader?: string) {
-    assertInternalAccess({
-      roleHeader,
-      allowedRoles: ['PLATFORM_ADMIN'],
-    });
-
+  getSessionReviewRecords() {
     return this.internalToolingService.getSessionReviewRecords();
   }
 
+  @Roles('PLATFORM_ADMIN')
   @Get('sessions/suspicious')
-  getSuspiciousSessionRecords(@Headers('x-internal-role') roleHeader?: string) {
-    assertInternalAccess({
-      roleHeader,
-      allowedRoles: ['PLATFORM_ADMIN'],
-    });
-
+  getSuspiciousSessionRecords() {
     return this.internalToolingService.getSuspiciousSessionRecords();
   }
 
+  @Roles('PLATFORM_ADMIN')
   @Get('sessions/:sessionId')
-  async getSessionById(
-    @Param('sessionId') sessionId: string,
-    @Headers('x-internal-role') roleHeader?: string,
-  ) {
-    assertInternalAccess({
-      roleHeader,
-      allowedRoles: ['PLATFORM_ADMIN'],
-    });
-
+  async getSessionById(@Param('sessionId') sessionId: string) {
     const session = await this.internalToolingService.getSessionById(sessionId);
 
     if (!session) {
@@ -419,183 +235,114 @@ export class InternalToolingController {
   }
 
   @Get('exports')
-  getAnalyticsExportDefinitions(
-    @Headers('x-internal-role') roleHeader?: string,
-  ) {
-    assertInternalAccess({
-      roleHeader,
-      allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
-    });
-
+  getAnalyticsExportDefinitions() {
     return this.internalToolingService.getAnalyticsExportDefinitions();
   }
 
   @Get('exports/governance')
-  getAnalyticsExportGovernanceSetting(
-    @Headers('x-internal-role') roleHeader?: string,
-  ) {
-    assertInternalAccess({
-      roleHeader,
-      allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
-    });
-
+  getAnalyticsExportGovernanceSetting() {
     return this.internalToolingService.getAnalyticsExportGovernanceSetting();
   }
 
+  @Roles('PLATFORM_ADMIN')
   @Patch('exports/governance')
   updateAnalyticsExportGovernanceSetting(
     @Body() input: UpdateAnalyticsExportGovernanceSettingInput,
-    @Headers('x-internal-role') roleHeader?: string,
+    @CurrentUser() user: RequestUser,
   ) {
-    assertInternalAccess({
-      roleHeader,
-      allowedRoles: ['PLATFORM_ADMIN'],
-    });
-
     return this.internalToolingService.updateAnalyticsExportGovernanceSetting(
       input,
-      roleHeader,
+      this.getInternalActorRole(user),
     );
   }
 
+  @Roles('PLATFORM_ADMIN')
   @Post('exports/direct')
   createDirectAnalyticsExport(
     @Body() input: DirectAnalyticsExportInput,
-    @Headers('x-internal-role') roleHeader?: string,
+    @CurrentUser() user: RequestUser,
   ) {
-    assertInternalAccess({
-      roleHeader,
-      allowedRoles: ['PLATFORM_ADMIN'],
-    });
-
     return this.internalToolingService.createDirectAnalyticsExport(
       input,
-      roleHeader,
+      this.getInternalActorRole(user),
     );
   }
 
   @Get('exports/requests')
-  getAnalyticsExportRequests(@Headers('x-internal-role') roleHeader?: string) {
-    assertInternalAccess({
-      roleHeader,
-      allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
-    });
-
-    return this.internalToolingService.getAnalyticsExportRequests(roleHeader);
+  getAnalyticsExportRequests(@CurrentUser() user: RequestUser) {
+    return this.internalToolingService.getAnalyticsExportRequests(
+      this.getInternalActorRole(user),
+    );
   }
 
   @Post('exports/requests')
   recordAnalyticsExportRequest(
     @Body() input: CreateAnalyticsExportRequestInput,
-    @Headers('x-internal-role') roleHeader?: string,
+    @CurrentUser() user: RequestUser,
   ) {
-    assertInternalAccess({
-      roleHeader,
-      allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
-    });
-
     return this.internalToolingService.recordAnalyticsExportRequest(
       input,
-      roleHeader,
+      this.getInternalActorRole(user),
     );
   }
 
+  @Roles('PLATFORM_ADMIN')
   @Patch('exports/requests/:requestId/review')
   reviewAnalyticsExportRequest(
     @Param('requestId') requestId: string,
     @Body() input: ReviewAnalyticsExportRequestInput,
-    @Headers('x-internal-role') roleHeader?: string,
+    @CurrentUser() user: RequestUser,
   ) {
-    assertInternalAccess({
-      roleHeader,
-      allowedRoles: ['PLATFORM_ADMIN'],
-    });
-
     return this.internalToolingService.reviewAnalyticsExportRequest(
       requestId,
       input,
-      roleHeader,
+      this.getInternalActorRole(user),
     );
   }
 
-  @Get('audit')
-  getInternalAuditEvents(@Headers('x-internal-role') roleHeader?: string) {
-    assertInternalAccess({
-      roleHeader,
-      allowedRoles: ['PLATFORM_ADMIN'],
-    });
-
-    return this.internalToolingService.getInternalAuditEvents();
-  }
-
-  @Post('audit')
-  recordInternalAuditEvent(
-    @Body() input: CreateInternalAuditEventInput,
-    @Headers('x-internal-role') roleHeader?: string,
-  ) {
-    assertInternalAccess({
-      roleHeader,
-      allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
-    });
-
-    return this.internalToolingService.recordInternalAuditEvent(input);
-  }
-
-  @Get('review-statuses')
-  getInternalReviewStatusRecords(
-    @Headers('x-internal-role') roleHeader?: string,
-  ) {
-    assertInternalAccess({
-      roleHeader,
-      allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
-    });
-
-    return this.internalToolingService.getInternalReviewStatusRecords();
-  }
-
-  @Post('review-statuses')
-  recordInternalReviewStatus(
-    @Body() input: CreateInternalReviewStatusInput,
-    @Headers('x-internal-role') roleHeader?: string,
-  ) {
-    assertInternalAccess({
-      roleHeader,
-      allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
-    });
-
-    return this.internalToolingService.recordInternalReviewStatus(input);
-  }
+  @Roles('PLATFORM_ADMIN')
   @Post('exports/requests/:requestId/generate')
   generateAnalyticsExportRequest(
     @Param('requestId') requestId: string,
     @Body() input: GenerateAnalyticsExportRequestInput,
-    @Headers('x-internal-role') roleHeader?: string,
+    @CurrentUser() user: RequestUser,
   ) {
-    assertInternalAccess({
-      roleHeader,
-      allowedRoles: ['PLATFORM_ADMIN'],
-    });
-
     return this.internalToolingService.generateAnalyticsExportRequest(
       requestId,
       input,
-      roleHeader,
+      this.getInternalActorRole(user),
     );
   }
 
   @Get('exports/requests/:requestId/download')
   downloadGeneratedAnalyticsExportRequest(
     @Param('requestId') requestId: string,
-    @Headers('x-internal-role') roleHeader?: string,
+    @CurrentUser() user: RequestUser,
   ) {
-    assertInternalAccess({
-      roleHeader,
-      allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
-    });
-
     return this.internalToolingService.downloadGeneratedAnalyticsExportRequest(
       requestId,
-      roleHeader,
+      this.getInternalActorRole(user),
     );
+  }
+
+  @Roles('PLATFORM_ADMIN')
+  @Get('audit')
+  getInternalAuditEvents() {
+    return this.internalToolingService.getInternalAuditEvents();
+  }
+
+  @Post('audit')
+  recordInternalAuditEvent(@Body() input: CreateInternalAuditEventInput) {
+    return this.internalToolingService.recordInternalAuditEvent(input);
+  }
+
+  @Get('review-statuses')
+  getInternalReviewStatusRecords() {
+    return this.internalToolingService.getInternalReviewStatusRecords();
+  }
+
+  @Post('review-statuses')
+  recordInternalReviewStatus(@Body() input: CreateInternalReviewStatusInput) {
+    return this.internalToolingService.recordInternalReviewStatus(input);
   }
 }

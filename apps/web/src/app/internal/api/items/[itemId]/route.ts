@@ -1,3 +1,4 @@
+import { getInternalAuthorizationHeaders } from '@/app/internal/api/_lib/internal-route-auth';
 import { NextResponse } from 'next/server';
 
 function getInternalApiBaseUrl() {
@@ -23,14 +24,22 @@ export async function GET(
   try {
     const { itemId } = await context.params;
 
+    const authContext = await getInternalAuthorizationHeaders({
+      includeJsonContentType: true,
+    });
+
+    if ('response' in authContext) {
+      return authContext.response;
+    }
+
+    const authHeaders = authContext.headers;
+
     const response = await fetch(
       `${getInternalApiBaseUrl()}/internal/items/${encodeURIComponent(itemId)}`,
       {
         method: 'GET',
         cache: 'no-store',
-        headers: {
-          'x-internal-role': 'RESEARCHER',
-        },
+        headers: authHeaders,
       }
     );
 
@@ -75,15 +84,22 @@ export async function PATCH(
     const { itemId } = await context.params;
     const body = (await request.json()) as unknown;
 
+    const authContext = await getInternalAuthorizationHeaders({
+      includeJsonContentType: true,
+    });
+
+    if ('response' in authContext) {
+      return authContext.response;
+    }
+
+    const authHeaders = authContext.headers;
+
     const response = await fetch(
       `${getInternalApiBaseUrl()}/internal/items/${encodeURIComponent(itemId)}`,
       {
         method: 'PATCH',
         cache: 'no-store',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-internal-role': 'RESEARCHER',
-        },
+        headers: authHeaders,
         body: JSON.stringify(body),
       }
     );

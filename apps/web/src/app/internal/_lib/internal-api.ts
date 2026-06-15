@@ -395,7 +395,7 @@ export function formatCorrectRate(rate: number) {
 }
 
 export function fetchAnalyticsExportGovernanceSetting(
-  role: 'PLATFORM_ADMIN' | 'RESEARCHER' = 'PLATFORM_ADMIN'
+  
 ) {
   return fetchInternalApi<InternalAnalyticsExportGovernanceSettingOutput>({
     path: '/internal/exports/governance',
@@ -409,7 +409,6 @@ export function updateAnalyticsExportGovernanceSetting(
   return writeInternalApi<InternalAnalyticsExportGovernanceSettingOutput>({
     path: '/internal/api/exports/governance',
     method: 'PATCH',
-    role: 'PLATFORM_ADMIN',
     body: input,
   });
 }
@@ -475,18 +474,20 @@ function getInternalApiBaseUrl() {
 
 async function fetchInternalApi<T>({
   path,
-  role = 'PLATFORM_ADMIN',
+  accessToken,
 }: {
   path: string;
-  role?: 'PLATFORM_ADMIN' | 'RESEARCHER';
+  accessToken?: string;
 }): Promise<T> {
   const url = `${getInternalApiBaseUrl()}${path}`;
 
   const response = await fetch(url, {
     cache: 'no-store',
-    headers: {
-      'x-internal-role': role,
-    },
+    headers: accessToken
+      ? {
+          Authorization: Bearer ,
+        }
+      : undefined,
   });
 
   if (!response.ok) {
@@ -520,12 +521,10 @@ async function writeInternalApi<T>({
   path,
   method,
   body,
-  role = 'RESEARCHER',
 }: {
   path: string;
   method: 'POST' | 'PATCH';
   body: unknown;
-  role?: 'PLATFORM_ADMIN' | 'RESEARCHER';
 }): Promise<T> {
   const url =
     typeof window === 'undefined' ? `${getInternalApiBaseUrl()}${path}` : path;
@@ -534,7 +533,6 @@ async function writeInternalApi<T>({
     method,
     headers: {
       'Content-Type': 'application/json',
-      'x-internal-role': role,
     },
     body: JSON.stringify(body),
   });
@@ -568,28 +566,24 @@ async function writeInternalApi<T>({
 export function fetchInternalSessions() {
   return fetchInternalApi<InternalSessionOutput[]>({
     path: '/internal/sessions',
-    role: 'PLATFORM_ADMIN',
   });
 }
 
 export function fetchSuspiciousInternalSessions() {
   return fetchInternalApi<InternalSessionOutput[]>({
     path: '/internal/sessions/suspicious',
-    role: 'PLATFORM_ADMIN',
   });
 }
 
 export function fetchInternalSessionById(sessionId: string) {
   return fetchInternalApi<InternalSessionOutput>({
     path: `/internal/sessions/${encodeURIComponent(sessionId)}`,
-    role: 'PLATFORM_ADMIN',
   });
 }
 
 export function fetchInternalAuditEvents() {
   return fetchInternalApi<InternalAuditEvent[]>({
     path: '/internal/audit',
-    role: 'PLATFORM_ADMIN',
   });
 }
 
@@ -599,13 +593,12 @@ export function requestAnalyticsExport(
   return writeInternalApi<InternalAnalyticsExportRequestOutput>({
     path: '/internal/api/exports/requests',
     method: 'POST',
-    role: 'RESEARCHER',
     body: input,
   });
 }
 
 export function fetchAnalyticsExportRequests(
-  role: 'PLATFORM_ADMIN' | 'RESEARCHER' = 'PLATFORM_ADMIN'
+  
 ) {
   return fetchInternalApi<InternalAnalyticsExportRequestOutput[]>({
     path: '/internal/exports/requests',
@@ -626,7 +619,6 @@ export function createDirectAnalyticsExport(input: DirectAnalyticsExportInput) {
   return writeInternalApi<InternalAnalyticsExportFileOutput>({
     path: '/internal/api/exports/direct',
     method: 'POST',
-    role: 'PLATFORM_ADMIN',
     body: input,
   });
 }
@@ -640,7 +632,6 @@ export function generateAnalyticsExportRequest(
       requestId
     )}/generate`,
     method: 'POST',
-    role: 'PLATFORM_ADMIN',
     body: input,
   });
 }
@@ -654,7 +645,6 @@ export function reviewAnalyticsExportRequest(
       requestId
     )}/review`,
     method: 'PATCH',
-    role: 'PLATFORM_ADMIN',
     body: input,
   });
 }
@@ -662,7 +652,6 @@ export function reviewAnalyticsExportRequest(
 export function fetchAnalyticsExportDefinitions() {
   return fetchInternalApi<AnalyticsExportDefinition[]>({
     path: '/internal/exports',
-    role: 'RESEARCHER',
   });
 }
 
@@ -797,70 +786,60 @@ export type InternalItemDetailOutput = InternalItemOutput & {
 export function fetchInternalItems() {
   return fetchInternalApi<InternalItemOutput[]>({
     path: '/internal/items',
-    role: 'RESEARCHER',
   });
 }
 
 export function fetchInternalItemById(itemId: string) {
   return fetchInternalApi<InternalItemDetailOutput>({
     path: `/internal/items/${encodeURIComponent(itemId)}`,
-    role: 'RESEARCHER',
   });
 }
 
 export function fetchInternalItemPerformance(itemId: string) {
   return fetchInternalApi<InternalItemPerformanceOutput>({
     path: `/internal/items/${encodeURIComponent(itemId)}/performance`,
-    role: 'RESEARCHER',
   });
 }
 
 export function fetchSectionPerformanceSummaries() {
   return fetchInternalApi<InternalSectionPerformanceSummary[]>({
     path: '/internal/performance/sections',
-    role: 'RESEARCHER',
   });
 }
 
 export function fetchFormPerformanceSummaries() {
   return fetchInternalApi<InternalFormPerformanceSummary[]>({
     path: '/internal/performance/forms',
-    role: 'RESEARCHER',
   });
 }
 
 export function fetchResearcherDashboardOverview() {
   return fetchInternalApi<InternalResearcherDashboardOverview>({
     path: '/internal/researcher/dashboard',
-    role: 'RESEARCHER',
   });
 }
 
 export function fetchAdminOverview() {
   return fetchInternalApi<InternalAdminOverview>({
     path: '/internal/admin/overview',
-    role: 'PLATFORM_ADMIN',
   });
 }
 
 export function fetchInternalItemTraceability(itemId: string) {
   return fetchInternalApi<InternalItemTraceabilityOutput>({
     path: `/internal/items/${encodeURIComponent(itemId)}/traceability`,
-    role: 'RESEARCHER',
   });
 }
 
 export function fetchReportScoreAuditRecords() {
   return fetchInternalApi<InternalReportScoreAuditOutput[]>({
     path: '/internal/reports/score-audit',
-    role: 'RESEARCHER',
   });
 }
 export function createInternalDraftItem(input: CreateInternalDraftItemInput) {
   return writeInternalApi<InternalItemDetailOutput>({
     path: '/internal/api/items',
     method: 'POST',
-    role: 'RESEARCHER',
     body: input,
   });
 }
@@ -875,7 +854,6 @@ export function attachInternalItemToForm({
   return writeInternalApi<InternalItemTraceabilityOutput>({
     path: `/internal/api/items/${encodeURIComponent(itemId)}/form-mappings`,
     method: 'POST',
-    role: 'RESEARCHER',
     body: input,
   });
 }
@@ -890,7 +868,6 @@ export function activateInternalItem({
   return writeInternalApi<InternalItemDetailOutput>({
     path: `/internal/api/items/${encodeURIComponent(itemId)}/activate`,
     method: 'POST',
-    role: 'RESEARCHER',
     body: input,
   });
 }
@@ -905,7 +882,6 @@ export function updateInternalItemStatus({
   return writeInternalApi<InternalItemDetailOutput>({
     path: `/internal/api/items/${encodeURIComponent(itemId)}/status`,
     method: 'POST',
-    role: 'RESEARCHER',
     body: input,
   });
 }
@@ -920,7 +896,6 @@ export function updateInternalItemReviewReadiness({
   return writeInternalApi<InternalItemDetailOutput>({
     path: `/internal/api/items/${encodeURIComponent(itemId)}`,
     method: 'PATCH',
-    role: 'RESEARCHER',
     body: input,
   });
 }
@@ -935,7 +910,6 @@ export function updateInternalDraftItem({
   return writeInternalApi<InternalItemDetailOutput>({
     path: `/internal/api/items/${encodeURIComponent(itemId)}`,
     method: 'PATCH',
-    role: 'RESEARCHER',
     body: input,
   });
 }
@@ -943,7 +917,6 @@ export function updateInternalDraftItem({
 export function fetchInternalAssessmentForms() {
   return fetchInternalApi<InternalPilotFormOutput[]>({
     path: '/internal/forms',
-    role: 'RESEARCHER',
   });
 }
 
@@ -953,7 +926,6 @@ export function createInternalAssessmentForm(
   return writeInternalApi<InternalPilotFormOutput>({
     path: '/internal/api/forms',
     method: 'POST',
-    role: 'RESEARCHER',
     body: input,
   });
 }
@@ -961,14 +933,12 @@ export function createInternalAssessmentForm(
 export function fetchInternalPilotForms() {
   return fetchInternalApi<InternalPilotFormOutput[]>({
     path: '/internal/pilot-forms',
-    role: 'RESEARCHER',
   });
 }
 
 export function fetchInternalPilotFormById(formId: string) {
   return fetchInternalApi<InternalPilotFormOutput>({
     path: `/internal/pilot-forms/${encodeURIComponent(formId)}`,
-    role: 'RESEARCHER',
   });
 }
 
@@ -977,7 +947,6 @@ export function fetchPilotFormBlueprintValidation(formId: string) {
     path: `/internal/pilot-forms/${encodeURIComponent(
       formId
     )}/blueprint-validation`,
-    role: 'RESEARCHER',
   });
 }
 
@@ -985,7 +954,6 @@ export function createFormalPilotForm() {
   return writeInternalApi<InternalPilotFormOutput>({
     path: '/internal/api/pilot-forms/general-cognitive-ability-v0-1',
     method: 'POST',
-    role: 'RESEARCHER',
     body: {},
   });
 }
@@ -1000,7 +968,7 @@ export function updatePilotFormStatus({
   return writeInternalApi<InternalPilotFormOutput>({
     path: `/internal/api/pilot-forms/${encodeURIComponent(formId)}/status`,
     method: 'PATCH',
-    role: 'RESEARCHER',
     body: input,
   });
 }
+
