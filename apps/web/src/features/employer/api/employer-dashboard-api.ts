@@ -1,3 +1,5 @@
+import { getRequiredServerApiAuthHeaders } from '@/lib/server-api-auth';
+
 type CollectionResponse<T> =
   | T[]
   | {
@@ -123,20 +125,47 @@ export type EmployerDashboardData = {
   };
 };
 
+export type EmployerAssessmentFormSummary = {
+  id: string;
+  name: string;
+  version?: number;
+  isActive?: boolean;
+};
+
+export type CreateEmployerCampaignInput = {
+  name: string;
+  organisationId: string;
+  assessmentFormId?: string;
+};
+
+export type EmployerReportResult = {
+  id: string;
+  sessionId: string;
+  visibility: string;
+  subjectUserId?: string | null;
+  scoreId?: string | null;
+  reportVersion?: number;
+  payload?: unknown;
+  scoreSnapshot?: unknown;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type UpdateEmployerCampaignStatusInput = {
+  status: 'DRAFT' | 'ACTIVE' | 'CLOSED' | 'ARCHIVED';
+};
+
 const normaliseBaseUrl = (baseUrl: string): string => {
   return baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
 };
 
 const getApiBaseUrl = (): string => {
   return normaliseBaseUrl(
-    process.env.NEXT_PUBLIC_API_BASE_URL ??
+    process.env.API_BASE_URL ??
+      process.env.NEXT_PUBLIC_API_BASE_URL ??
       process.env.NEXT_PUBLIC_API_URL ??
       'http://localhost:3001'
   );
-};
-
-const getEmployerAuthHeader = (): string => {
-  return process.env.EMPLOYER_API_TOKEN ?? 'Bearer employer-token';
 };
 
 const getCollection = <T>(payload: CollectionResponse<T>): T[] => {
@@ -148,12 +177,11 @@ const getCollection = <T>(payload: CollectionResponse<T>): T[] => {
 };
 
 const employerRequest = async <T>(path: string): Promise<T> => {
+  const authHeaders = await getRequiredServerApiAuthHeaders();
+
   const response = await fetch(`${getApiBaseUrl()}${path}`, {
     method: 'GET',
-    headers: {
-      Authorization: getEmployerAuthHeader(),
-      'Content-Type': 'application/json',
-    },
+    headers: authHeaders,
     cache: 'no-store',
   });
 
@@ -189,6 +217,7 @@ export const getEmployerDashboardData =
     const completedSessions = sessions.filter((session) => {
       return session.status === 'COMPLETED';
     }).length;
+
     const reportReadyResults = sessions.filter((session) => {
       return Boolean(session.score);
     }).length;
@@ -197,9 +226,9 @@ export const getEmployerDashboardData =
       campaigns,
       sessions,
       metrics: {
-        activeCampaigns: campaigns.filter(
-          (campaign) => campaign.status === 'ACTIVE'
-        ).length,
+        activeCampaigns: campaigns.filter((campaign) => {
+          return campaign.status === 'ACTIVE';
+        }).length,
         totalCampaigns: campaigns.length,
         totalInvitations,
         startedSessions,
@@ -212,36 +241,6 @@ export const getEmployerDashboardData =
       },
     };
   };
-
-export type EmployerAssessmentFormSummary = {
-  id: string;
-  name: string;
-  version?: number;
-  isActive?: boolean;
-};
-
-export type CreateEmployerCampaignInput = {
-  name: string;
-  organisationId: string;
-  assessmentFormId?: string;
-};
-
-export type EmployerReportResult = {
-  id: string;
-  sessionId: string;
-  visibility: string;
-  subjectUserId?: string | null;
-  scoreId?: string | null;
-  reportVersion?: number;
-  payload?: unknown;
-  scoreSnapshot?: unknown;
-  createdAt?: string;
-  updatedAt?: string;
-};
-
-export type UpdateEmployerCampaignStatusInput = {
-  status: 'DRAFT' | 'ACTIVE' | 'CLOSED' | 'ARCHIVED';
-};
 
 export const getActiveAssessmentForms = async (): Promise<
   EmployerAssessmentFormSummary[]
@@ -264,11 +263,13 @@ export const getEmployerCampaignById = async (
 export const createEmployerCampaign = async (
   input: CreateEmployerCampaignInput
 ): Promise<EmployerCampaignSummary> => {
+  const authHeaders = await getRequiredServerApiAuthHeaders();
+
   const response = await fetch(`${getApiBaseUrl()}/campaigns`, {
     method: 'POST',
     headers: {
-      Authorization: getEmployerAuthHeader(),
       'Content-Type': 'application/json',
+      ...authHeaders,
     },
     body: JSON.stringify(input),
     cache: 'no-store',
@@ -285,13 +286,15 @@ export const updateEmployerCampaignStatus = async (
   campaignId: string,
   input: UpdateEmployerCampaignStatusInput
 ): Promise<EmployerCampaignSummary> => {
+  const authHeaders = await getRequiredServerApiAuthHeaders();
+
   const response = await fetch(
     `${getApiBaseUrl()}/campaigns/${encodeURIComponent(campaignId)}/status`,
     {
       method: 'PATCH',
       headers: {
-        Authorization: getEmployerAuthHeader(),
         'Content-Type': 'application/json',
+        ...authHeaders,
       },
       body: JSON.stringify(input),
       cache: 'no-store',
@@ -310,11 +313,13 @@ export const updateEmployerCampaignStatus = async (
 export const createEmployerInvitation = async (
   input: CreateEmployerInvitationInput
 ): Promise<EmployerInvitationSummary> => {
+  const authHeaders = await getRequiredServerApiAuthHeaders();
+
   const response = await fetch(`${getApiBaseUrl()}/invitations`, {
     method: 'POST',
     headers: {
-      Authorization: getEmployerAuthHeader(),
       'Content-Type': 'application/json',
+      ...authHeaders,
     },
     body: JSON.stringify(input),
     cache: 'no-store',
@@ -332,6 +337,8 @@ export const createEmployerInvitation = async (
 export const generateEmployerReport = async (
   sessionId: string
 ): Promise<EmployerReportResult> => {
+  const authHeaders = await getRequiredServerApiAuthHeaders();
+
   const response = await fetch(
     `${getApiBaseUrl()}/reports/sessions/${encodeURIComponent(
       sessionId
@@ -339,8 +346,8 @@ export const generateEmployerReport = async (
     {
       method: 'POST',
       headers: {
-        Authorization: getEmployerAuthHeader(),
         'Content-Type': 'application/json',
+        ...authHeaders,
       },
       cache: 'no-store',
     }
@@ -358,16 +365,15 @@ export const generateEmployerReport = async (
 export const getEmployerReportBySession = async (
   sessionId: string
 ): Promise<EmployerReportResult | null> => {
+  const authHeaders = await getRequiredServerApiAuthHeaders();
+
   const response = await fetch(
     `${getApiBaseUrl()}/reports/sessions/${encodeURIComponent(
       sessionId
     )}/EMPLOYER`,
     {
       method: 'GET',
-      headers: {
-        Authorization: getEmployerAuthHeader(),
-        'Content-Type': 'application/json',
-      },
+      headers: authHeaders,
       cache: 'no-store',
     }
   );

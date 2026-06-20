@@ -1,4 +1,4 @@
-import { auth } from '@/auth';
+import { getServerApiAuthHeaders } from '@/lib/server-api-auth';
 import { NextResponse } from 'next/server';
 
 export async function getInternalAuthorizationHeaders({
@@ -6,10 +6,9 @@ export async function getInternalAuthorizationHeaders({
 }: {
   includeJsonContentType?: boolean;
 } = {}) {
-  const session = await auth();
-  const accessToken = session?.accessToken;
+  const authHeaders = await getServerApiAuthHeaders();
 
-  if (!accessToken) {
+  if (!authHeaders) {
     return {
       response: NextResponse.json(
         {
@@ -23,7 +22,7 @@ export async function getInternalAuthorizationHeaders({
   return {
     headers: {
       ...(includeJsonContentType ? { 'Content-Type': 'application/json' } : {}),
-      Authorization: `Bearer ${accessToken}`,
+      ...authHeaders,
     },
   } as const;
 }

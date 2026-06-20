@@ -18,6 +18,17 @@ type ErrorResponseBody = {
   timestamp: string;
 };
 
+type RequestWithAuthUser = Request & {
+  user?: {
+    sub?: string;
+    userId?: string;
+    id?: string;
+    email?: string;
+    role?: string;
+    organisationId?: string | null;
+  };
+};
+
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
   constructor(private readonly prisma?: PrismaService) {}
@@ -25,7 +36,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost) {
     const context = host.switchToHttp();
     const response = context.getResponse<Response>();
-    const request = context.getRequest<Request>();
+    const request = context.getRequest<RequestWithAuthUser>();
 
     const status =
       exception instanceof HttpException
@@ -67,7 +78,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     message,
     exception,
   }: {
-    request: Request;
+    request: RequestWithAuthUser;
     status: number;
     error: string;
     message: string | string[];
@@ -76,6 +87,9 @@ export class HttpExceptionFilter implements ExceptionFilter {
     if (!this.prisma) {
       return;
     }
+
+    const actorUserId =
+      request.user?.userId ?? request.user?.sub ?? request.user?.id ?? null;
 
     try {
       await this.prisma.auditLog.create({
@@ -86,13 +100,19 @@ export class HttpExceptionFilter implements ExceptionFilter {
               : 'INTERNAL_API_REQUEST_FAILED',
           entityType: 'InternalApiRequest',
           entityId: request.url,
+          userId: actorUserId,
           metadata: {
             method: request.method,
             path: request.url,
             statusCode: status,
             error,
             message,
-            role: this.normaliseHeader(request.headers['x-internal-role']),
+            actor: {
+              id: actorUserId,
+              email: request.user?.email ?? null,
+              role: request.user?.role ?? null,
+              organisationId: request.user?.organisationId ?? null,
+            },
             userAgent: this.normaliseHeader(request.headers['user-agent']),
             exceptionName:
               exception instanceof Error ? exception.name : 'UnknownException',
