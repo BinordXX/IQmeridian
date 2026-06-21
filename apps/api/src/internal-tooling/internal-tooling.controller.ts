@@ -8,6 +8,7 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
+
 import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RequestUser } from '../auth/request-user.type';
@@ -146,8 +147,8 @@ export class InternalToolingController {
     return this.internalToolingService.getResearcherDashboardOverview();
   }
 
-  @Roles('PLATFORM_ADMIN')
   @Get('admin/overview')
+  @Roles('PLATFORM_ADMIN')
   getAdminOverview() {
     return this.internalToolingService.getAdminOverview();
   }
@@ -210,20 +211,20 @@ export class InternalToolingController {
     return item;
   }
 
-  @Roles('PLATFORM_ADMIN')
   @Get('sessions')
+  @Roles('PLATFORM_ADMIN')
   getSessionReviewRecords() {
     return this.internalToolingService.getSessionReviewRecords();
   }
 
-  @Roles('PLATFORM_ADMIN')
   @Get('sessions/suspicious')
+  @Roles('PLATFORM_ADMIN')
   getSuspiciousSessionRecords() {
     return this.internalToolingService.getSuspiciousSessionRecords();
   }
 
-  @Roles('PLATFORM_ADMIN')
   @Get('sessions/:sessionId')
+  @Roles('PLATFORM_ADMIN')
   async getSessionById(@Param('sessionId') sessionId: string) {
     const session = await this.internalToolingService.getSessionById(sessionId);
 
@@ -244,8 +245,8 @@ export class InternalToolingController {
     return this.internalToolingService.getAnalyticsExportGovernanceSetting();
   }
 
-  @Roles('PLATFORM_ADMIN')
   @Patch('exports/governance')
+  @Roles('PLATFORM_ADMIN')
   updateAnalyticsExportGovernanceSetting(
     @Body() input: UpdateAnalyticsExportGovernanceSettingInput,
     @CurrentUser() user: RequestUser,
@@ -256,8 +257,8 @@ export class InternalToolingController {
     );
   }
 
-  @Roles('PLATFORM_ADMIN')
   @Post('exports/direct')
+  @Roles('PLATFORM_ADMIN')
   createDirectAnalyticsExport(
     @Body() input: DirectAnalyticsExportInput,
     @CurrentUser() user: RequestUser,
@@ -286,8 +287,8 @@ export class InternalToolingController {
     );
   }
 
-  @Roles('PLATFORM_ADMIN')
   @Patch('exports/requests/:requestId/review')
+  @Roles('PLATFORM_ADMIN')
   reviewAnalyticsExportRequest(
     @Param('requestId') requestId: string,
     @Body() input: ReviewAnalyticsExportRequestInput,
@@ -300,8 +301,29 @@ export class InternalToolingController {
     );
   }
 
+  @Get('audit')
   @Roles('PLATFORM_ADMIN')
+  getInternalAuditEvents() {
+    return this.internalToolingService.getInternalAuditEvents();
+  }
+
+  @Post('audit')
+  recordInternalAuditEvent(@Body() input: CreateInternalAuditEventInput) {
+    return this.internalToolingService.recordInternalAuditEvent(input);
+  }
+
+  @Get('review-statuses')
+  getInternalReviewStatusRecords() {
+    return this.internalToolingService.getInternalReviewStatusRecords();
+  }
+
+  @Post('review-statuses')
+  recordInternalReviewStatus(@Body() input: CreateInternalReviewStatusInput) {
+    return this.internalToolingService.recordInternalReviewStatus(input);
+  }
+
   @Post('exports/requests/:requestId/generate')
+  @Roles('PLATFORM_ADMIN')
   generateAnalyticsExportRequest(
     @Param('requestId') requestId: string,
     @Body() input: GenerateAnalyticsExportRequestInput,
@@ -323,26 +345,5 @@ export class InternalToolingController {
       requestId,
       this.getInternalActorRole(user),
     );
-  }
-
-  @Roles('PLATFORM_ADMIN')
-  @Get('audit')
-  getInternalAuditEvents() {
-    return this.internalToolingService.getInternalAuditEvents();
-  }
-
-  @Post('audit')
-  recordInternalAuditEvent(@Body() input: CreateInternalAuditEventInput) {
-    return this.internalToolingService.recordInternalAuditEvent(input);
-  }
-
-  @Get('review-statuses')
-  getInternalReviewStatusRecords() {
-    return this.internalToolingService.getInternalReviewStatusRecords();
-  }
-
-  @Post('review-statuses')
-  recordInternalReviewStatus(@Body() input: CreateInternalReviewStatusInput) {
-    return this.internalToolingService.recordInternalReviewStatus(input);
   }
 }

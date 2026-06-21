@@ -37,6 +37,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const context = host.switchToHttp();
     const response = context.getResponse<Response>();
     const request = context.getRequest<RequestWithAuthUser>();
+    const isProduction = process.env.NODE_ENV === 'production';
 
     const status =
       exception instanceof HttpException
@@ -46,7 +47,12 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const exceptionResponse =
       exception instanceof HttpException ? exception.getResponse() : null;
 
-    const message = this.extractMessage(exceptionResponse, exception);
+    const message = this.extractMessage({
+      exceptionResponse,
+      exception,
+      isProduction,
+      status,
+    });
     const error = this.extractError(exceptionResponse, status);
 
     const body: ErrorResponseBody = {
@@ -132,10 +138,17 @@ export class HttpExceptionFilter implements ExceptionFilter {
     return value ?? null;
   }
 
-  private extractMessage(
-    exceptionResponse: string | object | null,
-    exception: unknown,
-  ): string | string[] {
+  private extractMessage({
+    exceptionResponse,
+    exception,
+    isProduction,
+    status,
+  }: {
+    exceptionResponse: string | object | null;
+    exception: unknown;
+    isProduction: boolean;
+    status: number;
+  }): string | string[] {
     if (typeof exceptionResponse === 'string') {
       return exceptionResponse;
     }
@@ -150,6 +163,10 @@ export class HttpExceptionFilter implements ExceptionFilter {
       };
 
       return responseWithMessage.message;
+    }
+
+    if (status === HttpStatus.INTERNAL_SERVER_ERROR && isProduction) {
+      return 'An unexpected error occurred.';
     }
 
     if (exception instanceof Error) {
@@ -184,6 +201,8 @@ export class HttpExceptionFilter implements ExceptionFilter {
         return 'Not Found';
       case HttpStatus.CONFLICT:
         return 'Conflict';
+      case HttpStatus.TOO_MANY_REQUESTS:
+        return 'Too Many Requests';
       default:
         return 'Internal Server Error';
     }

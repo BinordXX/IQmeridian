@@ -20,6 +20,13 @@ enum UserStatus {
   DISABLED
 }
 
+enum AuthRateLimitAction {
+  LOGIN
+  REGISTER
+  REGISTER_CANDIDATE
+  REFRESH
+}
+
 enum AuthProvider {
   LOCAL
   GOOGLE
@@ -195,6 +202,18 @@ model User {
   @@index([role])
   @@index([status])
   @@index([organisationId])
+}
+
+
+model AuthRateLimitEvent {
+  id        String              @id @default(cuid())
+  action    AuthRateLimitAction
+  keyHash   String
+  success   Boolean             @default(false)
+  createdAt DateTime            @default(now())
+
+  @@index([action, keyHash, createdAt])
+  @@index([createdAt])
 }
 
 model AuthAccount {
