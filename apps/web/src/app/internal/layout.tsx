@@ -48,7 +48,7 @@ export default async function InternalLayout({
                 >
                   Users
                 </Link>
-                
+
                 <Link
                   href="/internal/admin/organisations"
                   className="hover:text-slate-950"

@@ -28,6 +28,7 @@
   "homepage": "https://github.com/BinordXX/IQmeridian#readme",
   "devDependencies": {
     "@eslint/js": "^9.39.4",
+    "@typescript-eslint/eslint-plugin": "^8.62.0",
     "eslint": "^10.3.0",
     "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.8.3",
