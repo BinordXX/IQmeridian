@@ -287,6 +287,22 @@ export default async function AssessmentStatusPage({
             </p>
           </div>
         ) : null}
+
+        <div className="mt-8 flex flex-col gap-3 border-t border-slate-200 pt-6 sm:flex-row sm:items-center">
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center justify-center rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+          >
+            Back to dashboard
+          </Link>
+
+          <Link
+            href="/"
+            className="inline-flex items-center justify-center rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-950 hover:text-slate-950"
+          >
+            Go home
+          </Link>
+        </div>
       </section>
     </main>
   );

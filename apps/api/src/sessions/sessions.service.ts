@@ -16,6 +16,8 @@ import {
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 
+const CONSUMER_DEFAULT_ASSESSMENT_KEY = 'CONSUMER_DEFAULT_ASSESSMENT';
+
 type RequestUser = {
   id: string;
   role: string;
@@ -162,16 +164,49 @@ export class SessionsService {
     };
   }
 
+  private async resolveConsumerAssessmentFormId(assessmentFormId?: string) {
+    if (assessmentFormId) {
+      return assessmentFormId;
+    }
+
+    const setting = await this.prisma.consumerAssessmentDefault.findUnique({
+      where: {
+        key: CONSUMER_DEFAULT_ASSESSMENT_KEY,
+      },
+      include: {
+        assessmentForm: true,
+      },
+    });
+
+    if (!setting?.isEnabled || !setting.assessmentFormId) {
+      throw new BadRequestException(
+        'No consumer assessment is currently available.',
+      );
+    }
+
+    if (!setting.assessmentForm?.isActive) {
+      throw new BadRequestException(
+        'The consumer assessment form is not currently active.',
+      );
+    }
+
+    return setting.assessmentFormId;
+  }
+
   async createConsumerSession(input: {
     userId: string;
-    assessmentFormId: string;
+    assessmentFormId?: string;
   }) {
-    const form = await this.getUsableForm(input.assessmentFormId);
+    const assessmentFormId = await this.resolveConsumerAssessmentFormId(
+      input.assessmentFormId,
+    );
+
+    const form = await this.getUsableForm(assessmentFormId);
 
     const existing = await this.prisma.session.findFirst({
       where: {
         userId: input.userId,
-        assessmentFormId: input.assessmentFormId,
+        assessmentFormId: form.id,
         campaignId: null,
         status: {
           in: [SessionStatus.NOT_STARTED, SessionStatus.IN_PROGRESS],

@@ -4,14 +4,17 @@ import {
   Get,
   Param,
   Patch,
+  Post,
   Query,
   UseGuards,
 } from '@nestjs/common';
+
 import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RequestUser } from '../auth/request-user.type';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
+import { CreateManagedUserDto } from './dto/create-managed-user.dto';
 import { ListUsersQueryDto } from './dto/list-users-query.dto';
 import { UpdateUserNameDto } from './dto/update-user-name.dto';
 import { UpdateUserOrganisationDto } from './dto/update-user-organisation.dto';
@@ -45,9 +48,15 @@ export class UsersController {
   }
 
   @Roles('PLATFORM_ADMIN')
-  @Get(':userId')
-  getUserById(@Param() params: UserIdParamDto) {
-    return this.usersService.getUserById(params.userId);
+  @Post()
+  createManagedUser(
+    @CurrentUser() actor: RequestUser,
+    @Body() body: CreateManagedUserDto,
+  ) {
+    return this.usersService.createManagedUser({
+      actor,
+      input: body,
+    });
   }
 
   @Roles('PLATFORM_ADMIN')
@@ -60,6 +69,12 @@ export class UsersController {
       params.organisationId,
       query,
     );
+  }
+
+  @Roles('PLATFORM_ADMIN')
+  @Get(':userId')
+  getUserById(@Param() params: UserIdParamDto) {
+    return this.usersService.getUserById(params.userId);
   }
 
   @Roles('PLATFORM_ADMIN')

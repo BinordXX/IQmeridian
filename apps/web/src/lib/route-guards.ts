@@ -1,54 +1,103 @@
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 
-export type AppRole =
-  | 'PLATFORM_ADMIN'
-  | 'RESEARCHER'
-  | 'EMPLOYER_ADMIN'
-  | 'CANDIDATE'
-  | 'CONSUMER';
+import {
+  buildLoginRedirect,
+  getDefaultDashboardForRole,
+  getLoginPathForRequestedPath,
+  isAppRole,
+  isPathAllowedForRole,
+  type AppRole,
+} from './role-routing';
 
-export function getDefaultDashboardForRole(role?: string | null) {
-  switch (role) {
-    case 'PLATFORM_ADMIN':
-      return '/internal/admin';
-    case 'RESEARCHER':
-      return '/internal/researcher';
-    case 'EMPLOYER_ADMIN':
-      return '/employer/dashboard';
-    case 'CANDIDATE':
-      return '/dashboard';
-    case 'CONSUMER':
-      return '/dashboard';
-    default:
-      return '/dashboard';
-  }
-}
+export type { AppRole };
 
-export async function requireAuthenticatedSession(callbackUrl = '/dashboard') {
+export const requireAuthenticatedUser = async (
+  requestedPath = '/dashboard'
+) => {
   const session = await auth();
+  const role = session?.user?.role;
 
-  if (!session?.user?.id) {
-    redirect(`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`);
+  if (!session?.user || !isAppRole(role)) {
+    redirect(
+      buildLoginRedirect({
+        loginPath: getLoginPathForRequestedPath(requestedPath),
+        callbackUrl: requestedPath,
+      })
+    );
   }
 
-  if (session.error === 'RefreshAccessTokenError') {
-    redirect(`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`);
-  }
+  return {
+    session,
+    role,
+  };
+};
 
-  return session;
-}
+export const requireRouteAccess = async (requestedPath: string) => {
+  const { session, role } = await requireAuthenticatedUser(requestedPath);
 
-export async function requireAnyRole(
-  allowedRoles: AppRole[],
-  callbackUrl: string
-) {
-  const session = await requireAuthenticatedSession(callbackUrl);
-  const role = session.user.role;
-
-  if (!role || !allowedRoles.includes(role as AppRole)) {
+  if (!isPathAllowedForRole({ role, path: requestedPath })) {
     redirect(getDefaultDashboardForRole(role));
   }
 
+  return {
+    session,
+    role,
+  };
+};
+
+export const requireRole = async ({
+  allowedRoles,
+  requestedPath,
+}: {
+  allowedRoles: AppRole[];
+  requestedPath: string;
+}) => {
+  const { session, role } = await requireAuthenticatedUser(requestedPath);
+
+  if (!allowedRoles.includes(role)) {
+    redirect(getDefaultDashboardForRole(role));
+  }
+
+  return {
+    session,
+    role,
+  };
+};
+
+export const requirePlatformAdmin = async (
+  requestedPath = '/internal/admin'
+) => {
+  return requireRole({
+    allowedRoles: ['PLATFORM_ADMIN'],
+    requestedPath,
+  });
+};
+
+export const requireInternalStaff = async (requestedPath = '/internal') => {
+  return requireRole({
+    allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
+    requestedPath,
+  });
+};
+
+export const requireEmployerAdmin = async (
+  requestedPath = '/employer/dashboard'
+) => {
+  return requireRole({
+    allowedRoles: ['EMPLOYER_ADMIN'],
+    requestedPath,
+  });
+};
+
+export const requireAnyRole = async (
+  allowedRoles: AppRole[],
+  requestedPath = '/dashboard'
+) => {
+  const { session } = await requireRole({
+    allowedRoles,
+    requestedPath,
+  });
+
   return session;
-}
+};

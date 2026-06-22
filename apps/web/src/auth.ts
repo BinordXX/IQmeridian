@@ -1,13 +1,19 @@
 import NextAuth from 'next-auth';
-import Credentials from 'next-auth/providers/credentials';
 import type { JWT } from 'next-auth/jwt';
-import { getApiBaseUrl } from './lib/api-base-url';
+import Credentials from 'next-auth/providers/credentials';
+
+type AppRole =
+  | 'PLATFORM_ADMIN'
+  | 'RESEARCHER'
+  | 'EMPLOYER_ADMIN'
+  | 'CANDIDATE'
+  | 'CONSUMER';
 
 type ApiUser = {
   id: string;
   email: string;
   name: string | null;
-  role: string;
+  role: AppRole;
   status: string;
   organisationId: string | null;
 };
@@ -20,11 +26,77 @@ type ApiAuthResponse = {
   refreshTokenExpiresAt: string;
 };
 
-async function refreshAccessToken(token: JWT): Promise<JWT> {
-  const refreshToken =
-    typeof token.refreshToken === 'string' ? token.refreshToken : null;
+declare module 'next-auth' {
+  interface Session {
+    accessToken?: string;
+    refreshToken?: string;
+    accessTokenExpiresAt?: string;
+    error?: 'RefreshAccessTokenError';
+    user: {
+      id: string;
+      role?: AppRole;
+      organisationId?: string | null;
+      name?: string | null;
+      email?: string | null;
+      image?: string | null;
+    };
+  }
 
-  if (!refreshToken) {
+  interface User {
+    role?: AppRole;
+    organisationId?: string | null;
+    accessToken?: string;
+    refreshToken?: string;
+    accessTokenExpiresAt?: string;
+  }
+}
+
+declare module 'next-auth/jwt' {
+  interface JWT {
+    role?: AppRole;
+    organisationId?: string | null;
+    accessToken?: string;
+    refreshToken?: string;
+    accessTokenExpiresAt?: string;
+    error?: 'RefreshAccessTokenError';
+  }
+}
+
+const normaliseBaseUrl = (baseUrl: string) => {
+  return baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+};
+
+const getApiBaseUrl = () => {
+  return normaliseBaseUrl(
+    process.env.API_BASE_URL ??
+      process.env.NEXT_PUBLIC_API_BASE_URL ??
+      process.env.NEXT_PUBLIC_API_URL ??
+      'http://localhost:3001'
+  );
+};
+
+const isAppRole = (value: unknown): value is AppRole => {
+  return (
+    value === 'PLATFORM_ADMIN' ||
+    value === 'RESEARCHER' ||
+    value === 'EMPLOYER_ADMIN' ||
+    value === 'CANDIDATE' ||
+    value === 'CONSUMER'
+  );
+};
+
+const isAccessTokenStillUsable = (accessTokenExpiresAt?: string) => {
+  if (!accessTokenExpiresAt) return false;
+
+  const expiresAt = Date.parse(accessTokenExpiresAt);
+
+  if (!Number.isFinite(expiresAt)) return false;
+
+  return Date.now() < expiresAt - 30_000;
+};
+
+const refreshAccessToken = async (token: JWT): Promise<JWT> => {
+  if (!token.refreshToken) {
     return {
       ...token,
       error: 'RefreshAccessTokenError',
@@ -37,16 +109,15 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ refreshToken }),
+      body: JSON.stringify({
+        refreshToken: token.refreshToken,
+      }),
       cache: 'no-store',
     });
 
     if (!response.ok) {
       return {
         ...token,
-        accessToken: undefined,
-        refreshToken: undefined,
-        accessTokenExpiresAt: undefined,
         error: 'RefreshAccessTokenError',
       };
     }
@@ -56,8 +127,8 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
     return {
       ...token,
       sub: data.user.id,
-      email: data.user.email,
       name: data.user.name,
+      email: data.user.email,
       role: data.user.role,
       organisationId: data.user.organisationId,
       accessToken: data.accessToken,
@@ -68,26 +139,10 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
   } catch {
     return {
       ...token,
-      accessToken: undefined,
-      refreshToken: undefined,
-      accessTokenExpiresAt: undefined,
       error: 'RefreshAccessTokenError',
     };
   }
-}
-
-function isAccessTokenStillValid(token: JWT) {
-  const expiresAt =
-    typeof token.accessTokenExpiresAt === 'string'
-      ? Date.parse(token.accessTokenExpiresAt)
-      : 0;
-
-  if (!expiresAt) {
-    return false;
-  }
-
-  return Date.now() < expiresAt - 60_000;
-}
+};
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   secret: process.env.AUTH_SECRET,
@@ -149,7 +204,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async jwt({ token, user }) {
       if (user) {
         token.sub = user.id;
-        token.role = user.role;
+        token.role = isAppRole(user.role) ? user.role : undefined;
         token.organisationId = user.organisationId ?? null;
         token.accessToken = user.accessToken;
         token.refreshToken = user.refreshToken;
@@ -159,22 +214,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return token;
       }
 
-      if (isAccessTokenStillValid(token)) {
+      if (
+        token.accessToken &&
+        isAccessTokenStillUsable(token.accessTokenExpiresAt)
+      ) {
         return token;
       }
 
       return refreshAccessToken(token);
     },
     async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.sub ?? '';
-        session.user.role =
-          typeof token.role === 'string' ? token.role : undefined;
-        session.user.organisationId =
-          typeof token.organisationId === 'string'
-            ? token.organisationId
-            : null;
-      }
+      session.user.id = token.sub ?? '';
+      session.user.role = isAppRole(token.role) ? token.role : undefined;
+      session.user.organisationId =
+        typeof token.organisationId === 'string' ? token.organisationId : null;
 
       session.accessToken =
         typeof token.accessToken === 'string' ? token.accessToken : undefined;

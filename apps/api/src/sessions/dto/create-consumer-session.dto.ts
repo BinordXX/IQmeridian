@@ -1,7 +1,8 @@
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsOptional, IsString, MinLength } from 'class-validator';
 
 export class CreateConsumerSessionDto {
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  assessmentFormId!: string;
+  @MinLength(1)
+  assessmentFormId?: string;
 }

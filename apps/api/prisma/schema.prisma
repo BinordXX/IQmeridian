@@ -204,7 +204,6 @@ model User {
   @@index([organisationId])
 }
 
-
 model AuthRateLimitEvent {
   id        String              @id @default(cuid())
   action    AuthRateLimitAction
@@ -284,6 +283,20 @@ model Campaign {
   sessions    Session[]
 }
 
+model ConsumerAssessmentDefault {
+  id               String   @id @default(cuid())
+  key              String   @unique
+  assessmentFormId String
+  isEnabled        Boolean  @default(true)
+  updatedByUserId  String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  assessmentForm AssessmentForm @relation(fields: [assessmentFormId], references: [id], onDelete: Restrict)
+
+  @@index([assessmentFormId])
+}
+
 model AssessmentForm {
   id           String          @id @default(cuid())
   name         String
@@ -304,11 +317,12 @@ model AssessmentForm {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  sections                 AssessmentSection[]
-  items                    FormItemMapping[]
-  campaigns                Campaign[]
-  sessions                 Session[]
-  psychometricAnalysisRuns PsychometricAnalysisRun[]
+  sections                   AssessmentSection[]
+  items                      FormItemMapping[]
+  campaigns                  Campaign[]
+  sessions                   Session[]
+  psychometricAnalysisRuns   PsychometricAnalysisRun[]
+  consumerAssessmentDefaults ConsumerAssessmentDefault[]
 
   @@index([pilotStatus])
   @@index([isLocked])

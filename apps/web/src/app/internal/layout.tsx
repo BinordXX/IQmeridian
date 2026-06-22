@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { requireAnyRole } from '@/lib/route-guards';
+
+import { requireInternalStaff } from '@/lib/route-guards';
 
 type InternalLayoutProps = {
   children: ReactNode;
@@ -9,12 +10,8 @@ type InternalLayoutProps = {
 export default async function InternalLayout({
   children,
 }: InternalLayoutProps) {
-  const session = await requireAnyRole(
-    ['PLATFORM_ADMIN', 'RESEARCHER'],
-    '/internal'
-  );
+  const { session, role } = await requireInternalStaff('/internal');
 
-  const role = session.user.role;
   const isPlatformAdmin = role === 'PLATFORM_ADMIN';
   const canUseResearcherTools =
     role === 'PLATFORM_ADMIN' || role === 'RESEARCHER';
@@ -45,12 +42,20 @@ export default async function InternalLayout({
                 <Link href="/internal/admin" className="hover:text-slate-950">
                   Platform admin
                 </Link>
+
+                <Link
+                  href="/internal/admin/users"
+                  className="hover:text-slate-950"
+                >
+                  Users
+                </Link>
                 <Link
                   href="/internal/admin/reports"
                   className="hover:text-slate-950"
                 >
                   Reports
                 </Link>
+
                 <Link
                   href="/internal/admin/sessions"
                   className="hover:text-slate-950"
@@ -62,6 +67,12 @@ export default async function InternalLayout({
                   className="hover:text-slate-950"
                 >
                   Export governance
+                </Link>
+                <Link
+                  href="/internal/admin/consumer-assessment"
+                  className="hover:text-slate-950"
+                >
+                  Consumer assessment
                 </Link>
               </>
             ) : null}

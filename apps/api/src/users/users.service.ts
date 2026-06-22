@@ -2,17 +2,21 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  ConflictException,
 } from '@nestjs/common';
 import { Prisma, User, UserRole, UserStatus } from '@prisma/client';
 import { RequestUser } from '../auth/request-user.type';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { PasswordService } from '../auth/password.service';
+import { CreateManagedUserDto } from './dto/create-managed-user.dto';
 
 @Injectable()
 export class UsersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
+    private readonly passwordService: PasswordService,
   ) {}
 
   async getCurrentUser(userId: string) {
@@ -109,6 +113,87 @@ export class UsersService {
     };
   }
 
+  async createManagedUser(input: {
+    actor: RequestUser;
+    input: CreateManagedUserDto;
+  }) {
+    const email = input.input.email.trim().toLowerCase();
+    const name = input.input.name?.trim() || null;
+    const role = input.input.role;
+    const status = input.input.status ?? UserStatus.ACTIVE;
+    const organisationId =
+      input.input.organisationId && input.input.organisationId.trim().length > 0
+        ? input.input.organisationId.trim()
+        : null;
+
+    const existingUser = await this.prisma.user.findUnique({
+      where: {
+        email,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (existingUser) {
+      throw new ConflictException('A user with this email already exists.');
+    }
+
+    if (role === UserRole.EMPLOYER_ADMIN && !organisationId) {
+      throw new BadRequestException(
+        'Employer admins must be attached to an organisation.',
+      );
+    }
+
+    if (organisationId) {
+      const organisation = await this.prisma.organisation.findUnique({
+        where: {
+          id: organisationId,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      if (!organisation) {
+        throw new NotFoundException('Organisation was not found.');
+      }
+    }
+
+    const passwordHash = await this.passwordService.hashPassword(
+      input.input.password,
+    );
+
+    const user = await this.prisma.user.create({
+      data: {
+        email,
+        name,
+        role,
+        status,
+        organisationId,
+        passwordHash,
+      },
+      include: {
+        organisation: true,
+      },
+    });
+
+    await this.auditService.record({
+      action: 'USER_CREATED_BY_PLATFORM_ADMIN',
+      userId: input.actor.id,
+      entityType: 'User',
+      entityId: user.id,
+      metadata: {
+        targetUserId: user.id,
+        email: user.email,
+        role: user.role,
+        status: user.status,
+        organisationId: user.organisationId,
+      },
+    });
+
+    return this.toSafeUser(user);
+  }
   getUsersByRole(role: UserRole) {
     return this.prisma.user.findMany({
       where: { role },
