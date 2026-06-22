@@ -367,12 +367,49 @@ export type InternalUserRole =
 
 export type InternalUserStatus = 'ACTIVE' | 'SUSPENDED' | 'DISABLED';
 
+export type InternalOrganisationUserOutput = {
+  id: string;
+  email: string;
+  name: string | null;
+  role: InternalUserRole;
+  status: InternalUserStatus;
+  organisationId: string | null;
+  emailVerifiedAt?: string | null;
+  lastLoginAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type InternalOrganisationCampaignOutput = {
+  id: string;
+  name: string;
+  status: string;
+  organisationId: string;
+  ownerId?: string | null;
+  assessmentFormId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type InternalOrganisationOutput = {
   id: string;
   name: string;
-  slug?: string | null;
-  createdAt?: string;
-  updatedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  users?: InternalOrganisationUserOutput[];
+  campaigns?: InternalOrganisationCampaignOutput[];
+};
+
+export type CreateInternalOrganisationInput = {
+  name: string;
+};
+
+export type UpdateInternalOrganisationInput = {
+  name: string;
+};
+
+export type AttachEmployerAdminInput = {
+  userId: string;
 };
 
 export type InternalUserOutput = {
@@ -1076,12 +1113,16 @@ const normaliseInternalUsers = (
 };
 
 export function fetchInternalUsers(query?: {
+  page?: number;
+  limit?: number;
   role?: string;
   status?: string;
   search?: string;
 }) {
   const params = new URLSearchParams();
 
+  if (query?.page) params.set('page', String(query.page));
+  if (query?.limit) params.set('limit', String(query.limit));
   if (query?.role) params.set('role', query.role);
   if (query?.status) params.set('status', query.status);
   if (query?.search) params.set('search', query.search);
@@ -1137,6 +1178,52 @@ export function updateInternalUserOrganisation({
   return writeInternalApi<InternalUserOutput>({
     path: `/users/${encodeURIComponent(userId)}/organisation`,
     method: 'PATCH',
+    body: input,
+  });
+}
+
+export function fetchInternalOrganisationById(organisationId: string) {
+  return fetchInternalApi<InternalOrganisationOutput>({
+    path: `/organisations/${encodeURIComponent(organisationId)}`,
+  });
+}
+
+export function createInternalOrganisation(
+  input: CreateInternalOrganisationInput
+) {
+  return writeInternalApi<InternalOrganisationOutput>({
+    path: '/organisations',
+    method: 'POST',
+    body: input,
+  });
+}
+
+export function updateInternalOrganisation({
+  organisationId,
+  input,
+}: {
+  organisationId: string;
+  input: UpdateInternalOrganisationInput;
+}) {
+  return writeInternalApi<InternalOrganisationOutput>({
+    path: `/organisations/${encodeURIComponent(organisationId)}`,
+    method: 'PATCH',
+    body: input,
+  });
+}
+
+export function attachEmployerAdminToOrganisation({
+  organisationId,
+  input,
+}: {
+  organisationId: string;
+  input: AttachEmployerAdminInput;
+}) {
+  return writeInternalApi<InternalUserOutput>({
+    path: `/organisations/${encodeURIComponent(
+      organisationId
+    )}/employer-admins`,
+    method: 'POST',
     body: input,
   });
 }

@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -130,6 +131,42 @@ export class OrganisationsService {
       organisationId: null,
       authSessionId: '',
     });
+
+    const targetUser = await this.prisma.user.findUnique({
+      where: {
+        id: userId,
+      },
+      select: {
+        id: true,
+        role: true,
+        status: true,
+      },
+    });
+
+    if (!targetUser) {
+      throw new NotFoundException('User was not found.');
+    }
+
+    if (targetUser.role === UserRole.PLATFORM_ADMIN) {
+      throw new BadRequestException(
+        'Platform admins cannot be reassigned as employer admins.',
+      );
+    }
+
+    if (
+      targetUser.role !== UserRole.CONSUMER &&
+      targetUser.role !== UserRole.EMPLOYER_ADMIN
+    ) {
+      throw new BadRequestException(
+        'Only consumers or existing employer admins can be attached as employer admins.',
+      );
+    }
+
+    if (targetUser.status !== 'ACTIVE') {
+      throw new BadRequestException(
+        'Only active users can be attached as employer admins.',
+      );
+    }
 
     const user = await this.prisma.user.update({
       where: { id: userId },
