@@ -23,7 +23,9 @@ const fail = (reason: string): never => {
 };
 
 export async function createInternalUserAction(formData: FormData) {
-  const email = String(formData.get('email') ?? '').trim().toLowerCase();
+  const email = String(formData.get('email') ?? '')
+    .trim()
+    .toLowerCase();
   const name = String(formData.get('name') ?? '').trim();
   const password = String(formData.get('password') ?? '');
   const role = String(formData.get('role') ?? '') as InternalUserRole;

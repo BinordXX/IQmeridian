@@ -42,12 +42,18 @@ export default async function InternalLayout({
                 <Link href="/internal/admin" className="hover:text-slate-950">
                   Platform admin
                 </Link>
-
                 <Link
                   href="/internal/admin/users"
                   className="hover:text-slate-950"
                 >
                   Users
+                </Link>
+                
+                <Link
+                  href="/internal/admin/organisations"
+                  className="hover:text-slate-950"
+                >
+                  Organisations
                 </Link>
                 <Link
                   href="/internal/admin/reports"
@@ -55,7 +61,6 @@ export default async function InternalLayout({
                 >
                   Reports
                 </Link>
-
                 <Link
                   href="/internal/admin/sessions"
                   className="hover:text-slate-950"
