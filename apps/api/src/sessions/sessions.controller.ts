@@ -41,7 +41,7 @@ export class SessionsController {
   @Post('consumer')
   createConsumerSession(
     @Req() req: { user: RequestUser },
-    @Body() body: CreateConsumerSessionDto,
+    @Body() body: CreateConsumerSessionDto = {},
   ) {
     return this.sessionsService.createConsumerSession({
       userId: req.user.id,

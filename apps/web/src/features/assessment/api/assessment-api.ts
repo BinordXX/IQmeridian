@@ -88,15 +88,7 @@ export class AssessmentApiError extends Error {
   }
 }
 
-const normaliseBaseUrl = (baseUrl: string): string => {
-  return baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
-};
-
-const assessmentApiBaseUrl = normaliseBaseUrl(
-  process.env.NEXT_PUBLIC_API_BASE_URL ??
-    process.env.NEXT_PUBLIC_API_URL ??
-    'http://localhost:3001'
-);
+const assessmentApiBasePath = '/api/assessment';
 
 const assessmentEndpoints = {
   validateInvitation: (token: string) =>
@@ -151,11 +143,10 @@ const assessmentRequest = async <T>(
   path: string,
   options: AssessmentRequestOptions = {}
 ): Promise<T> => {
-  const response = await fetch(`${assessmentApiBaseUrl}${path}`, {
+  const response = await fetch(`${assessmentApiBasePath}${path}`, {
     method: options.method ?? 'GET',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: 'Bearer candidate-token',
     },
     body: options.body === undefined ? undefined : JSON.stringify(options.body),
     credentials: 'include',

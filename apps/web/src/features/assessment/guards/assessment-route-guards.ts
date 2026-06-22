@@ -1,8 +1,7 @@
-import {
-  AssessmentApiError,
-  resumeAssessmentSession,
-  validateInvitation,
-} from '../api/assessment-api';
+import { auth } from '@/auth';
+import { getApiBaseUrl } from '@/lib/api-base-url';
+
+import { AssessmentApiError, validateInvitation } from '../api/assessment-api';
 import type {
   AssessmentSessionPayload,
   InvitationValidationResult,
@@ -27,6 +26,15 @@ export type AssessmentGuardDecision<T> =
       redirectTo: string;
     };
 
+type ServerAssessmentRequestOptions = {
+  method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
+  body?: unknown;
+};
+
+const normaliseBaseUrl = (baseUrl: string) => {
+  return baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+};
+
 const statusPath = (
   reason: AssessmentGuardReason,
   message?: string
@@ -42,6 +50,61 @@ const statusPath = (
   }
 
   return `/assessment/status?${params.toString()}`;
+};
+
+const readResponsePayload = async (response: Response): Promise<unknown> => {
+  const text = await response.text();
+
+  if (!text) return null;
+
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    return text;
+  }
+};
+
+const serverAssessmentRequest = async <T>(
+  path: string,
+  options: ServerAssessmentRequestOptions = {}
+): Promise<T> => {
+  const session = await auth();
+  const accessToken = session?.accessToken;
+
+  if (!accessToken) {
+    throw new AssessmentApiError('Authentication is required.', 401, null);
+  }
+
+  const response = await fetch(`${normaliseBaseUrl(getApiBaseUrl())}${path}`, {
+    method: options.method ?? 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: options.body ? JSON.stringify(options.body) : undefined,
+    cache: 'no-store',
+  });
+
+  const payload = await readResponsePayload(response);
+
+  if (!response.ok) {
+    throw new AssessmentApiError(
+      `Assessment API request failed with status ${response.status}.`,
+      response.status,
+      payload
+    );
+  }
+
+  return payload as T;
+};
+
+const resumeAssessmentSessionForGuard = async (sessionId: string) => {
+  return serverAssessmentRequest<AssessmentSessionPayload>(
+    `/sessions/${encodeURIComponent(sessionId)}/resume`,
+    {
+      method: 'POST',
+    }
+  );
 };
 
 const normaliseSessionStatus = (status?: string): string => {
@@ -151,7 +214,7 @@ export const guardSessionInstructionsRoute = async (
   sessionId: string
 ): Promise<AssessmentGuardDecision<AssessmentSessionPayload>> => {
   try {
-    const session = await resumeAssessmentSession(sessionId);
+    const session = await resumeAssessmentSessionForGuard(sessionId);
     const status = normaliseSessionStatus(session.status);
 
     if (isCompletedStatus(status)) {
@@ -191,7 +254,7 @@ export const guardLiveAssessmentRoute = async (
   sessionId: string
 ): Promise<AssessmentGuardDecision<AssessmentSessionPayload>> => {
   try {
-    const session = await resumeAssessmentSession(sessionId);
+    const session = await resumeAssessmentSessionForGuard(sessionId);
     const status = normaliseSessionStatus(session.status);
 
     if (isLiveStatus(status)) {

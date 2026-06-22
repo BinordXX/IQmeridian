@@ -10,6 +10,15 @@ export type ActivateInternalItemInput = {
   note?: string | null;
 };
 
+export type CreateInternalUserInput = {
+  email: string;
+  name?: string | null;
+  role: InternalUserRole;
+  status?: InternalUserStatus;
+  organisationId?: string | null;
+  password: string;
+};
+
 export type CreateAnalyticsExportRequestInput = {
   dataset: AnalyticsExportDataset;
   dateFrom?: string | null;
@@ -349,6 +358,71 @@ export type InternalAdminOverview = {
   pendingExportRequests: InternalAnalyticsExportRequestOutput[];
 };
 
+export type InternalUserRole =
+  | 'CONSUMER'
+  | 'CANDIDATE'
+  | 'RESEARCHER'
+  | 'EMPLOYER_ADMIN'
+  | 'PLATFORM_ADMIN';
+
+export type InternalUserStatus = 'ACTIVE' | 'SUSPENDED' | 'DISABLED';
+
+export type InternalOrganisationOutput = {
+  id: string;
+  name: string;
+  slug?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type InternalUserOutput = {
+  id: string;
+  email: string;
+  name: string | null;
+  role: InternalUserRole;
+  status: InternalUserStatus;
+  organisationId: string | null;
+  organisation?: InternalOrganisationOutput | null;
+  emailVerifiedAt?: string | null;
+  lastLoginAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type InternalUserListResponse =
+  | InternalUserOutput[]
+  | {
+      users?: InternalUserOutput[];
+      items?: InternalUserOutput[];
+      data?: InternalUserOutput[];
+    };
+
+export type UpdateInternalUserRoleInput = {
+  role: InternalUserRole;
+};
+
+export type UpdateInternalUserStatusInput = {
+  status: InternalUserStatus;
+};
+
+export type UpdateInternalUserOrganisationInput = {
+  organisationId: string | null;
+};
+
+export const internalUserRoleLabels: Record<InternalUserRole, string> = {
+  CONSUMER: 'Consumer',
+  CANDIDATE: 'Candidate',
+  RESEARCHER: 'Researcher',
+  EMPLOYER_ADMIN: 'Employer admin',
+  PLATFORM_ADMIN: 'Platform admin',
+};
+
+export const internalUserStatusLabels: Record<InternalUserStatus, string> = {
+  ACTIVE: 'Active',
+  SUSPENDED: 'Suspended',
+  DISABLED: 'Disabled',
+};
+
 export const itemDomainLabels: Record<string, string> = {
   VERBAL_REASONING: 'Verbal reasoning',
   NUMERICAL_REASONING: 'Numerical reasoning',
@@ -394,6 +468,14 @@ export const psychometricItemStatusLabels: Record<string, string> = {
 
 export function formatCorrectRate(rate: number) {
   return `${Math.round(rate * 100)}%`;
+}
+
+export function createInternalUser(input: CreateInternalUserInput) {
+  return writeInternalApi<InternalUserOutput>({
+    path: '/users',
+    method: 'POST',
+    body: input,
+  });
 }
 
 export function fetchAnalyticsExportGovernanceSetting() {
@@ -481,13 +563,18 @@ async function fetchInternalApi<T>({
   const url = `${getInternalApiBaseUrl()}${path}`;
   const session = accessToken ? null : await auth();
   const resolvedAccessToken = accessToken ?? session?.accessToken;
+
+  if (!resolvedAccessToken) {
+    throw new Error(
+      `Internal API request failed for ${path}: missing access token.`
+    );
+  }
+
   const response = await fetch(url, {
     cache: 'no-store',
-    headers: resolvedAccessToken
-      ? {
-          Authorization: `Bearer ${accessToken}`,
-        }
-      : undefined,
+    headers: {
+      Authorization: `Bearer ${resolvedAccessToken}`,
+    },
   });
 
   if (!response.ok) {
@@ -530,6 +617,11 @@ async function writeInternalApi<T>({
     typeof window === 'undefined' ? `${getInternalApiBaseUrl()}${path}` : path;
   const session = await auth();
   const resolvedAccessToken = session?.accessToken;
+
+  if (!resolvedAccessToken) {
+    throw new Error('Internal API write failed: missing access token.');
+  }
+
   const response = await fetch(url, {
     method,
     headers: {
@@ -969,5 +1061,88 @@ export function updatePilotFormStatus({
     path: `/internal/api/pilot-forms/${encodeURIComponent(formId)}/status`,
     method: 'PATCH',
     body: input,
+  });
+}
+
+const normaliseInternalUsers = (
+  response: InternalUserListResponse
+): InternalUserOutput[] => {
+  if (Array.isArray(response)) return response;
+  if (Array.isArray(response.users)) return response.users;
+  if (Array.isArray(response.items)) return response.items;
+  if (Array.isArray(response.data)) return response.data;
+
+  return [];
+};
+
+export function fetchInternalUsers(query?: {
+  role?: string;
+  status?: string;
+  search?: string;
+}) {
+  const params = new URLSearchParams();
+
+  if (query?.role) params.set('role', query.role);
+  if (query?.status) params.set('status', query.status);
+  if (query?.search) params.set('search', query.search);
+
+  const suffix = params.toString() ? `?${params.toString()}` : '';
+
+  return fetchInternalApi<InternalUserListResponse>({
+    path: `/users${suffix}`,
+  }).then(normaliseInternalUsers);
+}
+
+export function fetchInternalUserById(userId: string) {
+  return fetchInternalApi<InternalUserOutput>({
+    path: `/users/${encodeURIComponent(userId)}`,
+  });
+}
+
+export function updateInternalUserRole({
+  userId,
+  input,
+}: {
+  userId: string;
+  input: UpdateInternalUserRoleInput;
+}) {
+  return writeInternalApi<InternalUserOutput>({
+    path: `/users/${encodeURIComponent(userId)}/role`,
+    method: 'PATCH',
+    body: input,
+  });
+}
+
+export function updateInternalUserStatus({
+  userId,
+  input,
+}: {
+  userId: string;
+  input: UpdateInternalUserStatusInput;
+}) {
+  return writeInternalApi<InternalUserOutput>({
+    path: `/users/${encodeURIComponent(userId)}/status`,
+    method: 'PATCH',
+    body: input,
+  });
+}
+
+export function updateInternalUserOrganisation({
+  userId,
+  input,
+}: {
+  userId: string;
+  input: UpdateInternalUserOrganisationInput;
+}) {
+  return writeInternalApi<InternalUserOutput>({
+    path: `/users/${encodeURIComponent(userId)}/organisation`,
+    method: 'PATCH',
+    body: input,
+  });
+}
+
+export function fetchInternalOrganisations() {
+  return fetchInternalApi<InternalOrganisationOutput[]>({
+    path: '/organisations',
   });
 }

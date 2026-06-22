@@ -18,6 +18,17 @@ type ErrorResponseBody = {
   timestamp: string;
 };
 
+type RequestWithAuthUser = Request & {
+  user?: {
+    sub?: string;
+    userId?: string;
+    id?: string;
+    email?: string;
+    role?: string;
+    organisationId?: string | null;
+  };
+};
+
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
   constructor(private readonly prisma?: PrismaService) {}
@@ -25,7 +36,8 @@ export class HttpExceptionFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost) {
     const context = host.switchToHttp();
     const response = context.getResponse<Response>();
-    const request = context.getRequest<Request>();
+    const request = context.getRequest<RequestWithAuthUser>();
+    const isProduction = process.env.NODE_ENV === 'production';
 
     const status =
       exception instanceof HttpException
@@ -35,7 +47,12 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const exceptionResponse =
       exception instanceof HttpException ? exception.getResponse() : null;
 
-    const message = this.extractMessage(exceptionResponse, exception);
+    const message = this.extractMessage({
+      exceptionResponse,
+      exception,
+      isProduction,
+      status,
+    });
     const error = this.extractError(exceptionResponse, status);
 
     const body: ErrorResponseBody = {
@@ -67,7 +84,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     message,
     exception,
   }: {
-    request: Request;
+    request: RequestWithAuthUser;
     status: number;
     error: string;
     message: string | string[];
@@ -76,6 +93,9 @@ export class HttpExceptionFilter implements ExceptionFilter {
     if (!this.prisma) {
       return;
     }
+
+    const actorUserId =
+      request.user?.userId ?? request.user?.sub ?? request.user?.id ?? null;
 
     try {
       await this.prisma.auditLog.create({
@@ -86,13 +106,19 @@ export class HttpExceptionFilter implements ExceptionFilter {
               : 'INTERNAL_API_REQUEST_FAILED',
           entityType: 'InternalApiRequest',
           entityId: request.url,
+          userId: actorUserId,
           metadata: {
             method: request.method,
             path: request.url,
             statusCode: status,
             error,
             message,
-            role: this.normaliseHeader(request.headers['x-internal-role']),
+            actor: {
+              id: actorUserId,
+              email: request.user?.email ?? null,
+              role: request.user?.role ?? null,
+              organisationId: request.user?.organisationId ?? null,
+            },
             userAgent: this.normaliseHeader(request.headers['user-agent']),
             exceptionName:
               exception instanceof Error ? exception.name : 'UnknownException',
@@ -112,10 +138,17 @@ export class HttpExceptionFilter implements ExceptionFilter {
     return value ?? null;
   }
 
-  private extractMessage(
-    exceptionResponse: string | object | null,
-    exception: unknown,
-  ): string | string[] {
+  private extractMessage({
+    exceptionResponse,
+    exception,
+    isProduction,
+    status,
+  }: {
+    exceptionResponse: string | object | null;
+    exception: unknown;
+    isProduction: boolean;
+    status: number;
+  }): string | string[] {
     if (typeof exceptionResponse === 'string') {
       return exceptionResponse;
     }
@@ -130,6 +163,10 @@ export class HttpExceptionFilter implements ExceptionFilter {
       };
 
       return responseWithMessage.message;
+    }
+
+    if (status === HttpStatus.INTERNAL_SERVER_ERROR && isProduction) {
+      return 'An unexpected error occurred.';
     }
 
     if (exception instanceof Error) {
@@ -164,6 +201,8 @@ export class HttpExceptionFilter implements ExceptionFilter {
         return 'Not Found';
       case HttpStatus.CONFLICT:
         return 'Conflict';
+      case HttpStatus.TOO_MANY_REQUESTS:
+        return 'Too Many Requests';
       default:
         return 'Internal Server Error';
     }

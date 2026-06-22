@@ -18,6 +18,7 @@ import { DiagnosticsModule } from './diagnostics/diagnostics.module';
 import { InternalToolingModule } from './internal-tooling/internal-tooling.module';
 import { PsychometricsModule } from './psychometrics/psychometrics.module';
 import { AuthModule } from './auth/auth.module';
+import { ConsumerAssessmentsModule } from './consumer-assessments/consumer-assessments.module';
 @Module({
   imports: [
     PrismaModule,
@@ -37,6 +38,7 @@ import { AuthModule } from './auth/auth.module';
     DiagnosticsModule,
     InternalToolingModule,
     PsychometricsModule,
+    ConsumerAssessmentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

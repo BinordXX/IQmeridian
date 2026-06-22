@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { requireAnyRole } from '@/lib/route-guards';
+import { requireEmployerAdmin } from '@/lib/route-guards';
 
 type EmployerLayoutProps = {
   children: ReactNode;
@@ -9,6 +10,7 @@ type EmployerLayoutProps = {
 export default async function EmployerLayout({
   children,
 }: EmployerLayoutProps) {
+  await requireEmployerAdmin('/employer/dashboard');
   const session = await requireAnyRole(['EMPLOYER_ADMIN'], '/employer');
 
   return (

@@ -1,3 +1,5 @@
+import { getRequiredServerApiAuthHeaders } from '@/lib/server-api-auth';
+
 type CollectionResponse<T> =
   | T[]
   | {
@@ -64,18 +66,11 @@ const normaliseBaseUrl = (baseUrl: string): string => {
 
 const getApiBaseUrl = (): string => {
   return normaliseBaseUrl(
-    process.env.NEXT_PUBLIC_API_BASE_URL ??
+    process.env.API_BASE_URL ??
+      process.env.NEXT_PUBLIC_API_BASE_URL ??
       process.env.NEXT_PUBLIC_API_URL ??
       'http://localhost:3001'
   );
-};
-
-const getPlatformAdminAuthHeader = (): string => {
-  return process.env.PLATFORM_ADMIN_API_TOKEN ?? 'Bearer dev-token';
-};
-
-const getResearcherAuthHeader = (): string => {
-  return process.env.RESEARCHER_API_TOKEN ?? 'Bearer dev-token';
 };
 
 const getCollection = <T>(payload: CollectionResponse<T>): T[] => {
@@ -86,13 +81,12 @@ const getCollection = <T>(payload: CollectionResponse<T>): T[] => {
   return payload.data ?? [];
 };
 
-const internalRequest = async <T>(path: string, token: string): Promise<T> => {
+const internalRequest = async <T>(path: string): Promise<T> => {
+  const authHeaders = await getRequiredServerApiAuthHeaders();
+
   const response = await fetch(`${getApiBaseUrl()}${path}`, {
     method: 'GET',
-    headers: {
-      Authorization: token,
-      'Content-Type': 'application/json',
-    },
+    headers: authHeaders,
     cache: 'no-store',
   });
 
@@ -107,21 +101,12 @@ const internalRequest = async <T>(path: string, token: string): Promise<T> => {
 
 export const getPlatformAdminOperationalData =
   async (): Promise<InternalOperationalData> => {
-    const token = getPlatformAdminAuthHeader();
-
     const [auditPayload, sessionPayload, reportPayload] = await Promise.all([
       internalRequest<CollectionResponse<InternalAuditLogSummary>>(
-        '/audit-logs',
-        token
+        '/audit-logs'
       ),
-      internalRequest<CollectionResponse<InternalSessionSummary>>(
-        '/sessions',
-        token
-      ),
-      internalRequest<CollectionResponse<InternalReportSummary>>(
-        '/reports',
-        token
-      ),
+      internalRequest<CollectionResponse<InternalSessionSummary>>('/sessions'),
+      internalRequest<CollectionResponse<InternalReportSummary>>('/reports'),
     ]);
 
     const auditLogs = getCollection(auditPayload);
@@ -145,17 +130,9 @@ export const getPlatformAdminOperationalData =
 
 export const getResearcherOperationalData =
   async (): Promise<InternalOperationalData> => {
-    const token = getResearcherAuthHeader();
-
     const [sessionPayload, reportPayload] = await Promise.all([
-      internalRequest<CollectionResponse<InternalSessionSummary>>(
-        '/sessions',
-        token
-      ),
-      internalRequest<CollectionResponse<InternalReportSummary>>(
-        '/reports',
-        token
-      ),
+      internalRequest<CollectionResponse<InternalSessionSummary>>('/sessions'),
+      internalRequest<CollectionResponse<InternalReportSummary>>('/reports'),
     ]);
 
     const sessions = getCollection(sessionPayload);

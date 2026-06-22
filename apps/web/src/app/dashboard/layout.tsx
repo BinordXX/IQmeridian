@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import { requireAuthenticatedSession } from '@/lib/route-guards';
+
+import { requireRouteAccess } from '@/lib/route-guards';
 
 type DashboardLayoutProps = {
   children: ReactNode;
@@ -8,7 +9,7 @@ type DashboardLayoutProps = {
 export default async function DashboardLayout({
   children,
 }: DashboardLayoutProps) {
-  await requireAuthenticatedSession('/dashboard');
+  await requireRouteAccess('/dashboard');
 
-  return children;
+  return <>{children}</>;
 }
