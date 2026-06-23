@@ -1,6 +1,47 @@
+import {
+  AlertTriangle,
+  Building2,
+  FileSearch,
+  FileText,
+  ShieldAlert,
+  UsersRound,
+  type LucideIcon,
+} from 'lucide-react';
 import Link from 'next/link';
 
 import { fetchAdminOverview } from '../_lib/internal-api';
+
+const MetricCard = ({
+  label,
+  value,
+  icon: Icon,
+  tone,
+}: {
+  label: string;
+  value: string | number;
+  icon: LucideIcon;
+  tone: string;
+}) => {
+  return (
+    <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sm font-medium text-slate-500">{label}</p>
+          <p className="mt-3 text-3xl font-semibold text-slate-950">{value}</p>
+        </div>
+
+        <span
+          className={[
+            'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border',
+            tone,
+          ].join(' ')}
+        >
+          <Icon size={20} strokeWidth={2} />
+        </span>
+      </div>
+    </article>
+  );
+};
 
 export default async function InternalAdminDashboardPage() {
   const overview = await fetchAdminOverview();
@@ -9,7 +50,9 @@ export default async function InternalAdminDashboardPage() {
     (sum, count) => sum + count,
     0
   );
+
   const pendingExportRequestCount = overview.exportRequestCounts.requested;
+
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm lg:flex-row lg:items-start lg:justify-between">
@@ -51,19 +94,25 @@ export default async function InternalAdminDashboardPage() {
       {pendingExportRequestCount > 0 ? (
         <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5 shadow-sm">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-wide text-amber-800">
-                Pending export review
-              </p>
-              <h2 className="mt-2 text-xl font-semibold text-amber-950">
-                {pendingExportRequestCount} export request
-                {pendingExportRequestCount === 1 ? '' : 's'} awaiting admin
-                decision
-              </h2>
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-amber-900">
-                Researcher export requests require platform-admin review before
-                they can be generated and downloaded.
-              </p>
+            <div className="flex gap-4">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-amber-200 bg-white text-amber-700">
+                <AlertTriangle size={20} strokeWidth={2} />
+              </span>
+
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-wide text-amber-800">
+                  Pending export review
+                </p>
+                <h2 className="mt-2 text-xl font-semibold text-amber-950">
+                  {pendingExportRequestCount} export request
+                  {pendingExportRequestCount === 1 ? '' : 's'} awaiting admin
+                  decision
+                </h2>
+                <p className="mt-2 max-w-3xl text-sm leading-6 text-amber-900">
+                  Researcher export requests require platform-admin review
+                  before they can be generated and downloaded.
+                </p>
+              </div>
             </div>
 
             <Link
@@ -101,42 +150,40 @@ export default async function InternalAdminDashboardPage() {
       ) : null}
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-sm font-medium text-slate-500">Organisations</p>
-          <p className="mt-3 text-3xl font-semibold">
-            {overview.organisationCount}
-          </p>
-        </article>
+        <MetricCard
+          label="Organisations"
+          value={overview.organisationCount}
+          icon={Building2}
+          tone="border-blue-100 bg-blue-50 text-blue-700"
+        />
 
-        <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-sm font-medium text-slate-500">Active campaigns</p>
-          <p className="mt-3 text-3xl font-semibold">
-            {overview.activeCampaigns}
-          </p>
-        </article>
+        <MetricCard
+          label="Active campaigns"
+          value={overview.activeCampaigns}
+          icon={FileSearch}
+          tone="border-violet-100 bg-violet-50 text-violet-700"
+        />
 
-        <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-sm font-medium text-slate-500">
-            Pending export reviews
-          </p>
-          <p className="mt-3 text-3xl font-semibold">
-            {pendingExportRequestCount}
-          </p>
-        </article>
+        <MetricCard
+          label="Pending export reviews"
+          value={pendingExportRequestCount}
+          icon={FileText}
+          tone="border-amber-100 bg-amber-50 text-amber-700"
+        />
 
-        <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-sm font-medium text-slate-500">Total users</p>
-          <p className="mt-3 text-3xl font-semibold">{totalUsers}</p>
-        </article>
+        <MetricCard
+          label="Total users"
+          value={totalUsers}
+          icon={UsersRound}
+          tone="border-emerald-100 bg-emerald-50 text-emerald-700"
+        />
 
-        <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-sm font-medium text-slate-500">
-            Runtime/internal API failures
-          </p>
-          <p className="mt-3 text-3xl font-semibold">
-            {overview.platformErrors.length}
-          </p>
-        </article>
+        <MetricCard
+          label="Runtime/internal API failures"
+          value={overview.platformErrors.length}
+          icon={ShieldAlert}
+          tone="border-rose-100 bg-rose-50 text-rose-700"
+        />
       </section>
 
       <section className="grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
