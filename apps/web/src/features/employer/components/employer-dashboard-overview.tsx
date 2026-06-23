@@ -3,6 +3,15 @@ import type {
   EmployerDashboardData,
   EmployerSessionSummary,
 } from '../api/employer-dashboard-api';
+import {
+  BarChart3,
+  BriefcaseBusiness,
+  ClipboardList,
+  FileText,
+  LucideIcon,
+  Send,
+  UsersRound,
+} from 'lucide-react';
 
 type EmployerDashboardOverviewProps = {
   data: EmployerDashboardData;
@@ -12,15 +21,33 @@ const MetricCard = ({
   label,
   value,
   helper,
+  icon: Icon,
+  tone,
 }: {
   label: string;
   value: string | number;
   helper: string;
+  icon: LucideIcon;
+  tone: string;
 }) => {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <p className="text-sm font-medium text-slate-500">{label}</p>
-      <p className="mt-3 text-3xl font-bold text-slate-950">{value}</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sm font-medium text-slate-500">{label}</p>
+          <p className="mt-3 text-3xl font-bold text-slate-950">{value}</p>
+        </div>
+
+        <span
+          className={[
+            'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border',
+            tone,
+          ].join(' ')}
+        >
+          <Icon size={20} strokeWidth={2} />
+        </span>
+      </div>
+
       <p className="mt-2 text-sm text-slate-600">{helper}</p>
     </div>
   );
@@ -91,31 +118,43 @@ export const EmployerDashboardOverview = ({
           label="Active campaigns"
           value={data.metrics.activeCampaigns}
           helper="Campaigns currently open"
+          icon={BriefcaseBusiness}
+          tone="border-blue-100 bg-blue-50 text-blue-700"
         />
         <MetricCard
           label="Total campaigns"
           value={data.metrics.totalCampaigns}
           helper="All employer campaigns"
+          icon={ClipboardList}
+          tone="border-violet-100 bg-violet-50 text-violet-700"
         />
         <MetricCard
           label="Invitations"
           value={data.metrics.totalInvitations}
           helper="Known campaign invitations"
+          icon={Send}
+          tone="border-emerald-100 bg-emerald-50 text-emerald-700"
         />
         <MetricCard
           label="Started sessions"
           value={data.metrics.startedSessions}
           helper="Candidates who entered testing"
+          icon={UsersRound}
+          tone="border-amber-100 bg-amber-50 text-amber-700"
         />
         <MetricCard
           label="Completion rate"
           value={`${data.metrics.completionRate}%`}
           helper="Completed out of started"
+          icon={BarChart3}
+          tone="border-indigo-100 bg-indigo-50 text-indigo-700"
         />
         <MetricCard
           label="Report-ready results"
           value={data.metrics.reportReadyResults}
           helper="Sessions with available scores"
+          icon={FileText}
+          tone="border-rose-100 bg-rose-50 text-rose-700"
         />
       </section>
 

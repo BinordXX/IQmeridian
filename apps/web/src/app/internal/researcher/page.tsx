@@ -1,3 +1,12 @@
+import {
+  BarChart3,
+  ClipboardList,
+  Database,
+  FileText,
+  FlaskConical,
+  ScrollText,
+  type LucideIcon,
+} from 'lucide-react';
 import Link from 'next/link';
 
 import {
@@ -6,6 +15,80 @@ import {
   itemDomainLabels,
   itemStatusLabels,
 } from '../_lib/internal-api';
+
+const WorkspaceLinkCard = ({
+  href,
+  eyebrow,
+  title,
+  description,
+  icon: Icon,
+  tone,
+}: {
+  href: string;
+  eyebrow: string;
+  title: string;
+  description: string;
+  icon: LucideIcon;
+  tone: string;
+}) => {
+  return (
+    <Link
+      href={href}
+      className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:border-slate-400"
+    >
+      <span
+        className={[
+          'flex h-12 w-12 items-center justify-center rounded-xl border',
+          tone,
+        ].join(' ')}
+      >
+        <Icon size={22} strokeWidth={2} />
+      </span>
+
+      <p className="mt-5 text-sm font-semibold uppercase tracking-wide text-slate-500">
+        {eyebrow}
+      </p>
+      <h2 className="mt-3 text-xl font-semibold text-slate-950">{title}</h2>
+      <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p>
+    </Link>
+  );
+};
+
+const ResearchMetricCard = ({
+  label,
+  value,
+  helper,
+  icon: Icon,
+  tone,
+}: {
+  label: string;
+  value: string | number;
+  helper: string;
+  icon: LucideIcon;
+  tone: string;
+}) => {
+  return (
+    <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sm font-medium text-slate-500">{label}</p>
+          <p className="mt-3 text-3xl font-semibold text-slate-950">{value}</p>
+        </div>
+
+        <span
+          className={[
+            'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border',
+            tone,
+          ].join(' ')}
+        >
+          <Icon size={20} strokeWidth={2} />
+        </span>
+      </div>
+
+      <p className="mt-2 text-sm text-slate-600">{helper}</p>
+    </article>
+  );
+};
 
 export default async function InternalResearcherDashboardPage() {
   const overview = await fetchResearcherDashboardOverview();
@@ -62,82 +145,54 @@ export default async function InternalResearcherDashboardPage() {
       </header>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <Link
+        <WorkspaceLinkCard
           href="/internal/researcher/forms"
-          className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:border-slate-400"
-        >
-          <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-            Form management
-          </p>
-          <h2 className="mt-3 text-xl font-semibold text-slate-950">
-            Assessment forms
-          </h2>
-          <p className="mt-2 text-sm leading-6 text-slate-600">
-            Create reusable assessment forms, define domain blueprints, and
-            prepare forms for item placement, validation, locking, and pilot
-            governance.
-          </p>
-        </Link>
+          eyebrow="Form management"
+          title="Assessment forms"
+          description="Create reusable assessment forms, define domain blueprints, and prepare forms for item placement, validation, locking, and pilot governance."
+          icon={ClipboardList}
+          tone="border-blue-100 bg-blue-50 text-blue-700"
+        />
 
-        <Link
+        <WorkspaceLinkCard
           href="/internal/researcher/pilot-forms"
-          className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:border-slate-400"
-        >
-          <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-            Pilot governance
-          </p>
-          <h2 className="mt-3 text-xl font-semibold text-slate-950">
-            Pilot forms
-          </h2>
-          <p className="mt-2 text-sm leading-6 text-slate-600">
-            Validate pilot-form blueprints, inspect item-count gaps, control
-            pilot status transitions, and lock forms when they are ready for
-            controlled use.
-          </p>
-        </Link>
+          eyebrow="Pilot governance"
+          title="Pilot forms"
+          description="Validate pilot-form blueprints, inspect item-count gaps, control pilot status transitions, and lock forms when they are ready for controlled use."
+          icon={FlaskConical}
+          tone="border-emerald-100 bg-emerald-50 text-emerald-700"
+        />
 
-        <Link
+        <WorkspaceLinkCard
           href="/internal/researcher/exports"
-          className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:border-slate-400"
-        >
-          <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-            Research exports
-          </p>
-          <h2 className="mt-3 text-xl font-semibold text-slate-950">
-            Request analytics export
-          </h2>
-          <p className="mt-2 text-sm leading-6 text-slate-600">
-            Request item-level, session-level, response-level, score-level, or
-            campaign-summary datasets. Platform admins review and generate
-            approved exports.
-          </p>
-        </Link>
+          eyebrow="Research exports"
+          title="Request analytics export"
+          description="Request item-level, session-level, response-level, score-level, or campaign-summary datasets. Platform admins review and generate approved exports."
+          icon={FileText}
+          tone="border-violet-100 bg-violet-50 text-violet-700"
+        />
       </section>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {Object.entries(overview.totalItemsByStatus).map(([status, count]) => (
-          <article
+          <ResearchMetricCard
             key={status}
-            className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
-          >
-            <p className="text-sm font-medium text-slate-500">
-              {itemStatusLabels[status] ?? status}
-            </p>
-            <p className="mt-3 text-3xl font-semibold text-slate-950">
-              {count}
-            </p>
-            <p className="mt-2 text-sm text-slate-600">Items by status</p>
-          </article>
+            label={itemStatusLabels[status] ?? status}
+            value={count}
+            helper="Items by status"
+            icon={Database}
+            tone="border-indigo-100 bg-indigo-50 text-indigo-700"
+          />
         ))}
 
         {Object.keys(overview.totalItemsByStatus).length === 0 ? (
-          <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-sm font-medium text-slate-500">Items</p>
-            <p className="mt-3 text-3xl font-semibold text-slate-950">0</p>
-            <p className="mt-2 text-sm text-slate-600">
-              No item records are available yet.
-            </p>
-          </article>
+          <ResearchMetricCard
+            label="Items"
+            value={0}
+            helper="No item records are available yet."
+            icon={Database}
+            tone="border-slate-200 bg-slate-50 text-slate-600"
+          />
         ) : null}
       </section>
 

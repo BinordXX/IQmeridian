@@ -1,6 +1,8 @@
+import { redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
 
-import { requireRouteAccess } from '@/lib/route-guards';
+import { requireAnyRole } from '@/lib/route-guards';
+import { DashboardSidebarShell } from './_components/dashboard-sidebar-shell';
 
 type DashboardLayoutProps = {
   children: ReactNode;
@@ -9,7 +11,23 @@ type DashboardLayoutProps = {
 export default async function DashboardLayout({
   children,
 }: DashboardLayoutProps) {
-  await requireRouteAccess('/dashboard');
+  const session = await requireAnyRole(['CONSUMER', 'CANDIDATE'], '/dashboard');
+  const role = session.user.role;
 
-  return <>{children}</>;
+  if (role !== 'CONSUMER' && role !== 'CANDIDATE') {
+    redirect('/signin');
+  }
+
+  return (
+    <DashboardSidebarShell
+      role={role}
+      user={{
+        email: session.user.email,
+        image: session.user.image,
+        name: session.user.name,
+      }}
+    >
+      {children}
+    </DashboardSidebarShell>
+  );
 }
