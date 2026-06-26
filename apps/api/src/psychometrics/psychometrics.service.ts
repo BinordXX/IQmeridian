@@ -4,6 +4,9 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 
+import { PsychometricScorePersistenceService } from './psychometric-score-persistence.service';
+import { PsychometricScoringClientService } from './psychometric-scoring-client.service';
+import { PsychometricScoringRequestBuilderService } from './psychometric-scoring-request-builder.service';
 import {
   PsychometricsCapabilitiesResponse,
   PsychometricsHealthResponse,
@@ -23,6 +26,12 @@ export class PsychometricsService {
   private readonly internalToken =
     process.env.PSYCHOMETRICS_INTERNAL_TOKEN ?? 'dev-psychometrics-token';
 
+  constructor(
+    private readonly requestBuilder: PsychometricScoringRequestBuilderService,
+    private readonly scoringClient: PsychometricScoringClientService,
+    private readonly scorePersistence: PsychometricScorePersistenceService,
+  ) {}
+
   async getHealth(): Promise<PsychometricsHealthResponse> {
     return this.getFromPsychometrics<PsychometricsHealthResponse>('/health');
   }
@@ -35,6 +44,17 @@ export class PsychometricsService {
     return this.getFromPsychometrics<PsychometricsCapabilitiesResponse>(
       '/capabilities',
     );
+  }
+
+  async scoreSession(sessionId: string) {
+    const request = await this.requestBuilder.buildForSession(sessionId);
+    const response = await this.scoringClient.scoreSession(request);
+
+    return this.scorePersistence.upsertSessionScore(response);
+  }
+
+  async getSessionScore(sessionId: string) {
+    return this.scorePersistence.getSessionScore(sessionId);
   }
 
   private async getFromPsychometrics<T extends PsychometricsJsonObject>(
