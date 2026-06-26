@@ -117,17 +117,49 @@ export const LiveAssessmentShell = ({ session }: LiveAssessmentShellProps) => {
     null
   );
 
-  const handleTimerExpired = useCallback((): void => {
-    setSectionEndMessage(
-      'This timed section has ended. The item interface is now locked while the system restores the valid session state from the server.'
-    );
+const handleTimerExpired = useCallback((): void => {
+  setSectionEndMessage(
+    'Time has elapsed. IQMeridian is automatically submitting your assessment.'
+  );
 
-    dispatch({ type: 'EXPIRED' });
+  dispatch({ type: 'SUBMIT_STARTED' });
 
-    window.setTimeout(() => {
-      router.refresh();
-    }, 500);
-  }, [router]);
+  void trackAssessmentEvent('submission_initiated', {
+    sessionId: session.sessionId,
+    assessmentId: session.assessmentId,
+    trigger: 'timeout',
+  });
+
+  void finaliseAssessmentSession(session.sessionId)
+    .then((finaliseResult) => {
+      void trackAssessmentEvent('submission_completed', {
+        sessionId: session.sessionId,
+        assessmentId: session.assessmentId,
+        trigger: 'timeout',
+      });
+
+      const resultVisibility =
+        resolveCandidateResultVisibility(finaliseResult);
+
+      dispatch({ type: 'COMPLETED' });
+
+      const statusParams = new URLSearchParams({
+        reason: 'completed',
+        sessionId: session.sessionId,
+        resultVisibility,
+      });
+
+      router.replace(`/assessment/status?${statusParams.toString()}`);
+    })
+    .catch(() => {
+      dispatch({
+        type: 'FAILED',
+        message:
+          'Time has elapsed, but the assessment could not be automatically submitted. Please refresh the dashboard or contact support if this continues.',
+        code: 'TIMEOUT_AUTO_SUBMIT_FAILED',
+      });
+    });
+}, [router, session.assessmentId, session.sessionId]);
 
   const timer = useBackendSyncedTimer({
     sessionId: session.sessionId,

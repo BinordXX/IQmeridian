@@ -150,6 +150,14 @@ export type FinaliseAssessmentSessionResult = {
   sessionId: string;
   status: 'submitted' | 'completed';
   submittedAt: string;
+  psychometricScoring?: {
+    status: 'already_scored' | 'scored' | 'failed';
+    scoreResultId?: string | null;
+    scoringStatus?: string | null;
+    modelVersion?: string | null;
+    generatedAt?: string | null;
+    message?: string;
+  };
 };
 
 export type AssessmentScoreResult = {

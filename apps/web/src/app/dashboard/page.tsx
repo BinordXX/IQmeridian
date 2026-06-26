@@ -15,7 +15,7 @@ import { getDefaultDashboardForRole, isAppRole } from '@/lib/role-routing';
 import { startConsumerAssessmentAction } from './actions';
 import {
   getConsumerAssessmentDefault,
-  listConsumerSessions,
+  listConsumerSessionsWithPsychometricScores,
   type ConsumerAssessmentDefault,
   type ConsumerSessionSummary,
 } from './consumer-dashboard-api';
@@ -55,6 +55,111 @@ const formatDate = (value?: string | null) => {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value));
+};
+
+const formatScoreBand = (value?: string | null) => {
+  if (!value) return 'Unavailable';
+
+  return value
+    .toLowerCase()
+    .replaceAll('_', ' ')
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+};
+
+const formatWholeNumber = (value?: number | null) => {
+  if (typeof value !== 'number') return 'Not available';
+
+  return Math.round(value).toString();
+};
+
+const formatAccuracy = (value?: number | null) => {
+  if (typeof value !== 'number') return 'Not available';
+
+  return `${Math.round(value * 100)}%`;
+};
+
+const formatPercentile = (value?: number | null) => {
+  if (typeof value !== 'number') return 'Not available';
+
+  return `${Math.round(value)}th percentile`;
+};
+
+const isCompletedSession = (session: ConsumerSessionSummary) => {
+  return session.status === 'COMPLETED' || session.status === 'FINALISED';
+};
+
+const getTimestampValue = (value?: string | null) => {
+  if (!value) return 0;
+
+  const parsed = new Date(value).getTime();
+
+  return Number.isNaN(parsed) ? 0 : parsed;
+};
+
+const STANDARD_SCORE_MEAN = 100;
+const STANDARD_SCORE_SD = 15;
+const STANDARD_SCORE_MIN = 40;
+const STANDARD_SCORE_MAX = 160;
+const MAX_DISPLAYABLE_INTERVAL_WIDTH = 45;
+
+const formatStandardScoreInterval = (
+  lowerTheta: number | null | undefined,
+  upperTheta: number | null | undefined
+) => {
+  if (typeof lowerTheta !== 'number' || typeof upperTheta !== 'number') {
+    return 'Not available';
+  }
+
+  const lowerStandardScore = STANDARD_SCORE_MEAN + lowerTheta * STANDARD_SCORE_SD;
+  const upperStandardScore = STANDARD_SCORE_MEAN + upperTheta * STANDARD_SCORE_SD;
+
+  const rawIntervalWidth = upperStandardScore - lowerStandardScore;
+
+  if (
+    rawIntervalWidth > MAX_DISPLAYABLE_INTERVAL_WIDTH ||
+    lowerStandardScore < STANDARD_SCORE_MIN ||
+    upperStandardScore > STANDARD_SCORE_MAX
+  ) {
+    return 'Low precision';
+  }
+
+  const clampedLower = Math.max(
+    STANDARD_SCORE_MIN,
+    Math.min(STANDARD_SCORE_MAX, lowerStandardScore)
+  );
+
+  const clampedUpper = Math.max(
+    STANDARD_SCORE_MIN,
+    Math.min(STANDARD_SCORE_MAX, upperStandardScore)
+  );
+
+  return `${Math.round(clampedLower)}–${Math.round(clampedUpper)}`;
+};
+
+const getCurrentProfileSession = (sessions: ConsumerSessionSummary[]) => {
+  return sessions
+    .filter((sessionRecord) => sessionRecord.psychometricScore)
+    .sort((left, right) => {
+      const leftScore = left.psychometricScore;
+      const rightScore = right.psychometricScore;
+
+      return (
+        getTimestampValue(
+          rightScore?.generatedAt ?? right.completedAt ?? right.updatedAt
+        ) -
+        getTimestampValue(
+          leftScore?.generatedAt ?? left.completedAt ?? left.updatedAt
+        )
+      );
+    })[0];
+};
+
+const getStrongestDomain = (session: ConsumerSessionSummary | undefined) => {
+  const domainScores = session?.psychometricScore?.domainScores ?? [];
+
+  return [...domainScores].sort(
+    (left, right) => (right.standardScore ?? 0) - (left.standardScore ?? 0)
+  )[0];
 };
 
 const getSessionTitle = (session: ConsumerSessionSummary) => {
@@ -109,18 +214,20 @@ export default async function DashboardPage({
     if (role === 'CONSUMER') {
       const [assessmentDefault, sessionRecords] = await Promise.all([
         getConsumerAssessmentDefault(),
-        listConsumerSessions(),
+        listConsumerSessionsWithPsychometricScores(),
       ]);
 
       consumerAssessment = assessmentDefault;
       sessions = sessionRecords;
     } else {
-      sessions = await listConsumerSessions();
+      sessions = await listConsumerSessionsWithPsychometricScores();
     }
   } catch (error) {
     dashboardError =
       error instanceof Error ? error.message : 'Unable to load dashboard data.';
   }
+
+  
 
   const hasSessions = sessions.length > 0;
   const canStartConsumerAssessment =
@@ -157,6 +264,11 @@ export default async function DashboardPage({
     ) : (
       'Candidate assessments are assigned through invitations or employer campaigns. When an assessment is assigned to you, it will appear in your assessment history.'
     );
+
+
+  const currentProfileSession = getCurrentProfileSession(sessions);
+  const currentProfileScore = currentProfileSession?.psychometricScore ?? null;
+  const strongestDomain = getStrongestDomain(currentProfileSession);
 
   return (
     <div className="space-y-6">
@@ -198,6 +310,91 @@ export default async function DashboardPage({
           <span>{dashboardError}</span>
         </div>
       ) : null}
+
+
+      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.25em] text-slate-500">
+              Current IQMeridian profile
+            </p>
+            <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-950">
+              {currentProfileScore
+                ? formatScoreBand(currentProfileScore.overallScoreBand)
+                : 'Profile not available yet'}
+            </h2>
+            <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
+              {currentProfileScore
+                ? currentProfileScore.overallInterpretation
+                : 'Complete an assessment to generate your current IQMeridian intelligence profile. Your profile will update when a new valid assessment score is generated.'}
+            </p>
+          </div>
+
+          <span className="w-fit rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+            {currentProfileScore
+              ? `Updated ${formatDate(currentProfileScore.generatedAt)}`
+              : 'Awaiting first score'}
+          </span>
+        </div>
+
+        <dl className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+              Standard score
+            </dt>
+            <dd className="mt-2 text-2xl font-bold text-slate-950">
+              {formatWholeNumber(currentProfileScore?.overallStandardScore)}
+            </dd>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+              Percentile
+            </dt>
+            <dd className="mt-2 text-2xl font-bold text-slate-950">
+              {formatPercentile(currentProfileScore?.overallPercentile)}
+            </dd>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+              Accuracy
+            </dt>
+            <dd className="mt-2 text-2xl font-bold text-slate-950">
+              {formatAccuracy(currentProfileScore?.overallAccuracy)}
+            </dd>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+              Strongest domain
+            </dt>
+            <dd className="mt-2 text-2xl font-bold text-slate-950">
+              {strongestDomain?.label ?? 'Not available'}
+            </dd>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+              Validity flags
+            </dt>
+            <dd className="mt-2 text-2xl font-bold text-slate-950">
+              {currentProfileScore
+                ? currentProfileScore.validityFlags.length
+                : 'Not available'}
+            </dd>
+          </div>
+        </dl>
+
+        {currentProfileScore ? (
+          <div className="mt-5 rounded-2xl border border-amber-100 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+            This profile currently reflects your latest scored assessment. A
+            future IQMeridian release will recalculate this as a longitudinal
+            ability estimate across valid assessment attempts, with retake
+            interval controls and calibration safeguards.
+          </div>
+        ) : null}
+      </section>
 
       <section className="grid gap-4 md:grid-cols-3">
         <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -262,7 +459,10 @@ export default async function DashboardPage({
 
       <section className="grid gap-6 lg:grid-cols-[1.4fr_0.8fr]">
         <div className="space-y-6">
-          <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <article
+  className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+  id="assessment"
+>
             <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
               <div className="flex gap-4">
                 <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-emerald-100 bg-emerald-50 text-emerald-700">
@@ -355,6 +555,165 @@ export default async function DashboardPage({
                         </Link>
                       </div>
                     </div>
+
+                    {isCompletedSession(assessmentSession) ? (
+                      assessmentSession.psychometricScore ? (
+                        <div className="mt-4 rounded-xl border border-emerald-100 bg-white p-4">
+                          <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                            <div>
+                              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
+                                Psychometric profile
+                              </p>
+                              <h4 className="mt-1 text-lg font-bold text-slate-950">
+                                {formatScoreBand(
+                                  assessmentSession.psychometricScore
+                                    .overallScoreBand
+                                )}
+                              </h4>
+                              <p className="mt-1 text-sm leading-6 text-slate-600">
+                                {
+                                  assessmentSession.psychometricScore
+                                    .overallInterpretation
+                                }
+                              </p>
+                            </div>
+
+                            <span className="w-fit rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                              {
+                                assessmentSession.psychometricScore
+                                  .scoringStatus
+                              }
+                            </span>
+                          </div>
+
+                          <dl className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                            <div className="rounded-lg bg-slate-50 p-3">
+                              <dt className="text-xs font-medium text-slate-500">
+                                Standard score
+                              </dt>
+                              <dd className="mt-1 text-lg font-bold text-slate-950">
+                                {formatWholeNumber(
+                                  assessmentSession.psychometricScore
+                                    .overallStandardScore
+                                )}
+                              </dd>
+                            </div>
+
+                            <div className="rounded-lg bg-slate-50 p-3">
+                              <dt className="text-xs font-medium text-slate-500">
+                                Percentile
+                              </dt>
+                              <dd className="mt-1 text-lg font-bold text-slate-950">
+                                {formatPercentile(
+                                  assessmentSession.psychometricScore
+                                    .overallPercentile
+                                )}
+                              </dd>
+                            </div>
+
+                            <div className="rounded-lg bg-slate-50 p-3">
+                              <dt className="text-xs font-medium text-slate-500">
+                                Accuracy
+                              </dt>
+                              <dd className="mt-1 text-lg font-bold text-slate-950">
+                                {formatAccuracy(
+                                  assessmentSession.psychometricScore
+                                    .overallAccuracy
+                                )}
+                              </dd>
+                            </div>
+
+                            <div className="rounded-lg bg-slate-50 p-3">
+                              <dt className="text-xs font-medium text-slate-500">
+                               90% score interval
+                              </dt>
+<dd className="mt-1 text-lg font-bold text-slate-950">
+  {formatStandardScoreInterval(
+    assessmentSession.psychometricScore.overallCi90Lower,
+    assessmentSession.psychometricScore.overallCi90Upper
+  )}
+</dd>
+                            </div>
+                          </dl>
+
+                          {assessmentSession.psychometricScore.domainScores
+                            .length > 0 ? (
+                            <div className="mt-4">
+                              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                                Domain profile
+                              </p>
+
+                              <div className="mt-2 grid gap-2 md:grid-cols-2">
+                                {assessmentSession.psychometricScore.domainScores.map(
+                                  (domainScore) => (
+                                    <div
+                                      className="rounded-lg border border-slate-200 bg-slate-50 p-3"
+                                      key={domainScore.id}
+                                    >
+                                      <div className="flex items-start justify-between gap-3">
+                                        <div>
+                                          <p className="text-sm font-semibold text-slate-950">
+                                            {domainScore.label}
+                                          </p>
+                                          <p className="mt-1 text-xs text-slate-500">
+                                            {formatAccuracy(
+                                              domainScore.accuracy
+                                            )}{' '}
+                                            accuracy
+                                          </p>
+                                        </div>
+
+                                        <span className="rounded-full bg-white px-2 py-1 text-xs font-semibold text-slate-600">
+                                          {formatScoreBand(
+                                            domainScore.scoreBand
+                                          )}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  )
+                                )}
+                              </div>
+                            </div>
+                          ) : null}
+
+                          <div className="mt-4 rounded-lg bg-slate-50 p-3 text-xs leading-5 text-slate-600">
+                            <p>
+                              Model:{' '}
+                              <span className="font-semibold text-slate-800">
+                                {
+                                  assessmentSession.psychometricScore
+                                    .modelVersion
+                                }
+                              </span>
+                            </p>
+                            <p>
+                              Scoring mode:{' '}
+                              <span className="font-semibold text-slate-800">
+                                {
+                                  assessmentSession.psychometricScore
+                                    .scoringModeUsed
+                                }
+                              </span>
+                            </p>
+                            <p className="mt-1">
+                              Scores are provisional until IQMeridian completes
+                              formal calibration and norming.
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="mt-4 rounded-xl border border-dashed border-amber-200 bg-amber-50 p-4">
+                          <p className="text-sm font-semibold text-amber-900">
+                            Score profile pending
+                          </p>
+                          <p className="mt-1 text-sm leading-6 text-amber-800">
+                            This assessment is complete, but the psychometric
+                            score profile has not been generated or persisted
+                            yet.
+                          </p>
+                        </div>
+                      )
+                    ) : null}
                   </div>
                 ))
               ) : (

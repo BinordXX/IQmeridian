@@ -1,4 +1,5 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
@@ -23,5 +24,15 @@ export class PsychometricsController {
   @Get('capabilities')
   getCapabilities() {
     return this.psychometricsService.getCapabilities();
+  }
+
+  @Post('sessions/:sessionId/score')
+  scoreSession(@Param('sessionId') sessionId: string) {
+    return this.psychometricsService.scoreSession(sessionId);
+  }
+
+  @Get('sessions/:sessionId/score')
+  getSessionScore(@Param('sessionId') sessionId: string) {
+    return this.psychometricsService.getSessionScore(sessionId);
   }
 }

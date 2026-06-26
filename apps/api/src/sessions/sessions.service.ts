@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { PsychometricsService } from '../psychometrics/psychometrics.service';
 import {
   AssessmentDomain,
   FormItemMappingStatus,
@@ -89,10 +90,53 @@ type CandidateAssessmentSessionPayload = {
 
 @Injectable()
 export class SessionsService {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly auditService: AuditService,
-  ) {}
+constructor(
+  private readonly prisma: PrismaService,
+  private readonly auditService: AuditService,
+  private readonly psychometricsService: PsychometricsService,
+) {}
+
+  async getSessionPsychometricScore(
+    sessionId: string,
+    user: {
+      id: string;
+      role: string;
+      organisationId?: string | null;
+    },
+  ) {
+    const session = await this.prisma.session.findUnique({
+      where: { id: sessionId },
+      select: {
+        id: true,
+        userId: true,
+        campaign: {
+          select: {
+            organisationId: true,
+          },
+        },
+        psychometricScoreResult: {
+          include: {
+            domainScores: {
+              orderBy: { domain: 'asc' },
+            },
+            validityFlags: {
+              orderBy: [{ severity: 'desc' }, { code: 'asc' }],
+            },
+          },
+        },
+      },
+    });
+
+    if (!session) {
+      throw new NotFoundException('Session not found');
+    }
+
+    if (!this.canReadSessionPsychometricScore(session, user)) {
+      throw new ForbiddenException('Session does not belong to this user');
+    }
+
+    return session.psychometricScoreResult;
+  }
 
   async listSessions(
     user: RequestUser,
@@ -143,13 +187,23 @@ export class SessionsService {
         },
         skip,
         take: limit,
-        include: {
-          campaign: true,
-          assessmentForm: true,
-          currentSection: true,
-          responses: true,
-          score: true,
-        },
+include: {
+  campaign: true,
+  assessmentForm: true,
+  currentSection: true,
+  responses: true,
+  score: true,
+  psychometricScoreResult: {
+    include: {
+      domainScores: {
+        orderBy: { domain: 'asc' },
+      },
+      validityFlags: {
+        orderBy: [{ severity: 'desc' }, { code: 'asc' }],
+      },
+    },
+  },
+},
       }),
     ]);
 
@@ -201,9 +255,11 @@ export class SessionsService {
       input.assessmentFormId,
     );
 
-    const form = await this.getUsableForm(assessmentFormId);
+const form = await this.getUsableForm(assessmentFormId);
 
-    const existing = await this.prisma.session.findFirst({
+await this.completeTimedOutConsumerSessions(input.userId, form.id);
+
+const existing = await this.prisma.session.findFirst({
       where: {
         userId: input.userId,
         assessmentFormId: form.id,
@@ -360,19 +416,23 @@ export class SessionsService {
       },
     });
 
-    if (existing) {
-      if (existing.userId !== input.userId) {
-        throw new ForbiddenException(
-          'This invitation session belongs to another user',
-        );
-      }
+if (existing) {
+  if (existing.userId !== input.userId) {
+    throw new ForbiddenException(
+      'This invitation session belongs to another user',
+    );
+  }
 
-      return {
-        sessionId: existing.id,
-        assessmentId: existing.assessmentFormId,
-        status: this.toCandidateStatus(existing.status),
-      };
-    }
+  const wasAutoFinalised = await this.completeSessionIfTimedOut(existing);
+
+  return {
+    sessionId: existing.id,
+    assessmentId: existing.assessmentFormId,
+    status: wasAutoFinalised
+      ? this.toCandidateStatus(SessionStatus.COMPLETED)
+      : this.toCandidateStatus(existing.status),
+  };
+}
 
     if (invitation.status === InvitationStatus.PENDING) {
       const acceptedInvitation = await this.prisma.invitation.updateMany({
@@ -505,75 +565,106 @@ export class SessionsService {
     return this.getCandidateAssessmentSessionPayload(sessionId, userId);
   }
 
-  async resumeSession(sessionId: string, userId: string) {
-    const session = await this.getSessionForUser(sessionId, userId);
+async resumeSession(sessionId: string, userId: string) {
+  const session = await this.getSessionForUser(sessionId, userId);
 
-    if (
-      session.status !== SessionStatus.NOT_STARTED &&
-      session.status !== SessionStatus.IN_PROGRESS
-    ) {
-      throw new BadRequestException(
-        'Only not-started or in-progress sessions can be resumed',
-      );
-    }
+  await this.completeSessionIfTimedOut(session);
 
-    return this.getCandidateAssessmentSessionPayload(sessionId, userId);
+  const refreshedSession = await this.getSessionForUser(sessionId, userId);
+
+  if (
+    refreshedSession.status !== SessionStatus.NOT_STARTED &&
+    refreshedSession.status !== SessionStatus.IN_PROGRESS &&
+    refreshedSession.status !== SessionStatus.COMPLETED
+  ) {
+    throw new BadRequestException(
+      'Only not-started, in-progress, or completed sessions can be resumed',
+    );
   }
 
-  async finaliseSession(sessionId: string, userId: string) {
-    const session = await this.getSessionForUser(sessionId, userId);
+  return this.getCandidateAssessmentSessionPayload(sessionId, userId);
+}
 
-    if (session.status === SessionStatus.COMPLETED) {
-      throw new BadRequestException('Session is already completed');
-    }
+async finaliseSession(sessionId: string, userId: string) {
+  const session = await this.getSessionForUser(sessionId, userId);
 
-    if (
-      session.status === SessionStatus.EXPIRED ||
-      session.status === SessionStatus.ABANDONED
-    ) {
-      throw new BadRequestException('This session cannot be finalised');
-    }
+if (session.status === SessionStatus.COMPLETED) {
+  const psychometricScoring =
+    await this.scoreCompletedSessionBestEffort(
+      session.id,
+      session.userId,
+      'ALREADY_COMPLETED',
+    );
 
-    const completedAt = new Date();
+  return {
+    sessionId: session.id,
+    status: 'completed',
+    submittedAt:
+      session.completedAt?.toISOString() ?? new Date().toISOString(),
+    psychometricScoring,
+  };
+}
 
-    const finalisedSession = await this.prisma.session.update({
-      where: { id: sessionId },
-      data: {
-        status: SessionStatus.COMPLETED,
-        completedAt,
-      },
-    });
-
-    await this.auditService.record({
-      action: 'SESSION_SUBMITTED',
-      userId: finalisedSession.userId,
-      entityType: 'Session',
-      entityId: finalisedSession.id,
-      metadata: {
-        campaignId: finalisedSession.campaignId,
-        invitationId: finalisedSession.invitationId,
-        assessmentFormId: finalisedSession.assessmentFormId,
-        completedAt: finalisedSession.completedAt,
-        status: finalisedSession.status,
-        assessmentFormVersion: finalisedSession.assessmentFormVersion,
-        assessmentFormVersionLabel: finalisedSession.assessmentFormVersionLabel,
-        scoringVersion: finalisedSession.scoringVersion,
-        reportVersion: finalisedSession.reportVersion,
-      },
-    });
-
-    return {
-      sessionId: finalisedSession.id,
-      status: 'completed',
-      submittedAt: completedAt.toISOString(),
-    };
+  if (session.status === SessionStatus.ABANDONED) {
+    throw new BadRequestException('This session cannot be finalised');
   }
+
+  const isTimeoutFinalisation = this.isTimedOutSession(session);
+  const completedAt =
+    isTimeoutFinalisation && session.sectionEndsAt
+      ? session.sectionEndsAt
+      : new Date();
+
+  const finalisedSession = await this.prisma.session.update({
+    where: { id: sessionId },
+    data: {
+      status: SessionStatus.COMPLETED,
+      completedAt,
+    },
+  });
+
+  await this.auditService.record({
+    action: isTimeoutFinalisation
+      ? 'SESSION_TIMEOUT_AUTO_FINALISED'
+      : 'SESSION_SUBMITTED',
+    userId: finalisedSession.userId,
+    entityType: 'Session',
+    entityId: finalisedSession.id,
+    metadata: {
+      campaignId: finalisedSession.campaignId,
+      invitationId: finalisedSession.invitationId,
+      assessmentFormId: finalisedSession.assessmentFormId,
+      completedAt: finalisedSession.completedAt,
+      status: finalisedSession.status,
+      assessmentFormVersion: finalisedSession.assessmentFormVersion,
+      assessmentFormVersionLabel: finalisedSession.assessmentFormVersionLabel,
+      scoringVersion: finalisedSession.scoringVersion,
+      reportVersion: finalisedSession.reportVersion,
+      finalisationMode: isTimeoutFinalisation
+        ? 'TIMEOUT_AUTO_FINALISED'
+        : 'USER_SUBMITTED',
+    },
+  });
+
+const psychometricScoring = await this.scoreCompletedSessionBestEffort(
+  finalisedSession.id,
+  finalisedSession.userId,
+  isTimeoutFinalisation ? 'TIMEOUT_AUTO_FINALISED' : 'USER_SUBMITTED',
+);
+
+return {
+  sessionId: finalisedSession.id,
+  status: 'completed',
+  submittedAt: completedAt.toISOString(),
+  psychometricScoring,
+};
+}
 
   private async getCandidateAssessmentSessionPayload(
     sessionId: string,
     userId: string,
   ): Promise<CandidateAssessmentSessionPayload> {
-    const session = await this.prisma.session.findUnique({
+    let session = await this.prisma.session.findUnique({
       where: { id: sessionId },
       include: {
         user: true,
@@ -586,11 +677,22 @@ export class SessionsService {
       throw new NotFoundException('Session not found');
     }
 
-    if (session.userId !== userId) {
-      throw new ForbiddenException('Session does not belong to this user');
-    }
+if (session.userId !== userId) {
+  throw new ForbiddenException('Session does not belong to this user');
+}
 
-    const sections = await this.prisma.assessmentSection.findMany({
+if (this.isTimedOutSession(session)) {
+  const completedSession = await this.completeTimedOutSession(session);
+
+  session = {
+    ...session,
+    status: completedSession.status,
+    completedAt: completedSession.completedAt,
+    updatedAt: completedSession.updatedAt,
+  };
+}
+
+const sections = await this.prisma.assessmentSection.findMany({
       where: {
         formId: session.assessmentFormId,
       },
@@ -849,12 +951,234 @@ export class SessionsService {
 
     return session;
   }
+private isTimedOutSession(session: {
+  status: SessionStatus;
+  sectionEndsAt: Date | null;
+}) {
+  const sectionEndsAt = session.sectionEndsAt;
 
+  return (
+    session.status === SessionStatus.IN_PROGRESS &&
+    sectionEndsAt !== null &&
+    sectionEndsAt <= new Date()
+  );
+}
+
+private async completeSessionIfTimedOut(session: {
+  id: string;
+  userId: string;
+  campaignId: string | null;
+  invitationId: string | null;
+  assessmentFormId: string;
+  assessmentFormVersion: number;
+  assessmentFormVersionLabel: string | null;
+  scoringVersion: number;
+  reportVersion: number;
+  status: SessionStatus;
+  sectionEndsAt: Date | null;
+}) {
+  if (!this.isTimedOutSession(session)) {
+    return false;
+  }
+
+  await this.completeTimedOutSession(session);
+
+  return true;
+}
+
+private async completeTimedOutConsumerSessions(
+  userId: string,
+  assessmentFormId: string,
+) {
+  const timedOutSessions = await this.prisma.session.findMany({
+    where: {
+      userId,
+      assessmentFormId,
+      campaignId: null,
+      status: SessionStatus.IN_PROGRESS,
+      sectionEndsAt: {
+        lte: new Date(),
+      },
+    },
+  });
+
+  for (const session of timedOutSessions) {
+    await this.completeTimedOutSession(session);
+  }
+}
+
+private async completeTimedOutSession(session: {
+  id: string;
+  userId: string;
+  campaignId: string | null;
+  invitationId: string | null;
+  assessmentFormId: string;
+  assessmentFormVersion: number;
+  assessmentFormVersionLabel: string | null;
+  scoringVersion: number;
+  reportVersion: number;
+  sectionEndsAt: Date | null;
+}) {
+  const completedAt = session.sectionEndsAt ?? new Date();
+
+  const updatedSession = await this.prisma.session.update({
+    where: { id: session.id },
+    data: {
+      status: SessionStatus.COMPLETED,
+      completedAt,
+    },
+  });
+
+  await this.auditService.record({
+    action: 'SESSION_TIMEOUT_AUTO_FINALISED',
+    userId: updatedSession.userId,
+    entityType: 'Session',
+    entityId: updatedSession.id,
+    metadata: {
+      campaignId: updatedSession.campaignId,
+      invitationId: updatedSession.invitationId,
+      assessmentFormId: updatedSession.assessmentFormId,
+      completedAt: updatedSession.completedAt,
+      status: updatedSession.status,
+      assessmentFormVersion: updatedSession.assessmentFormVersion,
+      assessmentFormVersionLabel: updatedSession.assessmentFormVersionLabel,
+      scoringVersion: updatedSession.scoringVersion,
+      reportVersion: updatedSession.reportVersion,
+      finalisationMode: 'TIMEOUT_AUTO_FINALISED',
+    },
+  });
+await this.scoreCompletedSessionBestEffort(
+  updatedSession.id,
+  updatedSession.userId,
+  'TIMEOUT_AUTO_FINALISED',
+);
+  return updatedSession;
+}
+
+private async scoreCompletedSessionBestEffort(
+  sessionId: string,
+  userId: string | null,
+  trigger:
+    | 'USER_SUBMITTED'
+    | 'TIMEOUT_AUTO_FINALISED'
+    | 'ALREADY_COMPLETED',
+) {
+  const existingScore =
+    await this.prisma.psychometricScoreResult.findUnique({
+      where: { sessionId },
+      select: {
+        id: true,
+        scoringStatus: true,
+        modelVersion: true,
+        generatedAt: true,
+      },
+    });
+
+  if (existingScore) {
+    return {
+      status: 'already_scored',
+      scoreResultId: existingScore.id,
+      scoringStatus: existingScore.scoringStatus,
+      modelVersion: existingScore.modelVersion,
+      generatedAt: existingScore.generatedAt.toISOString(),
+    };
+  }
+
+  try {
+    const scoreResult =
+      await this.psychometricsService.scoreCompletedSession(sessionId);
+
+    const typedScoreResult = scoreResult as {
+      id?: string;
+      scoringStatus?: string;
+      modelVersion?: string;
+      generatedAt?: Date | string;
+    };
+
+    await this.auditService.record({
+      action: 'SESSION_PSYCHOMETRIC_AUTO_SCORE_COMPLETED',
+      userId,
+      entityType: 'Session',
+      entityId: sessionId,
+      metadata: {
+        trigger,
+        scoreResultId: typedScoreResult.id ?? null,
+        scoringStatus: typedScoreResult.scoringStatus ?? null,
+        modelVersion: typedScoreResult.modelVersion ?? null,
+        generatedAt: typedScoreResult.generatedAt ?? null,
+      },
+    });
+
+    return {
+      status: 'scored',
+      scoreResultId: typedScoreResult.id ?? null,
+      scoringStatus: typedScoreResult.scoringStatus ?? null,
+      modelVersion: typedScoreResult.modelVersion ?? null,
+    };
+  } catch (error) {
+    await this.auditService.record({
+      action: 'SESSION_PSYCHOMETRIC_AUTO_SCORE_FAILED',
+      userId,
+      entityType: 'Session',
+      entityId: sessionId,
+      metadata: {
+        trigger,
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Unknown psychometric scoring error',
+      },
+    });
+
+    return {
+      status: 'failed',
+      message:
+        error instanceof Error
+          ? error.message
+          : 'Unknown psychometric scoring error',
+    };
+  }
+}
   private isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
   }
 
   private getStringValue(value: unknown): string | undefined {
     return typeof value === 'string' ? value : undefined;
+  }
+
+  private canReadSessionPsychometricScore(
+    session: {
+      userId: string;
+      campaign: {
+        organisationId: string | null;
+      } | null;
+    },
+    user: {
+      id: string;
+      role: string;
+      organisationId?: string | null;
+    },
+  ) {
+    if (user.role === 'PLATFORM_ADMIN' || user.role === 'RESEARCHER') {
+      return true;
+    }
+
+    if (
+      (user.role === 'CONSUMER' || user.role === 'CANDIDATE') &&
+      session.userId === user.id
+    ) {
+      return true;
+    }
+
+    if (
+      user.role === 'EMPLOYER_ADMIN' &&
+      session.campaign?.organisationId &&
+      user.organisationId === session.campaign.organisationId
+    ) {
+      return true;
+    }
+
+    return false;
   }
 }

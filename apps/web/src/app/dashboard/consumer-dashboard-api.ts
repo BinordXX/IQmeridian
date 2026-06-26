@@ -33,6 +33,72 @@ export type ConsumerSessionSummary = {
     id?: string;
     name?: string | null;
   } | null;
+  psychometricScore?: ConsumerPsychometricScoreResult | null;
+  psychometricScoreResult?: ConsumerPsychometricScoreResult | null;
+};
+
+export type ConsumerPsychometricDomainScore = {
+  id: string;
+  domain: string;
+  label: string;
+  rawScore: number;
+  maxRawScore: number;
+  accuracy: number | null;
+  theta: number | null;
+  standardScore: number | null;
+  percentile: number | null;
+  scoreBand: string;
+  standardError: number | null;
+  ci90Lower: number | null;
+  ci90Upper: number | null;
+  testInformation: number | null;
+  reliability: number | null;
+  interpretation: string;
+};
+
+export type ConsumerPsychometricValidityFlag = {
+  id: string;
+  code: string;
+  label: string;
+  severity: string;
+  description: string;
+  evidence: unknown;
+};
+
+export type ConsumerPsychometricScoreResult = {
+  id: string;
+  sessionId: string;
+  contractVersion: string;
+  scoringStatus: string;
+  overallRawScore: number;
+  overallMaxRawScore: number;
+  overallAccuracy: number | null;
+  overallTheta: number | null;
+  overallStandardScore: number | null;
+  overallPercentile: number | null;
+  overallScoreBand: string;
+  overallStandardError: number | null;
+  overallCi90Lower: number | null;
+  overallCi90Upper: number | null;
+  overallTestInformation: number | null;
+  overallReliability: number | null;
+  overallInterpretation: string;
+  timingTotalResponseTimeMs: number | null;
+  timingMedianResponseTimeMs: number | null;
+  timingSpeedIndex: number | null;
+  timingSpeedAccuracyTradeoff: string | null;
+  timingRapidGuessingRate: number;
+  timingOmissionRate: number;
+  modelVersion: string;
+  calibrationVersion: string | null;
+  scoringModeUsed: string;
+  generatedAt: string;
+  inputHash: string | null;
+  warnings: unknown;
+  domainScores: ConsumerPsychometricDomainScore[];
+  validityFlags: ConsumerPsychometricValidityFlag[];
+  createdAt: string;
+  updatedAt: string;
 };
 
 type CreateConsumerSessionResponse = {
@@ -99,18 +165,49 @@ const requestApi = async <T>(path: string, init?: RequestInit): Promise<T> => {
     );
   }
 
-  return response.json() as Promise<T>;
+  const responseText = await response.text();
+
+  if (!responseText.trim()) {
+    return null as T;
+  }
+
+  return JSON.parse(responseText) as T;
+};
+
+const attachEmbeddedPsychometricScores = (
+  sessions: ConsumerSessionSummary[]
+): ConsumerSessionSummary[] => {
+  return sessions.map((session) => ({
+    ...session,
+    psychometricScore:
+      session.psychometricScore ?? session.psychometricScoreResult ?? null,
+  }));
 };
 
 const normaliseSessions = (
   response: SessionsListResponse
 ): ConsumerSessionSummary[] => {
-  if (Array.isArray(response)) return response;
-  if (Array.isArray(response.sessions)) return response.sessions;
-  if (Array.isArray(response.items)) return response.items;
-  if (Array.isArray(response.data)) return response.data;
+  if (Array.isArray(response)) {
+    return attachEmbeddedPsychometricScores(response);
+  }
+
+  if (Array.isArray(response.sessions)) {
+    return attachEmbeddedPsychometricScores(response.sessions);
+  }
+
+  if (Array.isArray(response.items)) {
+    return attachEmbeddedPsychometricScores(response.items);
+  }
+
+  if (Array.isArray(response.data)) {
+    return attachEmbeddedPsychometricScores(response.data);
+  }
 
   return [];
+};
+
+const isCompletedSessionStatus = (status: string) => {
+  return status === 'COMPLETED' || status === 'FINALISED';
 };
 
 export const getConsumerAssessmentDefault = async () => {
@@ -120,6 +217,54 @@ export const getConsumerAssessmentDefault = async () => {
 export const listConsumerSessions = async () => {
   const response = await requestApi<SessionsListResponse>('/sessions');
   return normaliseSessions(response);
+};
+
+export const getConsumerSessionPsychometricScore = async (
+  sessionId: string
+) => {
+  return requestApi<ConsumerPsychometricScoreResult | null>(
+    `/sessions/${encodeURIComponent(sessionId)}/psychometric-score`
+  );
+};
+
+export const listConsumerSessionsWithPsychometricScores = async () => {
+  const sessions = await listConsumerSessions();
+
+  return Promise.all(
+    sessions.map(async (session) => {
+      if (session.psychometricScore) {
+        return session;
+      }
+
+      if (!isCompletedSessionStatus(session.status)) {
+        return {
+          ...session,
+          psychometricScore: null,
+        };
+      }
+
+      try {
+        const psychometricScore = await getConsumerSessionPsychometricScore(
+          session.id
+        );
+
+        return {
+          ...session,
+          psychometricScore,
+        };
+      } catch (error) {
+        console.error(
+          `Failed to load psychometric score for session ${session.id}`,
+          error
+        );
+
+        return {
+          ...session,
+          psychometricScore: null,
+        };
+      }
+    })
+  );
 };
 
 export const createConsumerAssessmentSession = async () => {

@@ -76,6 +76,70 @@ type BackendCreateAssessmentSessionResult = {
   status?: string;
 };
 
+export type AssessmentPsychometricDomainScore = {
+  id: string;
+  domain: string;
+  label: string;
+  rawScore: number;
+  maxRawScore: number;
+  accuracy: number | null;
+  theta: number | null;
+  standardScore: number | null;
+  percentile: number | null;
+  scoreBand: string;
+  standardError: number | null;
+  ci90Lower: number | null;
+  ci90Upper: number | null;
+  testInformation: number | null;
+  reliability: number | null;
+  interpretation: string;
+};
+
+export type AssessmentPsychometricValidityFlag = {
+  id: string;
+  code: string;
+  label: string;
+  severity: string;
+  description: string;
+  evidence: unknown;
+};
+
+export type AssessmentPsychometricScoreResult = {
+  id: string;
+  sessionId: string;
+  contractVersion: string;
+  scoringStatus: string;
+  overallRawScore: number;
+  overallMaxRawScore: number;
+  overallAccuracy: number | null;
+  overallTheta: number | null;
+  overallStandardScore: number | null;
+  overallPercentile: number | null;
+  overallScoreBand: string;
+  overallStandardError: number | null;
+  overallCi90Lower: number | null;
+  overallCi90Upper: number | null;
+  overallTestInformation: number | null;
+  overallReliability: number | null;
+  overallInterpretation: string;
+  timingTotalResponseTimeMs: number | null;
+  timingMedianResponseTimeMs: number | null;
+  timingSpeedIndex: number | null;
+  timingSpeedAccuracyTradeoff: string | null;
+  timingRapidGuessingRate: number;
+  timingOmissionRate: number;
+  modelVersion: string;
+  calibrationVersion: string | null;
+  scoringModeUsed: string;
+  generatedAt: string;
+  inputHash: string | null;
+  warnings: unknown;
+  domainScores: AssessmentPsychometricDomainScore[];
+  validityFlags: AssessmentPsychometricValidityFlag[];
+  createdAt: string;
+  updatedAt: string;
+};
+
 export class AssessmentApiError extends Error {
   readonly status: number;
   readonly payload: unknown;
@@ -118,6 +182,9 @@ const assessmentEndpoints = {
 
   scoreSession: (sessionId: string) =>
     `/sessions/${encodeURIComponent(sessionId)}/score`,
+
+    getPsychometricScore: (sessionId: string) =>
+    `/sessions/${encodeURIComponent(sessionId)}/psychometric-score`,
 
   generateReport: (sessionId: string) =>
     `/sessions/${encodeURIComponent(sessionId)}/report`,
@@ -393,6 +460,16 @@ export const scoreAssessmentSession = async (
       method: 'POST',
       signal,
     }
+  );
+};
+
+export const getAssessmentPsychometricScore = async (
+  sessionId: string,
+  signal?: AbortSignal
+): Promise<AssessmentPsychometricScoreResult | null> => {
+  return assessmentRequest<AssessmentPsychometricScoreResult | null>(
+    assessmentEndpoints.getPsychometricScore(sessionId),
+    { signal }
   );
 };
 
