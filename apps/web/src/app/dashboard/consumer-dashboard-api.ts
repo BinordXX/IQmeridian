@@ -33,7 +33,8 @@ export type ConsumerSessionSummary = {
     id?: string;
     name?: string | null;
   } | null;
-    psychometricScore?: ConsumerPsychometricScoreResult | null;
+  psychometricScore?: ConsumerPsychometricScoreResult | null;
+  psychometricScoreResult?: ConsumerPsychometricScoreResult | null;
 };
 
 export type ConsumerPsychometricDomainScore = {
@@ -164,16 +165,43 @@ const requestApi = async <T>(path: string, init?: RequestInit): Promise<T> => {
     );
   }
 
-  return response.json() as Promise<T>;
+  const responseText = await response.text();
+
+  if (!responseText.trim()) {
+    return null as T;
+  }
+
+  return JSON.parse(responseText) as T;
+};
+
+const attachEmbeddedPsychometricScores = (
+  sessions: ConsumerSessionSummary[]
+): ConsumerSessionSummary[] => {
+  return sessions.map((session) => ({
+    ...session,
+    psychometricScore:
+      session.psychometricScore ?? session.psychometricScoreResult ?? null,
+  }));
 };
 
 const normaliseSessions = (
   response: SessionsListResponse
 ): ConsumerSessionSummary[] => {
-  if (Array.isArray(response)) return response;
-  if (Array.isArray(response.sessions)) return response.sessions;
-  if (Array.isArray(response.items)) return response.items;
-  if (Array.isArray(response.data)) return response.data;
+  if (Array.isArray(response)) {
+    return attachEmbeddedPsychometricScores(response);
+  }
+
+  if (Array.isArray(response.sessions)) {
+    return attachEmbeddedPsychometricScores(response.sessions);
+  }
+
+  if (Array.isArray(response.items)) {
+    return attachEmbeddedPsychometricScores(response.items);
+  }
+
+  if (Array.isArray(response.data)) {
+    return attachEmbeddedPsychometricScores(response.data);
+  }
 
   return [];
 };
@@ -204,6 +232,10 @@ export const listConsumerSessionsWithPsychometricScores = async () => {
 
   return Promise.all(
     sessions.map(async (session) => {
+      if (session.psychometricScore) {
+        return session;
+      }
+
       if (!isCompletedSessionStatus(session.status)) {
         return {
           ...session,
@@ -220,7 +252,12 @@ export const listConsumerSessionsWithPsychometricScores = async () => {
           ...session,
           psychometricScore,
         };
-      } catch {
+      } catch (error) {
+        console.error(
+          `Failed to load psychometric score for session ${session.id}`,
+          error
+        );
+
         return {
           ...session,
           psychometricScore: null,

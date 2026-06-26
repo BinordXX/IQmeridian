@@ -53,6 +53,10 @@ export class PsychometricsService {
     return this.scorePersistence.upsertSessionScore(response);
   }
 
+  async scoreCompletedSession(sessionId: string) {
+  return this.scoreSession(sessionId);
+}
+
   async getSessionScore(sessionId: string) {
     return this.scorePersistence.getSessionScore(sessionId);
   }

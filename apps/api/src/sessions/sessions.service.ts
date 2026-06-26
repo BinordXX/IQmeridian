@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { PsychometricsService } from '../psychometrics/psychometrics.service';
 import {
   AssessmentDomain,
   FormItemMappingStatus,
@@ -89,10 +90,11 @@ type CandidateAssessmentSessionPayload = {
 
 @Injectable()
 export class SessionsService {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly auditService: AuditService,
-  ) {}
+constructor(
+  private readonly prisma: PrismaService,
+  private readonly auditService: AuditService,
+  private readonly psychometricsService: PsychometricsService,
+) {}
 
   async getSessionPsychometricScore(
     sessionId: string,
@@ -185,13 +187,23 @@ export class SessionsService {
         },
         skip,
         take: limit,
-        include: {
-          campaign: true,
-          assessmentForm: true,
-          currentSection: true,
-          responses: true,
-          score: true,
-        },
+include: {
+  campaign: true,
+  assessmentForm: true,
+  currentSection: true,
+  responses: true,
+  score: true,
+  psychometricScoreResult: {
+    include: {
+      domainScores: {
+        orderBy: { domain: 'asc' },
+      },
+      validityFlags: {
+        orderBy: [{ severity: 'desc' }, { code: 'asc' }],
+      },
+    },
+  },
+},
       }),
     ]);
 
@@ -576,14 +588,22 @@ async resumeSession(sessionId: string, userId: string) {
 async finaliseSession(sessionId: string, userId: string) {
   const session = await this.getSessionForUser(sessionId, userId);
 
-  if (session.status === SessionStatus.COMPLETED) {
-    return {
-      sessionId: session.id,
-      status: 'completed',
-      submittedAt:
-        session.completedAt?.toISOString() ?? new Date().toISOString(),
-    };
-  }
+if (session.status === SessionStatus.COMPLETED) {
+  const psychometricScoring =
+    await this.scoreCompletedSessionBestEffort(
+      session.id,
+      session.userId,
+      'ALREADY_COMPLETED',
+    );
+
+  return {
+    sessionId: session.id,
+    status: 'completed',
+    submittedAt:
+      session.completedAt?.toISOString() ?? new Date().toISOString(),
+    psychometricScoring,
+  };
+}
 
   if (session.status === SessionStatus.ABANDONED) {
     throw new BadRequestException('This session cannot be finalised');
@@ -626,11 +646,18 @@ async finaliseSession(sessionId: string, userId: string) {
     },
   });
 
-  return {
-    sessionId: finalisedSession.id,
-    status: 'completed',
-    submittedAt: completedAt.toISOString(),
-  };
+const psychometricScoring = await this.scoreCompletedSessionBestEffort(
+  finalisedSession.id,
+  finalisedSession.userId,
+  isTimeoutFinalisation ? 'TIMEOUT_AUTO_FINALISED' : 'USER_SUBMITTED',
+);
+
+return {
+  sessionId: finalisedSession.id,
+  status: 'completed',
+  submittedAt: completedAt.toISOString(),
+  psychometricScoring,
+};
 }
 
   private async getCandidateAssessmentSessionPayload(
@@ -1020,8 +1047,97 @@ private async completeTimedOutSession(session: {
       finalisationMode: 'TIMEOUT_AUTO_FINALISED',
     },
   });
-
+await this.scoreCompletedSessionBestEffort(
+  updatedSession.id,
+  updatedSession.userId,
+  'TIMEOUT_AUTO_FINALISED',
+);
   return updatedSession;
+}
+
+private async scoreCompletedSessionBestEffort(
+  sessionId: string,
+  userId: string | null,
+  trigger:
+    | 'USER_SUBMITTED'
+    | 'TIMEOUT_AUTO_FINALISED'
+    | 'ALREADY_COMPLETED',
+) {
+  const existingScore =
+    await this.prisma.psychometricScoreResult.findUnique({
+      where: { sessionId },
+      select: {
+        id: true,
+        scoringStatus: true,
+        modelVersion: true,
+        generatedAt: true,
+      },
+    });
+
+  if (existingScore) {
+    return {
+      status: 'already_scored',
+      scoreResultId: existingScore.id,
+      scoringStatus: existingScore.scoringStatus,
+      modelVersion: existingScore.modelVersion,
+      generatedAt: existingScore.generatedAt.toISOString(),
+    };
+  }
+
+  try {
+    const scoreResult =
+      await this.psychometricsService.scoreCompletedSession(sessionId);
+
+    const typedScoreResult = scoreResult as {
+      id?: string;
+      scoringStatus?: string;
+      modelVersion?: string;
+      generatedAt?: Date | string;
+    };
+
+    await this.auditService.record({
+      action: 'SESSION_PSYCHOMETRIC_AUTO_SCORE_COMPLETED',
+      userId,
+      entityType: 'Session',
+      entityId: sessionId,
+      metadata: {
+        trigger,
+        scoreResultId: typedScoreResult.id ?? null,
+        scoringStatus: typedScoreResult.scoringStatus ?? null,
+        modelVersion: typedScoreResult.modelVersion ?? null,
+        generatedAt: typedScoreResult.generatedAt ?? null,
+      },
+    });
+
+    return {
+      status: 'scored',
+      scoreResultId: typedScoreResult.id ?? null,
+      scoringStatus: typedScoreResult.scoringStatus ?? null,
+      modelVersion: typedScoreResult.modelVersion ?? null,
+    };
+  } catch (error) {
+    await this.auditService.record({
+      action: 'SESSION_PSYCHOMETRIC_AUTO_SCORE_FAILED',
+      userId,
+      entityType: 'Session',
+      entityId: sessionId,
+      metadata: {
+        trigger,
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Unknown psychometric scoring error',
+      },
+    });
+
+    return {
+      status: 'failed',
+      message:
+        error instanceof Error
+          ? error.message
+          : 'Unknown psychometric scoring error',
+    };
+  }
 }
   private isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);

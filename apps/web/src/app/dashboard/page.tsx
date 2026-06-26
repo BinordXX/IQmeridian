@@ -96,6 +96,46 @@ const getTimestampValue = (value?: string | null) => {
   return Number.isNaN(parsed) ? 0 : parsed;
 };
 
+const STANDARD_SCORE_MEAN = 100;
+const STANDARD_SCORE_SD = 15;
+const STANDARD_SCORE_MIN = 40;
+const STANDARD_SCORE_MAX = 160;
+const MAX_DISPLAYABLE_INTERVAL_WIDTH = 45;
+
+const formatStandardScoreInterval = (
+  lowerTheta: number | null | undefined,
+  upperTheta: number | null | undefined
+) => {
+  if (typeof lowerTheta !== 'number' || typeof upperTheta !== 'number') {
+    return 'Not available';
+  }
+
+  const lowerStandardScore = STANDARD_SCORE_MEAN + lowerTheta * STANDARD_SCORE_SD;
+  const upperStandardScore = STANDARD_SCORE_MEAN + upperTheta * STANDARD_SCORE_SD;
+
+  const rawIntervalWidth = upperStandardScore - lowerStandardScore;
+
+  if (
+    rawIntervalWidth > MAX_DISPLAYABLE_INTERVAL_WIDTH ||
+    lowerStandardScore < STANDARD_SCORE_MIN ||
+    upperStandardScore > STANDARD_SCORE_MAX
+  ) {
+    return 'Low precision';
+  }
+
+  const clampedLower = Math.max(
+    STANDARD_SCORE_MIN,
+    Math.min(STANDARD_SCORE_MAX, lowerStandardScore)
+  );
+
+  const clampedUpper = Math.max(
+    STANDARD_SCORE_MIN,
+    Math.min(STANDARD_SCORE_MAX, upperStandardScore)
+  );
+
+  return `${Math.round(clampedLower)}–${Math.round(clampedUpper)}`;
+};
+
 const getCurrentProfileSession = (sessions: ConsumerSessionSummary[]) => {
   return sessions
     .filter((sessionRecord) => sessionRecord.psychometricScore)
@@ -186,6 +226,8 @@ export default async function DashboardPage({
     dashboardError =
       error instanceof Error ? error.message : 'Unable to load dashboard data.';
   }
+
+  
 
   const hasSessions = sessions.length > 0;
   const canStartConsumerAssessment =
@@ -583,22 +625,14 @@ export default async function DashboardPage({
 
                             <div className="rounded-lg bg-slate-50 p-3">
                               <dt className="text-xs font-medium text-slate-500">
-                                90% interval
+                               90% score interval
                               </dt>
-                              <dd className="mt-1 text-lg font-bold text-slate-950">
-                                {assessmentSession.psychometricScore
-                                  .overallCi90Lower !== null &&
-                                assessmentSession.psychometricScore
-                                  .overallCi90Upper !== null
-                                  ? `${formatWholeNumber(
-                                      assessmentSession.psychometricScore
-                                        .overallCi90Lower
-                                    )}–${formatWholeNumber(
-                                      assessmentSession.psychometricScore
-                                        .overallCi90Upper
-                                    )}`
-                                  : 'Not available'}
-                              </dd>
+<dd className="mt-1 text-lg font-bold text-slate-950">
+  {formatStandardScoreInterval(
+    assessmentSession.psychometricScore.overallCi90Lower,
+    assessmentSession.psychometricScore.overallCi90Upper
+  )}
+</dd>
                             </div>
                           </dl>
 
