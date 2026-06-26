@@ -11,7 +11,7 @@ client = TestClient(app)
 def _payload() -> dict:
     return {
         "contractVersion": "2026-06-25.v1",
-        "requestedScoringMode": "IRT_3PL_PROVISIONAL",
+        "requestedScoringMode": "BASELINE_CLASSICAL",
         "requestedAt": "2026-06-25T12:00:00Z",
         "session": {
             "sessionId": "session-1",
