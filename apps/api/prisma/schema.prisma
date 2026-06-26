@@ -436,9 +436,10 @@ model Session {
   createdAt                  DateTime           @default(now())
   updatedAt                  DateTime           @updatedAt
 
-  responses Response[]
-  score     Score?
-  report    Report[]
+  responses               Response[]
+  score                   Score?
+  psychometricScoreResult PsychometricScoreResult?
+  report                  Report[]
 }
 
 model Response {
@@ -751,4 +752,131 @@ enum InvitationStatus {
   ACCEPTED
   EXPIRED
   CANCELLED
+}
+
+enum PsychometricScoringStatus {
+  SCORED
+  PARTIAL
+  INSUFFICIENT_DATA
+  FAILED
+}
+
+enum PsychometricScoreBand {
+  VERY_LOW
+  LOW
+  LOW_AVERAGE
+  AVERAGE
+  HIGH_AVERAGE
+  HIGH
+  VERY_HIGH
+  UNAVAILABLE
+}
+
+enum PsychometricValiditySeverity {
+  INFO
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum PsychometricScoringMode {
+  BASELINE_CLASSICAL
+  IRT_2PL_PROVISIONAL
+  IRT_3PL_PROVISIONAL
+  MULTIDIMENSIONAL_PROVISIONAL
+  HYBRID_RESEARCH
+}
+
+model PsychometricScoreResult {
+  id        String  @id @default(cuid())
+  sessionId String  @unique
+  session   Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  contractVersion String
+  scoringStatus   PsychometricScoringStatus
+
+  overallRawScore        Float
+  overallMaxRawScore     Float
+  overallAccuracy        Float?
+  overallTheta           Float?
+  overallStandardScore   Float?
+  overallPercentile      Float?
+  overallScoreBand       PsychometricScoreBand
+  overallStandardError   Float?
+  overallCi90Lower       Float?
+  overallCi90Upper       Float?
+  overallTestInformation Float?
+  overallReliability     Float?
+  overallInterpretation  String
+
+  timingTotalResponseTimeMs   Int?
+  timingMedianResponseTimeMs  Int?
+  timingSpeedIndex            Float?
+  timingSpeedAccuracyTradeoff String?
+  timingRapidGuessingRate     Float
+  timingOmissionRate          Float
+
+  modelVersion       String
+  calibrationVersion String?
+  scoringModeUsed    PsychometricScoringMode
+  generatedAt        DateTime
+  inputHash          String?
+  warnings           Json
+
+  domainScores  PsychometricDomainScore[]
+  validityFlags PsychometricValidityFlag[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([scoringStatus])
+  @@index([overallScoreBand])
+  @@index([modelVersion])
+  @@index([generatedAt])
+}
+
+model PsychometricDomainScore {
+  id       String                  @id @default(cuid())
+  resultId String
+  result   PsychometricScoreResult @relation(fields: [resultId], references: [id], onDelete: Cascade)
+
+  domain String
+  label  String
+
+  rawScore        Float
+  maxRawScore     Float
+  accuracy        Float?
+  theta           Float?
+  standardScore   Float?
+  percentile      Float?
+  scoreBand       PsychometricScoreBand
+  standardError   Float?
+  ci90Lower       Float?
+  ci90Upper       Float?
+  testInformation Float?
+  reliability     Float?
+  interpretation  String
+
+  createdAt DateTime @default(now())
+
+  @@unique([resultId, domain])
+  @@index([domain])
+  @@index([scoreBand])
+}
+
+model PsychometricValidityFlag {
+  id       String                  @id @default(cuid())
+  resultId String
+  result   PsychometricScoreResult @relation(fields: [resultId], references: [id], onDelete: Cascade)
+
+  code        String
+  label       String
+  severity    PsychometricValiditySeverity
+  description String
+  evidence    Json
+
+  createdAt DateTime @default(now())
+
+  @@index([code])
+  @@index([severity])
 }
