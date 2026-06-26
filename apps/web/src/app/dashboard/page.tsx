@@ -88,6 +88,40 @@ const isCompletedSession = (session: ConsumerSessionSummary) => {
   return session.status === 'COMPLETED' || session.status === 'FINALISED';
 };
 
+const getTimestampValue = (value?: string | null) => {
+  if (!value) return 0;
+
+  const parsed = new Date(value).getTime();
+
+  return Number.isNaN(parsed) ? 0 : parsed;
+};
+
+const getCurrentProfileSession = (sessions: ConsumerSessionSummary[]) => {
+  return sessions
+    .filter((sessionRecord) => sessionRecord.psychometricScore)
+    .sort((left, right) => {
+      const leftScore = left.psychometricScore;
+      const rightScore = right.psychometricScore;
+
+      return (
+        getTimestampValue(
+          rightScore?.generatedAt ?? right.completedAt ?? right.updatedAt
+        ) -
+        getTimestampValue(
+          leftScore?.generatedAt ?? left.completedAt ?? left.updatedAt
+        )
+      );
+    })[0];
+};
+
+const getStrongestDomain = (session: ConsumerSessionSummary | undefined) => {
+  const domainScores = session?.psychometricScore?.domainScores ?? [];
+
+  return [...domainScores].sort(
+    (left, right) => (right.standardScore ?? 0) - (left.standardScore ?? 0)
+  )[0];
+};
+
 const getSessionTitle = (session: ConsumerSessionSummary) => {
   return (
     session.assessmentForm?.name ??
@@ -189,6 +223,11 @@ export default async function DashboardPage({
       'Candidate assessments are assigned through invitations or employer campaigns. When an assessment is assigned to you, it will appear in your assessment history.'
     );
 
+
+  const currentProfileSession = getCurrentProfileSession(sessions);
+  const currentProfileScore = currentProfileSession?.psychometricScore ?? null;
+  const strongestDomain = getStrongestDomain(currentProfileSession);
+
   return (
     <div className="space-y-6">
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -229,6 +268,91 @@ export default async function DashboardPage({
           <span>{dashboardError}</span>
         </div>
       ) : null}
+
+
+      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.25em] text-slate-500">
+              Current IQMeridian profile
+            </p>
+            <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-950">
+              {currentProfileScore
+                ? formatScoreBand(currentProfileScore.overallScoreBand)
+                : 'Profile not available yet'}
+            </h2>
+            <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
+              {currentProfileScore
+                ? currentProfileScore.overallInterpretation
+                : 'Complete an assessment to generate your current IQMeridian intelligence profile. Your profile will update when a new valid assessment score is generated.'}
+            </p>
+          </div>
+
+          <span className="w-fit rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+            {currentProfileScore
+              ? `Updated ${formatDate(currentProfileScore.generatedAt)}`
+              : 'Awaiting first score'}
+          </span>
+        </div>
+
+        <dl className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+              Standard score
+            </dt>
+            <dd className="mt-2 text-2xl font-bold text-slate-950">
+              {formatWholeNumber(currentProfileScore?.overallStandardScore)}
+            </dd>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+              Percentile
+            </dt>
+            <dd className="mt-2 text-2xl font-bold text-slate-950">
+              {formatPercentile(currentProfileScore?.overallPercentile)}
+            </dd>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+              Accuracy
+            </dt>
+            <dd className="mt-2 text-2xl font-bold text-slate-950">
+              {formatAccuracy(currentProfileScore?.overallAccuracy)}
+            </dd>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+              Strongest domain
+            </dt>
+            <dd className="mt-2 text-2xl font-bold text-slate-950">
+              {strongestDomain?.label ?? 'Not available'}
+            </dd>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+              Validity flags
+            </dt>
+            <dd className="mt-2 text-2xl font-bold text-slate-950">
+              {currentProfileScore
+                ? currentProfileScore.validityFlags.length
+                : 'Not available'}
+            </dd>
+          </div>
+        </dl>
+
+        {currentProfileScore ? (
+          <div className="mt-5 rounded-2xl border border-amber-100 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+            This profile currently reflects your latest scored assessment. A
+            future IQMeridian release will recalculate this as a longitudinal
+            ability estimate across valid assessment attempts, with retake
+            interval controls and calibration safeguards.
+          </div>
+        ) : null}
+      </section>
 
       <section className="grid gap-4 md:grid-cols-3">
         <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -293,7 +417,10 @@ export default async function DashboardPage({
 
       <section className="grid gap-6 lg:grid-cols-[1.4fr_0.8fr]">
         <div className="space-y-6">
-          <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <article
+  className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+  id="assessment"
+>
             <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
               <div className="flex gap-4">
                 <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-emerald-100 bg-emerald-50 text-emerald-700">

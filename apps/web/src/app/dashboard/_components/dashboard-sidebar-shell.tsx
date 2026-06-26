@@ -37,16 +37,16 @@ type NavItem = {
 const navItems: NavItem[] = [
   {
     label: 'Dashboard',
-    description: 'Assessment overview',
+    description: 'Current profile',
     href: '/dashboard',
     exact: true,
     icon: Home,
     tone: 'border-blue-100 bg-blue-50 text-blue-700',
   },
   {
-    label: 'Assessment status',
-    description: 'Completion and progress',
-    href: '/assessment/status',
+    label: 'Assessment',
+    description: 'Start or resume',
+    href: '/dashboard#assessment',
     icon: ClipboardCheck,
     tone: 'border-emerald-100 bg-emerald-50 text-emerald-700',
   },
@@ -104,7 +104,7 @@ export function DashboardSidebarShell({
                 IQMeridian
               </p>
               <h1 className="mt-2 text-xl font-bold tracking-tight text-slate-950">
-                Candidate workspace
+                Assessment workspace
               </h1>
             </Link>
           </div>
@@ -192,9 +192,9 @@ export function DashboardSidebarShell({
         <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 px-6 py-4 backdrop-blur">
           <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Candidate assessment workspace
-              </p>
+<p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+  Assessment workspace
+</p>
               <p className="mt-1 text-sm text-slate-600">
                 Manage your IQMeridian assessment activity and results.
               </p>
