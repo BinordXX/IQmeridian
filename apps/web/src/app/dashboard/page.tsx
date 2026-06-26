@@ -15,7 +15,7 @@ import { getDefaultDashboardForRole, isAppRole } from '@/lib/role-routing';
 import { startConsumerAssessmentAction } from './actions';
 import {
   getConsumerAssessmentDefault,
-  listConsumerSessions,
+  listConsumerSessionsWithPsychometricScores,
   type ConsumerAssessmentDefault,
   type ConsumerSessionSummary,
 } from './consumer-dashboard-api';
@@ -55,6 +55,37 @@ const formatDate = (value?: string | null) => {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value));
+};
+
+const formatScoreBand = (value?: string | null) => {
+  if (!value) return 'Unavailable';
+
+  return value
+    .toLowerCase()
+    .replaceAll('_', ' ')
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+};
+
+const formatWholeNumber = (value?: number | null) => {
+  if (typeof value !== 'number') return 'Not available';
+
+  return Math.round(value).toString();
+};
+
+const formatAccuracy = (value?: number | null) => {
+  if (typeof value !== 'number') return 'Not available';
+
+  return `${Math.round(value * 100)}%`;
+};
+
+const formatPercentile = (value?: number | null) => {
+  if (typeof value !== 'number') return 'Not available';
+
+  return `${Math.round(value)}th percentile`;
+};
+
+const isCompletedSession = (session: ConsumerSessionSummary) => {
+  return session.status === 'COMPLETED' || session.status === 'FINALISED';
 };
 
 const getSessionTitle = (session: ConsumerSessionSummary) => {
@@ -109,13 +140,13 @@ export default async function DashboardPage({
     if (role === 'CONSUMER') {
       const [assessmentDefault, sessionRecords] = await Promise.all([
         getConsumerAssessmentDefault(),
-        listConsumerSessions(),
+        listConsumerSessionsWithPsychometricScores(),
       ]);
 
       consumerAssessment = assessmentDefault;
       sessions = sessionRecords;
     } else {
-      sessions = await listConsumerSessions();
+      sessions = await listConsumerSessionsWithPsychometricScores();
     }
   } catch (error) {
     dashboardError =
@@ -355,6 +386,173 @@ export default async function DashboardPage({
                         </Link>
                       </div>
                     </div>
+
+                    {isCompletedSession(assessmentSession) ? (
+                      assessmentSession.psychometricScore ? (
+                        <div className="mt-4 rounded-xl border border-emerald-100 bg-white p-4">
+                          <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                            <div>
+                              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
+                                Psychometric profile
+                              </p>
+                              <h4 className="mt-1 text-lg font-bold text-slate-950">
+                                {formatScoreBand(
+                                  assessmentSession.psychometricScore
+                                    .overallScoreBand
+                                )}
+                              </h4>
+                              <p className="mt-1 text-sm leading-6 text-slate-600">
+                                {
+                                  assessmentSession.psychometricScore
+                                    .overallInterpretation
+                                }
+                              </p>
+                            </div>
+
+                            <span className="w-fit rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                              {
+                                assessmentSession.psychometricScore
+                                  .scoringStatus
+                              }
+                            </span>
+                          </div>
+
+                          <dl className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                            <div className="rounded-lg bg-slate-50 p-3">
+                              <dt className="text-xs font-medium text-slate-500">
+                                Standard score
+                              </dt>
+                              <dd className="mt-1 text-lg font-bold text-slate-950">
+                                {formatWholeNumber(
+                                  assessmentSession.psychometricScore
+                                    .overallStandardScore
+                                )}
+                              </dd>
+                            </div>
+
+                            <div className="rounded-lg bg-slate-50 p-3">
+                              <dt className="text-xs font-medium text-slate-500">
+                                Percentile
+                              </dt>
+                              <dd className="mt-1 text-lg font-bold text-slate-950">
+                                {formatPercentile(
+                                  assessmentSession.psychometricScore
+                                    .overallPercentile
+                                )}
+                              </dd>
+                            </div>
+
+                            <div className="rounded-lg bg-slate-50 p-3">
+                              <dt className="text-xs font-medium text-slate-500">
+                                Accuracy
+                              </dt>
+                              <dd className="mt-1 text-lg font-bold text-slate-950">
+                                {formatAccuracy(
+                                  assessmentSession.psychometricScore
+                                    .overallAccuracy
+                                )}
+                              </dd>
+                            </div>
+
+                            <div className="rounded-lg bg-slate-50 p-3">
+                              <dt className="text-xs font-medium text-slate-500">
+                                90% interval
+                              </dt>
+                              <dd className="mt-1 text-lg font-bold text-slate-950">
+                                {assessmentSession.psychometricScore
+                                  .overallCi90Lower !== null &&
+                                assessmentSession.psychometricScore
+                                  .overallCi90Upper !== null
+                                  ? `${formatWholeNumber(
+                                      assessmentSession.psychometricScore
+                                        .overallCi90Lower
+                                    )}–${formatWholeNumber(
+                                      assessmentSession.psychometricScore
+                                        .overallCi90Upper
+                                    )}`
+                                  : 'Not available'}
+                              </dd>
+                            </div>
+                          </dl>
+
+                          {assessmentSession.psychometricScore.domainScores
+                            .length > 0 ? (
+                            <div className="mt-4">
+                              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                                Domain profile
+                              </p>
+
+                              <div className="mt-2 grid gap-2 md:grid-cols-2">
+                                {assessmentSession.psychometricScore.domainScores.map(
+                                  (domainScore) => (
+                                    <div
+                                      className="rounded-lg border border-slate-200 bg-slate-50 p-3"
+                                      key={domainScore.id}
+                                    >
+                                      <div className="flex items-start justify-between gap-3">
+                                        <div>
+                                          <p className="text-sm font-semibold text-slate-950">
+                                            {domainScore.label}
+                                          </p>
+                                          <p className="mt-1 text-xs text-slate-500">
+                                            {formatAccuracy(
+                                              domainScore.accuracy
+                                            )}{' '}
+                                            accuracy
+                                          </p>
+                                        </div>
+
+                                        <span className="rounded-full bg-white px-2 py-1 text-xs font-semibold text-slate-600">
+                                          {formatScoreBand(
+                                            domainScore.scoreBand
+                                          )}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  )
+                                )}
+                              </div>
+                            </div>
+                          ) : null}
+
+                          <div className="mt-4 rounded-lg bg-slate-50 p-3 text-xs leading-5 text-slate-600">
+                            <p>
+                              Model:{' '}
+                              <span className="font-semibold text-slate-800">
+                                {
+                                  assessmentSession.psychometricScore
+                                    .modelVersion
+                                }
+                              </span>
+                            </p>
+                            <p>
+                              Scoring mode:{' '}
+                              <span className="font-semibold text-slate-800">
+                                {
+                                  assessmentSession.psychometricScore
+                                    .scoringModeUsed
+                                }
+                              </span>
+                            </p>
+                            <p className="mt-1">
+                              Scores are provisional until IQMeridian completes
+                              formal calibration and norming.
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="mt-4 rounded-xl border border-dashed border-amber-200 bg-amber-50 p-4">
+                          <p className="text-sm font-semibold text-amber-900">
+                            Score profile pending
+                          </p>
+                          <p className="mt-1 text-sm leading-6 text-amber-800">
+                            This assessment is complete, but the psychometric
+                            score profile has not been generated or persisted
+                            yet.
+                          </p>
+                        </div>
+                      )
+                    ) : null}
                   </div>
                 ))
               ) : (
