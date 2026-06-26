@@ -94,6 +94,48 @@ export class SessionsService {
     private readonly auditService: AuditService,
   ) {}
 
+    async getSessionPsychometricScore(
+    sessionId: string,
+    user: {
+      id: string;
+      role: string;
+      organisationId?: string | null;
+    },
+  ) {
+    const session = await this.prisma.session.findUnique({
+      where: { id: sessionId },
+      select: {
+        id: true,
+        userId: true,
+        campaign: {
+          select: {
+            organisationId: true,
+          },
+        },
+        psychometricScoreResult: {
+          include: {
+            domainScores: {
+              orderBy: { domain: 'asc' },
+            },
+            validityFlags: {
+              orderBy: [{ severity: 'desc' }, { code: 'asc' }],
+            },
+          },
+        },
+      },
+    });
+
+    if (!session) {
+      throw new NotFoundException('Session not found');
+    }
+
+    if (!this.canReadSessionPsychometricScore(session, user)) {
+      throw new ForbiddenException('Session does not belong to this user');
+    }
+
+    return session.psychometricScoreResult;
+  }
+
   async listSessions(
     user: RequestUser,
     filters: {
@@ -856,5 +898,40 @@ export class SessionsService {
 
   private getStringValue(value: unknown): string | undefined {
     return typeof value === 'string' ? value : undefined;
+  }
+
+    private canReadSessionPsychometricScore(
+    session: {
+      userId: string;
+      campaign: {
+        organisationId: string | null;
+      } | null;
+    },
+    user: {
+      id: string;
+      role: string;
+      organisationId?: string | null;
+    },
+  ) {
+    if (user.role === 'PLATFORM_ADMIN' || user.role === 'RESEARCHER') {
+      return true;
+    }
+
+    if (
+      (user.role === 'CONSUMER' || user.role === 'CANDIDATE') &&
+      session.userId === user.id
+    ) {
+      return true;
+    }
+
+    if (
+      user.role === 'EMPLOYER_ADMIN' &&
+      session.campaign?.organisationId &&
+      user.organisationId === session.campaign.organisationId
+    ) {
+      return true;
+    }
+
+    return false;
   }
 }

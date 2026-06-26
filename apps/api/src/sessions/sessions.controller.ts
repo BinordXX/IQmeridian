@@ -87,4 +87,15 @@ export class SessionsController {
   ) {
     return this.sessionsService.finaliseSession(params.id, req.user.id);
   }
+    @Roles('CANDIDATE', 'CONSUMER', 'PLATFORM_ADMIN', 'RESEARCHER')
+  @Get(':id/psychometric-score')
+  getSessionPsychometricScore(
+    @Param() params: SessionIdParamDto,
+    @Req() req: { user: RequestUser },
+  ) {
+    return this.sessionsService.getSessionPsychometricScore(
+      params.id,
+      req.user,
+    );
+  }
 }
