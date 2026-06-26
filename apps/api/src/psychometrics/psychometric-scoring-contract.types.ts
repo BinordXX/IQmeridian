@@ -163,6 +163,7 @@ export type PsychometricDomainScore = {
     lower: number | null;
     upper: number | null;
   };
+  testInformation: number | null;
   reliability: number | null;
   interpretation: string;
 };
@@ -211,6 +212,7 @@ export type PsychometricScoringResponse = {
       lower: number | null;
       upper: number | null;
     };
+    testInformation: number | null;
     reliability: number | null;
     interpretation: string;
   };

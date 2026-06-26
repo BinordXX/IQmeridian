@@ -209,6 +209,7 @@ class DomainScore(BaseModel):
     score_band: ScoreBand = Field(alias="scoreBand")
     standard_error: float | None = Field(default=None, alias="standardError")
     confidence_interval_90: ConfidenceInterval90 = Field(alias="confidenceInterval90")
+    test_information: float | None = Field(default=None, alias="testInformation")
     reliability: float | None = None
     interpretation: str
 

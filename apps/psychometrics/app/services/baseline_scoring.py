@@ -76,6 +76,7 @@ def build_baseline_scoring_response(request: ScoringRequest) -> ScoringResponse:
             standardScore=None,
             percentile=None,
             scoreBand=_score_band_from_accuracy(accuracy),
+            testInformation=None,
             standardError=None,
             confidenceInterval90=ConfidenceInterval90(lower=None, upper=None),
             reliability=None,
@@ -149,6 +150,7 @@ def _build_domain_scores(
             standardError=None,
             confidenceInterval90=ConfidenceInterval90(lower=None, upper=None),
             reliability=None,
+            testInformation=None,
             interpretation=_domain_interpretation(
                 label=domain_labels.get(domain, domain),
                 accuracy=_safe_divide(

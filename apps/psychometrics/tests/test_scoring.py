@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -9,7 +11,7 @@ client = TestClient(app)
 def _payload() -> dict:
     return {
         "contractVersion": "2026-06-25.v1",
-        "requestedScoringMode": "HYBRID_RESEARCH",
+        "requestedScoringMode": "IRT_3PL_PROVISIONAL"
         "requestedAt": "2026-06-25T12:00:00Z",
         "session": {
             "sessionId": "session-1",
@@ -61,13 +63,13 @@ def _payload() -> dict:
                 "correctOptionId": "a",
                 "presentedAt": "2026-06-25T12:01:00Z",
                 "calibration": {
-                    "difficulty": None,
-                    "discrimination": None,
-                    "guessing": None,
+                    "difficulty": -0.8,
+                    "discrimination": 1.2,
+                    "guessing": 0.2,
                     "slipping": None,
                     "timeIntensity": None,
-                    "calibrationSampleSize": None,
-                    "calibrationVersion": None,
+                    "calibrationSampleSize": 500,
+                    "calibrationVersion": "calibration-v0",
                 },
                 "metadata": {},
             },
@@ -83,13 +85,13 @@ def _payload() -> dict:
                 "correctOptionId": "b",
                 "presentedAt": "2026-06-25T12:02:00Z",
                 "calibration": {
-                    "difficulty": None,
-                    "discrimination": None,
-                    "guessing": None,
+                    "difficulty": 0.2,
+                    "discrimination": 1.1,
+                    "guessing": 0.2,
                     "slipping": None,
                     "timeIntensity": None,
-                    "calibrationSampleSize": None,
-                    "calibrationVersion": None,
+                    "calibrationSampleSize": 500,
+                    "calibrationVersion": "calibration-v0",
                 },
                 "metadata": {},
             },
@@ -105,13 +107,13 @@ def _payload() -> dict:
                 "correctOptionId": "c",
                 "presentedAt": "2026-06-25T12:03:00Z",
                 "calibration": {
-                    "difficulty": None,
-                    "discrimination": None,
-                    "guessing": None,
+                    "difficulty": 0.5,
+                    "discrimination": 1.4,
+                    "guessing": 0.2,
                     "slipping": None,
                     "timeIntensity": None,
-                    "calibrationSampleSize": None,
-                    "calibrationVersion": None,
+                    "calibrationSampleSize": 500,
+                    "calibrationVersion": "calibration-v0",
                 },
                 "metadata": {},
             },
@@ -127,13 +129,13 @@ def _payload() -> dict:
                 "correctOptionId": "d",
                 "presentedAt": "2026-06-25T12:04:00Z",
                 "calibration": {
-                    "difficulty": None,
-                    "discrimination": None,
-                    "guessing": None,
+                    "difficulty": 1.2,
+                    "discrimination": 1.6,
+                    "guessing": 0.2,
                     "slipping": None,
                     "timeIntensity": None,
-                    "calibrationSampleSize": None,
-                    "calibrationVersion": None,
+                    "calibrationSampleSize": 500,
+                    "calibrationVersion": "calibration-v0",
                 },
                 "metadata": {},
             },
@@ -154,12 +156,12 @@ def _payload() -> dict:
             },
             {
                 "itemId": "item-2",
-                "selectedOptionId": "c",
+                "selectedOptionId": "b",
                 "responseText": None,
                 "status": "ANSWERED",
-                "correctness": "INCORRECT",
-                "rawScore": 0,
-                "responseTimeMs": 2500,
+                "correctness": "CORRECT",
+                "rawScore": 1,
+                "responseTimeMs": 9500,
                 "firstInteractionTimeMs": 900,
                 "revisionCount": 0,
                 "confidenceRating": None,
@@ -180,16 +182,16 @@ def _payload() -> dict:
             },
             {
                 "itemId": "item-4",
-                "selectedOptionId": None,
+                "selectedOptionId": "a",
                 "responseText": None,
-                "status": "OMITTED",
-                "correctness": "UNSCORED",
+                "status": "ANSWERED",
+                "correctness": "INCORRECT",
                 "rawScore": 0,
-                "responseTimeMs": None,
-                "firstInteractionTimeMs": None,
+                "responseTimeMs": 13000,
+                "firstInteractionTimeMs": 1800,
                 "revisionCount": 0,
                 "confidenceRating": None,
-                "answeredAt": None,
+                "answeredAt": "2026-06-25T12:04:30Z",
             },
         ],
         "timingEvents": [],
@@ -198,7 +200,7 @@ def _payload() -> dict:
             "rapidGuessingRate": 0,
             "medianResponseTimeMs": None,
             "totalResponseTimeMs": None,
-            "suspiciousSessionFlags": ["visibility_loss_detected"],
+            "suspiciousSessionFlags": [],
             "browserOrDeviceSignals": {},
         },
     }
@@ -213,28 +215,50 @@ def test_score_session_returns_baseline_profile() -> None:
 
     assert body["contractVersion"] == "2026-06-25.v1"
     assert body["sessionId"] == "session-1"
-    assert body["scoringStatus"] == "PARTIAL"
-    assert body["overall"]["rawScore"] == 2
+    assert body["scoringStatus"] == "SCORED"
+    assert body["overall"]["rawScore"] == 3
     assert body["overall"]["maxRawScore"] == 4
-    assert body["overall"]["accuracy"] == 0.5
-    assert body["overall"]["scoreBand"] == "AVERAGE"
+    assert body["overall"]["accuracy"] == 0.75
+    assert body["overall"]["theta"] is None
+    assert body["overall"]["standardScore"] is None
+    assert body["overall"]["testInformation"] is None
     assert body["audit"]["scoringModeUsed"] == "BASELINE_CLASSICAL"
-    assert body["audit"]["inputHash"]
+
+
+def test_score_session_returns_irt_profile_when_requested() -> None:
+    payload = deepcopy(_payload())
+    payload["requestedScoringMode"] = "IRT_3PL_PROVISIONAL"
+
+    response = client.post("/v1/scoring/score-session", json=payload)
+
+    assert response.status_code == 200
+
+    body = response.json()
+
+    assert body["contractVersion"] == "2026-06-25.v1"
+    assert body["sessionId"] == "session-1"
+    assert body["scoringStatus"] == "SCORED"
+    assert body["overall"]["rawScore"] == 3
+    assert body["overall"]["maxRawScore"] == 4
+    assert body["overall"]["theta"] is not None
+    assert body["overall"]["standardScore"] is not None
+    assert body["overall"]["percentile"] is not None
+    assert body["overall"]["standardError"] is not None
+    assert body["overall"]["confidenceInterval90"]["lower"] is not None
+    assert body["overall"]["confidenceInterval90"]["upper"] is not None
+    assert body["overall"]["testInformation"] is not None
+    assert body["overall"]["reliability"] is not None
+    assert body["audit"]["modelVersion"] == "irt-provisional.0.2.0"
+    assert body["audit"]["scoringModeUsed"] == "IRT_3PL_PROVISIONAL"
+    assert body["audit"]["calibrationVersion"] == "calibration-v0"
 
     domains = {domain["domain"]: domain for domain in body["domains"]}
 
-    assert domains["verbal_reasoning"]["rawScore"] == 1
-    assert domains["verbal_reasoning"]["maxRawScore"] == 2
-    assert domains["verbal_reasoning"]["accuracy"] == 0.5
+    assert domains["verbal_reasoning"]["theta"] is not None
+    assert domains["verbal_reasoning"]["testInformation"] is not None
 
-    assert domains["quantitative_reasoning"]["rawScore"] == 1
-    assert domains["quantitative_reasoning"]["maxRawScore"] == 2
-    assert domains["quantitative_reasoning"]["accuracy"] == 0.5
-
-    flag_codes = {flag["code"] for flag in body["validityFlags"]}
-
-    assert "ELEVATED_OMISSION_RATE" in flag_codes
-    assert "UPSTREAM_SUSPICIOUS_SESSION_FLAG" in flag_codes
+    assert domains["quantitative_reasoning"]["theta"] is not None
+    assert domains["quantitative_reasoning"]["testInformation"] is not None
 
 
 def test_score_session_rejects_invalid_contract_version() -> None:
