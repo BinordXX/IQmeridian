@@ -8,6 +8,7 @@ import { RegisterCandidateDto } from './dto/register-candidate.dto';
 import { RegisterDto } from './dto/register.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { RequestUser } from './request-user.type';
+import { ChangePasswordDto } from './dto/change-password.dto';
 
 type RequestMetadataSource = {
   ip?: string;
@@ -55,7 +56,15 @@ export class AuthController {
   logout(@CurrentUser() user: RequestUser, @Body() body: LogoutDto) {
     return this.authService.logout(user, body);
   }
-
+  @UseGuards(JwtAuthGuard)
+  @Post('change-password')
+  changePassword(
+    @CurrentUser() user: RequestUser,
+    @Body() body: ChangePasswordDto,
+  ) {
+    return this.authService.changePassword(user, body);
+  }
+  
   @UseGuards(JwtAuthGuard)
   @Get('me')
   me(@CurrentUser() user: RequestUser) {
