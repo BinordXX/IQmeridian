@@ -880,3 +880,29 @@ model PsychometricValidityFlag {
   @@index([code])
   @@index([severity])
 }
+
+enum ContactMessageEnquiryType {
+  PRODUCT
+  EMPLOYER
+  RESEARCH
+  GOVERNANCE
+  GENERAL
+}
+
+enum ContactMessageStatus {
+  NEW
+  REVIEWED
+  ARCHIVED
+}
+
+model ContactMessage {
+  id           String                    @id @default(cuid())
+  fullName     String
+  email        String
+  organisation String?
+  enquiryType  ContactMessageEnquiryType @default(GENERAL)
+  message      String
+  status       ContactMessageStatus      @default(NEW)
+  createdAt    DateTime                  @default(now())
+  updatedAt    DateTime                  @updatedAt
+}

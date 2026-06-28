@@ -136,6 +136,111 @@ const formatStandardScoreInterval = (
   return `${Math.round(clampedLower)}–${Math.round(clampedUpper)}`;
 };
 
+const VALIDITY_SEVERITY_RANK: Record<string, number> = {
+  HIGH: 3,
+  MEDIUM: 2,
+  LOW: 1,
+};
+
+const getHighestValiditySeverity = (
+  validityFlags:
+    | {
+        severity: string;
+      }[]
+    | null
+    | undefined
+) => {
+  if (!validityFlags?.length) {
+    return null;
+  }
+
+  return validityFlags.reduce<string | null>((highest, flag) => {
+    if (!highest) {
+      return flag.severity;
+    }
+
+    return (VALIDITY_SEVERITY_RANK[flag.severity] ?? 0) >
+      (VALIDITY_SEVERITY_RANK[highest] ?? 0)
+      ? flag.severity
+      : highest;
+  }, null);
+};
+
+const getAttemptQualityLabel = (
+  validityFlags:
+    | {
+        severity: string;
+      }[]
+    | null
+    | undefined
+) => {
+  const highestSeverity = getHighestValiditySeverity(validityFlags);
+
+  if (highestSeverity === 'HIGH') {
+    return 'Low-validity attempt';
+  }
+
+  if (highestSeverity === 'MEDIUM') {
+    return 'Interpret with caution';
+  }
+
+  if (highestSeverity === 'LOW') {
+    return 'Minor validity notice';
+  }
+
+  return 'Clean attempt';
+};
+
+const getAttemptQualityDescription = (
+  validityFlags:
+    | {
+        severity: string;
+      }[]
+    | null
+    | undefined
+) => {
+  const highestSeverity = getHighestValiditySeverity(validityFlags);
+
+  if (highestSeverity === 'HIGH') {
+    return 'This result may not be a dependable estimate because the attempt triggered serious validity concerns.';
+  }
+
+  if (highestSeverity === 'MEDIUM') {
+    return 'This result is usable as a provisional estimate, but the attempt had factors that may reduce interpretive confidence.';
+  }
+
+  if (highestSeverity === 'LOW') {
+    return 'This result has a minor validity notice. Interpret the score alongside the listed flags.';
+  }
+
+  return 'No major validity issues were detected for this attempt.';
+};
+
+const getAttemptQualityClassName = (
+  validityFlags:
+    | {
+        severity: string;
+      }[]
+    | null
+    | undefined
+) => {
+  const highestSeverity = getHighestValiditySeverity(validityFlags);
+
+  if (highestSeverity === 'HIGH') {
+    return 'border-red-200 bg-red-50 text-red-900';
+  }
+
+  if (highestSeverity === 'MEDIUM') {
+    return 'border-amber-200 bg-amber-50 text-amber-900';
+  }
+
+  if (highestSeverity === 'LOW') {
+    return 'border-blue-200 bg-blue-50 text-blue-900';
+  }
+
+  return 'border-emerald-200 bg-emerald-50 text-emerald-900';
+};
+
 const getCurrentProfileSession = (sessions: ConsumerSessionSummary[]) => {
   return sessions
     .filter((sessionRecord) => sessionRecord.psychometricScore)
@@ -311,7 +416,6 @@ export default async function DashboardPage({
         </div>
       ) : null}
 
-
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div>
@@ -387,6 +491,21 @@ export default async function DashboardPage({
         </dl>
 
         {currentProfileScore ? (
+          <div
+            className={`mt-5 rounded-2xl border p-4 text-sm leading-6 ${getAttemptQualityClassName(
+              currentProfileScore.validityFlags
+            )}`}
+          >
+            <p className="font-semibold">
+              {getAttemptQualityLabel(currentProfileScore.validityFlags)}
+            </p>
+            <p className="mt-1">
+              {getAttemptQualityDescription(currentProfileScore.validityFlags)}
+            </p>
+          </div>
+        ) : null}
+
+        {currentProfileScore ? (
           <div className="mt-5 rounded-2xl border border-amber-100 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
             This profile currently reflects your latest scored assessment. A
             future IQMeridian release will recalculate this as a longitudinal
@@ -395,6 +514,7 @@ export default async function DashboardPage({
           </div>
         ) : null}
       </section>
+      
 
       <section className="grid gap-4 md:grid-cols-3">
         <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -676,6 +796,34 @@ export default async function DashboardPage({
                             </div>
                           ) : null}
 
+                          <div
+  className={`rounded-xl border p-4 text-sm ${getAttemptQualityClassName(
+    assessmentSession.psychometricScore.validityFlags
+  )}`}
+>
+  <p className="font-semibold">
+    {getAttemptQualityLabel(
+      assessmentSession.psychometricScore.validityFlags
+    )}
+  </p>
+  <p className="mt-1">
+    {getAttemptQualityDescription(
+      assessmentSession.psychometricScore.validityFlags
+    )}
+  </p>
+
+  {assessmentSession.psychometricScore.validityFlags.length > 0 ? (
+    <ul className="mt-3 space-y-1">
+      {assessmentSession.psychometricScore.validityFlags.map((flag) => (
+        <li key={flag.id}>
+          <span className="font-medium">{flag.label}</span>
+          <span> — {flag.description}</span>
+        </li>
+      ))}
+    </ul>
+  ) : null}
+</div>
+
                           <div className="mt-4 rounded-lg bg-slate-50 p-3 text-xs leading-5 text-slate-600">
                             <p>
                               Model:{' '}
@@ -696,8 +844,7 @@ export default async function DashboardPage({
                               </span>
                             </p>
                             <p className="mt-1">
-                              Scores are provisional until IQMeridian completes
-                              formal calibration and norming.
+                             Scores are provisional until IQMeridian completes formal calibration, norming, reliability validation, and reporting governance.
                             </p>
                           </div>
                         </div>
