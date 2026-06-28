@@ -6,7 +6,9 @@ import {
 } from '@nestjs/common';
 import {
   ContactMessageEnquiryType,
+  ContactMessageSource,
   ContactMessageStatus,
+  Prisma,
   UserRole,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -16,13 +18,16 @@ import { UpdateContactMessageStatusDto } from './dto/update-contact-message-stat
 type ContactAdminUser = {
   id: string;
   role: UserRole | string;
+  email?: string | null;
+  name?: string | null;
 };
 
 type ListContactMessagesOptions = {
   page?: number;
   pageSize?: number;
   query?: string;
-  status?: ContactMessageStatus;
+  source?: string;
+  status?: string;
 };
 
 @Injectable()
@@ -42,6 +47,7 @@ export class ContactService {
         fullName,
         message,
         organisation,
+        source: ContactMessageSource.PUBLIC,
       },
       select: {
         createdAt: true,
@@ -57,50 +63,93 @@ export class ContactService {
     };
   }
 
-  async listForAdmin(user: ContactAdminUser, options: ListContactMessagesOptions) {
+  async createAuthenticated(
+    user: ContactAdminUser,
+    dto: CreateContactMessageDto,
+  ) {
+    const fullName = this.normaliseRequiredText(
+      dto.fullName || user.name || 'Authenticated user',
+      'Full name',
+    );
+    const email = dto.email.trim().toLowerCase();
+    const organisation = this.normaliseOptionalText(dto.organisation);
+    const message = this.normaliseRequiredText(dto.message, 'Message');
+
+    const contactMessage = await this.prisma.contactMessage.create({
+      data: {
+        email,
+        enquiryType: dto.enquiryType ?? ContactMessageEnquiryType.GENERAL,
+        fullName,
+        message,
+        organisation,
+        senderRole: String(user.role),
+        senderUserId: user.id,
+        source: this.getSourceForUserRole(user.role),
+      },
+      select: {
+        createdAt: true,
+        id: true,
+      },
+    });
+
+    return {
+      id: contactMessage.id,
+      message: 'Contact message received.',
+      status: 'received',
+      submittedAt: contactMessage.createdAt,
+    };
+  }
+
+  async listForAdmin(
+    user: ContactAdminUser,
+    options: ListContactMessagesOptions,
+  ) {
     this.assertPlatformAdmin(user);
 
-    const page = Math.max(1, options.page ?? 1);
-    const pageSize = Math.min(50, Math.max(1, options.pageSize ?? 20));
+    const page = this.getPositiveNumber(options.page, 1);
+    const pageSize = Math.min(50, this.getPositiveNumber(options.pageSize, 20));
     const query = options.query?.trim();
+    const status = this.getContactStatus(options.status);
+    const source = this.getContactSource(options.source);
 
-    const where = {
-      ...(options.status
-        ? {
-            status: options.status,
-          }
-        : {}),
-      ...(query
-        ? {
-            OR: [
-              {
-                fullName: {
-                  contains: query,
-                  mode: 'insensitive' as const,
-                },
-              },
-              {
-                email: {
-                  contains: query,
-                  mode: 'insensitive' as const,
-                },
-              },
-              {
-                organisation: {
-                  contains: query,
-                  mode: 'insensitive' as const,
-                },
-              },
-              {
-                message: {
-                  contains: query,
-                  mode: 'insensitive' as const,
-                },
-              },
-            ],
-          }
-        : {}),
-    };
+    const where: Prisma.ContactMessageWhereInput = {};
+
+    if (status) {
+      where.status = status;
+    }
+
+    if (source) {
+      where.source = source;
+    }
+
+    if (query) {
+      where.OR = [
+        {
+          fullName: {
+            contains: query,
+            mode: 'insensitive',
+          },
+        },
+        {
+          email: {
+            contains: query,
+            mode: 'insensitive',
+          },
+        },
+        {
+          organisation: {
+            contains: query,
+            mode: 'insensitive',
+          },
+        },
+        {
+          message: {
+            contains: query,
+            mode: 'insensitive',
+          },
+        },
+      ];
+    }
 
     const [total, messages] = await this.prisma.$transaction([
       this.prisma.contactMessage.count({ where }),
@@ -116,6 +165,9 @@ export class ContactService {
           id: true,
           message: true,
           organisation: true,
+          senderRole: true,
+          senderUserId: true,
+          source: true,
           status: true,
           updatedAt: true,
         },
@@ -191,6 +243,62 @@ export class ContactService {
         'Only platform administrators can manage contact messages.',
       );
     }
+  }
+
+  private getSourceForUserRole(role: UserRole | string) {
+    if (role === UserRole.RESEARCHER) {
+      return ContactMessageSource.RESEARCHER;
+    }
+
+    if (role === UserRole.EMPLOYER_ADMIN) {
+      return ContactMessageSource.EMPLOYER;
+    }
+
+    if (role === UserRole.CANDIDATE) {
+      return ContactMessageSource.CANDIDATE;
+    }
+
+    if (role === UserRole.CONSUMER) {
+      return ContactMessageSource.CONSUMER;
+    }
+
+    if (role === UserRole.PLATFORM_ADMIN) {
+      return ContactMessageSource.PLATFORM_ADMIN;
+    }
+
+    return ContactMessageSource.PUBLIC;
+  }
+
+  private getContactStatus(value: string | undefined) {
+    if (!value) {
+      return undefined;
+    }
+
+    return Object.values(ContactMessageStatus).includes(
+      value as ContactMessageStatus,
+    )
+      ? (value as ContactMessageStatus)
+      : undefined;
+  }
+
+  private getContactSource(value: string | undefined) {
+    if (!value) {
+      return undefined;
+    }
+
+    return Object.values(ContactMessageSource).includes(
+      value as ContactMessageSource,
+    )
+      ? (value as ContactMessageSource)
+      : undefined;
+  }
+
+  private getPositiveNumber(value: number | undefined, fallback: number) {
+    if (!Number.isFinite(value)) {
+      return fallback;
+    }
+
+    return Math.max(1, Number(value));
   }
 
   private normaliseRequiredText(value: string, label: string) {

@@ -888,6 +888,14 @@ enum ContactMessageEnquiryType {
   GOVERNANCE
   GENERAL
 }
+enum ContactMessageSource {
+  PUBLIC
+  CONSUMER
+  CANDIDATE
+  EMPLOYER
+  RESEARCHER
+  PLATFORM_ADMIN
+}
 
 enum ContactMessageStatus {
   NEW
@@ -902,7 +910,11 @@ model ContactMessage {
   organisation String?
   enquiryType  ContactMessageEnquiryType @default(GENERAL)
   message      String
+  source       ContactMessageSource @default(PUBLIC)
+senderUserId String?
+senderRole   String?
   status       ContactMessageStatus      @default(NEW)
   createdAt    DateTime                  @default(now())
   updatedAt    DateTime                  @updatedAt
+  
 }

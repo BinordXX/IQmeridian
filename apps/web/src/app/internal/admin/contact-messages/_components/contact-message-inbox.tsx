@@ -1,5 +1,9 @@
 'use client';
-
+import {
+  AmbientSignalConduit,
+  PublicCursorGlow,
+  ScrollProgressBar,
+} from '../../../../_components/public-homepage-effects';
 import {
   AlertCircle,
   Archive,
@@ -13,6 +17,13 @@ import {
 import { useEffect, useMemo, useState } from 'react';
 
 type ContactMessageStatus = 'NEW' | 'REVIEWED' | 'ARCHIVED';
+type ContactMessageSource =
+  | 'PUBLIC'
+  | 'CONSUMER'
+  | 'CANDIDATE'
+  | 'EMPLOYER'
+  | 'RESEARCHER'
+  | 'PLATFORM_ADMIN';
 
 type ContactMessage = {
   createdAt: string;
@@ -21,6 +32,9 @@ type ContactMessage = {
   fullName: string;
   id: string;
   message: string;
+  source: ContactMessageSource;
+senderRole?: string | null;
+senderUserId?: string | null;
   organisation?: string | null;
   status: ContactMessageStatus;
   updatedAt: string;
@@ -56,6 +70,40 @@ const statusOptions: Array<{
   },
 ];
 
+const sourceOptions: Array<{
+  label: string;
+  value: ContactMessageSource | 'ALL';
+}> = [
+  {
+    label: 'All sources',
+    value: 'ALL',
+  },
+  {
+    label: 'Public site',
+    value: 'PUBLIC',
+  },
+  {
+    label: 'Consumers',
+    value: 'CONSUMER',
+  },
+  {
+    label: 'Candidates',
+    value: 'CANDIDATE',
+  },
+  {
+    label: 'Employers',
+    value: 'EMPLOYER',
+  },
+  {
+    label: 'Researchers',
+    value: 'RESEARCHER',
+  },
+  {
+    label: 'Platform admins',
+    value: 'PLATFORM_ADMIN',
+  },
+];
+
 function formatDate(value: string) {
   return new Intl.DateTimeFormat(undefined, {
     dateStyle: 'medium',
@@ -75,6 +123,51 @@ function getStatusClassName(status: ContactMessageStatus) {
   return 'border-slate-400/20 bg-white/[0.04] text-slate-300';
 }
 
+
+function getSourceLabel(source: ContactMessageSource) {
+  if (source === 'PUBLIC') {
+    return 'Public site';
+  }
+
+  if (source === 'CONSUMER') {
+    return 'Consumer';
+  }
+
+  if (source === 'CANDIDATE') {
+    return 'Candidate';
+  }
+
+  if (source === 'EMPLOYER') {
+    return 'Employer';
+  }
+
+  if (source === 'RESEARCHER') {
+    return 'Researcher';
+  }
+
+  return 'Platform admin';
+}
+
+function getSourceClassName(source: ContactMessageSource) {
+  if (source === 'PUBLIC') {
+    return 'border-cyan-300/20 bg-cyan-400/10 text-cyan-100';
+  }
+
+  if (source === 'EMPLOYER') {
+    return 'border-blue-300/20 bg-blue-400/10 text-blue-100';
+  }
+
+  if (source === 'RESEARCHER') {
+    return 'border-fuchsia-300/20 bg-fuchsia-400/10 text-fuchsia-100';
+  }
+
+  if (source === 'PLATFORM_ADMIN') {
+    return 'border-amber-300/20 bg-amber-400/10 text-amber-100';
+  }
+
+  return 'border-slate-300/20 bg-white/[0.04] text-slate-200';
+}
+
 function getReadableError(payload: unknown, fallback: string) {
   if (!payload || typeof payload !== 'object') {
     return fallback;
@@ -90,9 +183,12 @@ export function ContactMessageInbox() {
   const [messages, setMessages] = useState<ContactMessage[]>([]);
   const [selectedMessage, setSelectedMessage] =
     useState<ContactMessage | null>(null);
-  const [statusFilter, setStatusFilter] = useState<ContactMessageStatus | 'ALL'>(
-    'NEW',
-  );
+    const [statusFilter, setStatusFilter] = useState<ContactMessageStatus | 'ALL'>(
+  'NEW',
+);
+const [sourceFilter, setSourceFilter] = useState<ContactMessageSource | 'ALL'>(
+  'ALL',
+);
   const [query, setQuery] = useState('');
   const [pageState, setPageState] = useState({
     page: 1,
@@ -130,6 +226,9 @@ export function ContactMessageInbox() {
     if (statusFilter !== 'ALL') {
       params.set('status', statusFilter);
     }
+    if (sourceFilter !== 'ALL') {
+  params.set('source', sourceFilter);
+}
 
     if (query.trim()) {
       params.set('query', query.trim());
@@ -237,10 +336,14 @@ export function ContactMessageInbox() {
     }
   }
 
-  useEffect(() => {
+useEffect(() => {
+  const timeoutId = window.setTimeout(() => {
     void loadMessages();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageState.page, statusFilter]);
+  }, 0);
+
+  return () => window.clearTimeout(timeoutId);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [pageState.page, sourceFilter, statusFilter]);
 
   function handleSearchSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -254,7 +357,24 @@ export function ContactMessageInbox() {
   }
 
   return (
-    <main className="min-h-screen bg-[#020817] px-6 py-8 text-white">
+    <main className="relative min-h-screen overflow-hidden bg-[#020817] px-6 py-8 text-white selection:bg-cyan-400/30 selection:text-white">
+  <ScrollProgressBar />
+  <PublicCursorGlow />
+
+  <div
+    aria-hidden="true"
+    className="pointer-events-none absolute inset-0 overflow-hidden"
+  >
+    <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.13),transparent_24%),radial-gradient(circle_at_85%_12%,rgba(59,130,246,0.12),transparent_22%),radial-gradient(circle_at_50%_80%,rgba(168,85,247,0.1),transparent_26%)]" />
+    <div className="absolute inset-0 opacity-[0.06] [background-image:linear-gradient(rgba(255,255,255,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.08)_1px,transparent_1px)] [background-size:72px_72px]" />
+    <div className="absolute left-[-10rem] top-24 h-[28rem] w-[28rem] rounded-full bg-cyan-500/10 blur-[140px]" />
+    <div className="absolute right-[-8rem] top-[28rem] h-[24rem] w-[24rem] rounded-full bg-blue-500/10 blur-[120px]" />
+  </div>
+
+  <AmbientSignalConduit className="right-10 top-24 rotate-6 opacity-45" />
+  <AmbientSignalConduit className="bottom-20 left-10 -rotate-3 opacity-35" />
+
+  <div className="relative z-10">
       <div className="mx-auto max-w-7xl">
         <div className="rounded-[2rem] border border-cyan-300/15 bg-[linear-gradient(180deg,rgba(15,23,42,0.84),rgba(3,7,18,0.96))] p-6 shadow-[0_30px_100px_rgba(0,0,0,0.45)] backdrop-blur-2xl">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
@@ -305,21 +425,35 @@ export function ContactMessageInbox() {
               </button>
             </form>
 
-            <select
-              className="rounded-2xl border border-white/10 bg-[#07142f] px-4 py-3 text-sm font-bold text-white outline-none"
-              onChange={(event) =>
-                setStatusFilter(
-                  event.target.value as ContactMessageStatus | 'ALL',
-                )
-              }
-              value={statusFilter}
-            >
-              {statusOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+<div className="grid gap-3 sm:grid-cols-2">
+  <select
+    className="rounded-2xl border border-white/10 bg-[#07142f] px-4 py-3 text-sm font-bold text-white outline-none"
+    onChange={(event) =>
+      setSourceFilter(event.target.value as ContactMessageSource | 'ALL')
+    }
+    value={sourceFilter}
+  >
+    {sourceOptions.map((option) => (
+      <option key={option.value} value={option.value}>
+        {option.label}
+      </option>
+    ))}
+  </select>
+
+  <select
+    className="rounded-2xl border border-white/10 bg-[#07142f] px-4 py-3 text-sm font-bold text-white outline-none"
+    onChange={(event) =>
+      setStatusFilter(event.target.value as ContactMessageStatus | 'ALL')
+    }
+    value={statusFilter}
+  >
+    {statusOptions.map((option) => (
+      <option key={option.value} value={option.value}>
+        {option.label}
+      </option>
+    ))}
+  </select>
+</div>
           </div>
 
           {error ? (
@@ -400,9 +534,20 @@ export function ContactMessageInbox() {
                         </p>
 
                         <div className="mt-3 flex items-center justify-between gap-3">
-                          <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[0.65rem] font-black uppercase tracking-[0.16em] text-cyan-200">
-                            {message.enquiryType}
-                          </span>
+                         <div className="flex flex-wrap gap-2">
+  <span
+    className={[
+      'rounded-full border px-2.5 py-1 text-[0.65rem] font-black uppercase tracking-[0.16em]',
+      getSourceClassName(message.source),
+    ].join(' ')}
+  >
+    {getSourceLabel(message.source)}
+  </span>
+
+  <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[0.65rem] font-black uppercase tracking-[0.16em] text-cyan-200">
+    {message.enquiryType}
+  </span>
+</div>
                           <span className="text-[0.7rem] text-slate-500">
                             {formatDate(message.createdAt)}
                           </span>
@@ -445,7 +590,15 @@ export function ContactMessageInbox() {
                     </span>
                   </div>
 
-                  <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                  <div className="mt-5 grid gap-4 sm:grid-cols-3">
+                    <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+  <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">
+    Source
+  </p>
+  <p className="mt-2 text-sm font-bold text-white">
+    {getSourceLabel(selectedMessage.source)}
+  </p>
+</div>
                     <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
                       <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">
                         Enquiry type
@@ -532,6 +685,7 @@ export function ContactMessageInbox() {
           </div>
         </div>
       </div>
+    </div>
     </main>
   );
 }

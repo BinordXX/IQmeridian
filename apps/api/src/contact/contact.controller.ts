@@ -10,7 +10,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ContactMessageStatus, UserRole } from '@prisma/client';
+import { UserRole } from '@prisma/client';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ContactService } from './contact.service';
@@ -20,6 +20,8 @@ import { UpdateContactMessageStatusDto } from './dto/update-contact-message-stat
 type ContactAdminUser = {
   id: string;
   role: UserRole | string;
+  email?: string | null;
+  name?: string | null;
 };
 
 @Controller('contact-messages')
@@ -33,18 +35,30 @@ export class ContactController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Post('authenticated')
+  @HttpCode(HttpStatus.CREATED)
+  createAuthenticated(
+    @CurrentUser() user: ContactAdminUser,
+    @Body() dto: CreateContactMessageDto,
+  ) {
+    return this.contactService.createAuthenticated(user, dto);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Get('admin')
   listForAdmin(
     @CurrentUser() user: ContactAdminUser,
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
     @Query('query') query?: string,
-    @Query('status') status?: ContactMessageStatus,
+    @Query('source') source?: string,
+    @Query('status') status?: string,
   ) {
     return this.contactService.listForAdmin(user, {
       page: page ? Number(page) : undefined,
       pageSize: pageSize ? Number(pageSize) : undefined,
       query,
+      source,
       status,
     });
   }
