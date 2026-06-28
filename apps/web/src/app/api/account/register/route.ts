@@ -7,6 +7,24 @@ type RegisterPayload = {
   password?: unknown;
 };
 
+function normaliseApiPayload(payload: unknown) {
+  if (!payload || typeof payload !== 'object') {
+    return payload;
+  }
+
+  const payloadRecord = payload as Record<string, unknown>;
+  const message = payloadRecord.message;
+
+  if (Array.isArray(message)) {
+    return {
+      ...payloadRecord,
+      message: message.filter((item) => typeof item === 'string').join(' '),
+    };
+  }
+
+  return payload;
+}
+
 async function parseApiResponse(response: Response) {
   const responseText = await response.text();
 
@@ -15,7 +33,7 @@ async function parseApiResponse(response: Response) {
   }
 
   try {
-    return JSON.parse(responseText) as unknown;
+    return normaliseApiPayload(JSON.parse(responseText) as unknown);
   } catch {
     return {
       message: responseText,
@@ -80,22 +98,33 @@ export async function POST(request: Request) {
     );
   }
 
-  const response = await fetch(`${getApiBaseUrl()}/auth/register`, {
-    body: JSON.stringify({
-      email,
-      name,
-      password,
-    }),
-    cache: 'no-store',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    method: 'POST',
-  });
+  try {
+    const response = await fetch(`${getApiBaseUrl()}/auth/register`, {
+      body: JSON.stringify({
+        email,
+        name,
+        password,
+      }),
+      cache: 'no-store',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      method: 'POST',
+    });
 
-  const payload = await parseApiResponse(response);
+    const payload = await parseApiResponse(response);
 
-  return NextResponse.json(payload, {
-    status: response.status,
-  });
+    return NextResponse.json(payload, {
+      status: response.status,
+    });
+  } catch {
+    return NextResponse.json(
+      {
+        message: 'Unable to reach the IQMeridian API service.',
+      },
+      {
+        status: 502,
+      },
+    );
+  }
 }

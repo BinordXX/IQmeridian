@@ -1,4 +1,9 @@
 import { auth } from '@/auth';
+import {
+  getPostLoginRedirectPath,
+  getSafeCallbackUrl,
+  getSessionRole,
+} from '@/lib/post-login-redirect';
 import { redirect } from 'next/navigation';
 import { PublicAuthShell } from '../_components/public-auth-shell';
 import { LoginForm } from './_components/login-form';
@@ -14,23 +19,13 @@ type LoginPageProps = {
   }>;
 };
 
-function getSafeCallbackUrl(callbackUrl?: string) {
-  if (!callbackUrl) {
-    return '/dashboard';
-  }
-
-  if (!callbackUrl.startsWith('/') || callbackUrl.startsWith('//')) {
-    return '/dashboard';
-  }
-
-  return callbackUrl;
-}
-
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const session = await auth();
 
   if (session?.user) {
-    redirect('/dashboard');
+    const role = getSessionRole(session);
+
+    redirect(getPostLoginRedirectPath(role));
   }
 
   const params = await searchParams;
@@ -42,7 +37,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
       eyebrow="Secure access"
       proofPoints={[
         'Role-aware access for consumers, candidates, employers, researchers, and platform administrators.',
-        'Authenticated sessions connect directly to IQMeridian dashboards.',
+        'Authenticated sessions now pass through a role-aware redirect gateway.',
         'Internal workflows remain separated from public and candidate-facing routes.',
       ]}
       sideDescription="Authentication is part of the assessment infrastructure, not an afterthought."

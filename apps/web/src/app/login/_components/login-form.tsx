@@ -1,5 +1,6 @@
 'use client';
 
+import { GoogleAuthPlaceholder } from '../../_components/google-auth-placeholder';
 import {
   AlertCircle,
   ArrowRight,
@@ -17,6 +18,44 @@ import { FormEvent, useState } from 'react';
 type LoginFormProps = {
   callbackUrl: string;
 };
+
+function getReadableLoginError(errorCode?: string) {
+  if (!errorCode) {
+    return 'The email or password is incorrect, or this account is not active.';
+  }
+
+  if (errorCode === 'CredentialsSignin') {
+    return 'The email or password is incorrect.';
+  }
+
+  if (errorCode === 'AccessDenied') {
+    return 'Access was denied for this account.';
+  }
+
+  if (errorCode === 'Configuration') {
+    return 'Authentication is not configured correctly. Check the web and API auth environment values.';
+  }
+
+  return 'Sign-in failed. Confirm your details and try again.';
+}
+
+function getSafeResultUrl(resultUrl: string | null | undefined, fallback: string) {
+  if (!resultUrl) {
+    return fallback;
+  }
+
+  try {
+    const parsedUrl = new URL(resultUrl, window.location.origin);
+
+    if (parsedUrl.origin !== window.location.origin) {
+      return fallback;
+    }
+
+    return `${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`;
+  } catch {
+    return fallback;
+  }
+}
 
 export function LoginForm({ callbackUrl }: LoginFormProps) {
   const router = useRouter();
@@ -38,28 +77,37 @@ export function LoginForm({ callbackUrl }: LoginFormProps) {
 
     setError(null);
 
-    if (!email.trim() || !password) {
+    const normalisedEmail = email.trim().toLowerCase();
+
+    if (!normalisedEmail || !password) {
       setError('Enter your email address and password.');
       return;
     }
 
     setStatus('submitting');
 
-    const result = await signIn('credentials', {
-      callbackUrl,
-      email: email.trim().toLowerCase(),
-      password,
-      redirect: false,
-    });
+    try {
+      const result = await signIn('credentials', {
+        callbackUrl,
+        email: normalisedEmail,
+        password,
+        redirect: false,
+      });
 
-    if (result?.error) {
+      if (result?.error) {
+        setStatus('idle');
+        setError(getReadableLoginError(result.error));
+        return;
+      }
+
+      const nextUrl = getSafeResultUrl(result?.url, callbackUrl);
+
+      router.push(nextUrl);
+      router.refresh();
+    } catch {
       setStatus('idle');
-      setError('The email or password is incorrect, or this account is not active.');
-      return;
+      setError('Unable to reach the authentication service. Try again.');
     }
-
-    router.push(result?.url ?? callbackUrl);
-    router.refresh();
   }
 
   return (
@@ -83,7 +131,8 @@ export function LoginForm({ callbackUrl }: LoginFormProps) {
             <Mail className="text-slate-500" size={18} strokeWidth={2.2} />
             <input
               autoComplete="email"
-              className="w-full bg-transparent text-sm text-white outline-none placeholder:text-slate-600"
+              className="w-full bg-transparent text-sm text-white outline-none placeholder:text-slate-600 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={isSubmitting}
               onChange={(event) => setEmail(event.target.value)}
               placeholder="you@example.com"
               type="email"
@@ -104,14 +153,16 @@ export function LoginForm({ callbackUrl }: LoginFormProps) {
             />
             <input
               autoComplete="current-password"
-              className="w-full bg-transparent text-sm text-white outline-none placeholder:text-slate-600"
+              className="w-full bg-transparent text-sm text-white outline-none placeholder:text-slate-600 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={isSubmitting}
               onChange={(event) => setPassword(event.target.value)}
               placeholder="Your password"
               type={showPassword ? 'text' : 'password'}
               value={password}
             />
             <button
-              className="text-slate-500 transition hover:text-cyan-300"
+              className="text-slate-500 transition hover:text-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={isSubmitting}
               onClick={() => setShowPassword((current) => !current)}
               type="button"
             >
@@ -124,12 +175,20 @@ export function LoginForm({ callbackUrl }: LoginFormProps) {
           </span>
         </label>
 
-        {error ? (
-          <div className="flex gap-3 rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm leading-6 text-red-100">
-            <AlertCircle className="mt-0.5 shrink-0" size={17} />
-            <span>{error}</span>
-          </div>
-        ) : null}
+        <div aria-live="polite">
+          {error ? (
+            <div className="flex gap-3 rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm leading-6 text-red-100">
+              <AlertCircle className="mt-0.5 shrink-0" size={17} />
+              <span>{error}</span>
+            </div>
+          ) : null}
+
+          {isSubmitting ? (
+            <div className="rounded-2xl border border-cyan-300/15 bg-cyan-400/10 px-4 py-3 text-sm leading-6 text-cyan-100">
+              Verifying credentials and preparing your workspace.
+            </div>
+          ) : null}
+        </div>
 
         <button
           className="inline-flex items-center justify-center gap-2 rounded-full border border-cyan-300/30 bg-cyan-400/10 px-6 py-3 text-sm font-black text-cyan-100 shadow-[0_0_0_1px_rgba(34,211,238,0.14),0_12px_40px_rgba(34,211,238,0.18)] transition hover:bg-cyan-400/15 disabled:cursor-not-allowed disabled:opacity-60"
@@ -164,35 +223,7 @@ export function LoginForm({ callbackUrl }: LoginFormProps) {
       </div>
 
       <div className="mt-5 grid gap-3">
-<button
-  className="inline-flex cursor-not-allowed items-center justify-center gap-3 rounded-full border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-bold text-slate-400"
-  disabled
-  type="button"
->
-  <svg
-    aria-hidden="true"
-    className="h-5 w-5"
-    viewBox="0 0 48 48"
-  >
-    <path
-      d="M44.5 20H24v8.5h11.8C34.7 34.1 30 37.5 24 37.5c-7.4 0-13.5-6.1-13.5-13.5S16.6 10.5 24 10.5c3.2 0 6.2 1.1 8.5 3.1l6-6C34.7 4.2 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-22 0-1.4-.2-2.7-.5-4Z"
-      fill="#FFC107"
-    />
-    <path
-      d="M4.5 14.1 11.5 19.2C13.4 14.1 18.3 10.5 24 10.5c3.2 0 6.2 1.1 8.5 3.1l6-6C34.7 4.2 29.6 2 24 2 15.5 2 8.2 6.8 4.5 14.1Z"
-      fill="#FF3D00"
-    />
-    <path
-      d="M24 46c5.5 0 10.5-2.1 14.2-5.6l-6.6-5.6c-2.1 1.6-4.8 2.7-7.6 2.7-5.9 0-10.9-3.8-12.7-9.1l-7 5.4C7.9 41 15.4 46 24 46Z"
-      fill="#4CAF50"
-    />
-    <path
-      d="M44.5 20H24v8.5h11.8c-.5 2.5-2 4.7-4.2 6.3l6.6 5.6C42 36.8 45 31.5 45 24c0-1.4-.2-2.7-.5-4Z"
-      fill="#1976D2"
-    />
-  </svg>
-  Continue with Google — coming soon
-</button>
+        <GoogleAuthPlaceholder />
       </div>
     </div>
   );
