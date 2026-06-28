@@ -5,6 +5,7 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
+
 import {
   AuthProvider,
   AuthRateLimitAction,
@@ -22,6 +23,7 @@ import { LoginDto } from './dto/login.dto';
 import { LogoutDto } from './dto/logout.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { RegisterCandidateDto } from './dto/register-candidate.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { RegisterDto } from './dto/register.dto';
 import { PasswordService } from './password.service';
 import { RequestUser } from './request-user.type';
@@ -661,6 +663,93 @@ export class AuthService {
     return {
       status: 'ok',
       revokedScope: 'current_session',
+    };
+  }
+
+    async changePassword(user: RequestUser, dto: ChangePasswordDto) {
+    if (dto.newPassword !== dto.confirmNewPassword) {
+      throw new BadRequestException('New password confirmation does not match.');
+    }
+
+    if (dto.currentPassword === dto.newPassword) {
+      throw new BadRequestException(
+        'New password must be different from the current password.',
+      );
+    }
+
+    const freshUser = await this.prisma.user.findUnique({
+      where: {
+        id: user.id,
+      },
+      select: {
+        id: true,
+        passwordHash: true,
+        status: true,
+      },
+    });
+
+    if (!freshUser) {
+      throw new UnauthorizedException('Authenticated user was not found.');
+    }
+
+    if (freshUser.status !== UserStatus.ACTIVE) {
+      throw new ForbiddenException('This account is not active.');
+    }
+
+    if (!freshUser.passwordHash) {
+      throw new BadRequestException(
+        'This account does not currently have a local password.',
+      );
+    }
+
+    const currentPasswordIsValid =
+      await this.passwordService.verifyPassword(
+        dto.currentPassword,
+        freshUser.passwordHash,
+      );
+
+    if (!currentPasswordIsValid) {
+      throw new UnauthorizedException('Current password is incorrect.');
+    }
+
+    const nextPasswordHash = await this.passwordService.hashPassword(
+      dto.newPassword,
+    );
+
+    const now = new Date();
+
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: {
+          id: user.id,
+        },
+        data: {
+          passwordHash: nextPasswordHash,
+        },
+      }),
+      this.prisma.authSession.updateMany({
+        where: {
+          userId: user.id,
+          status: AuthSessionStatus.ACTIVE,
+          id: {
+            not: user.authSessionId,
+          },
+        },
+        data: {
+          status: AuthSessionStatus.REVOKED,
+          revokedAt: now,
+          revokedReason: 'PASSWORD_CHANGED',
+        },
+      }),
+    ]);
+
+    await this.recordAudit('auth.password_changed', user.id, {
+      revokedOtherSessions: true,
+    });
+
+    return {
+      status: 'ok',
+      message: 'Password changed successfully.',
     };
   }
 

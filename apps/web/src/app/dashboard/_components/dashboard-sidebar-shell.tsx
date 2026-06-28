@@ -6,9 +6,11 @@ import {
   Home,
   LogOut,
   LucideIcon,
+  Settings,
   ShieldCheck,
   UserRound,
 } from 'lucide-react';
+
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
@@ -56,6 +58,13 @@ const navItems: NavItem[] = [
     href: '/dashboard#history',
     icon: FileText,
     tone: 'border-violet-100 bg-violet-50 text-violet-700',
+  },
+    {
+    label: 'Settings',
+    description: 'Account security',
+    href: '/dashboard/settings',
+    icon: Settings,
+    tone: 'border-slate-200 bg-slate-50 text-slate-700',
   },
 ];
 
