@@ -19,6 +19,7 @@ import { InternalToolingModule } from './internal-tooling/internal-tooling.modul
 import { PsychometricsModule } from './psychometrics/psychometrics.module';
 import { AuthModule } from './auth/auth.module';
 import { ConsumerAssessmentsModule } from './consumer-assessments/consumer-assessments.module';
+import { ContactModule } from './contact/contact.module';
 @Module({
   imports: [
     PrismaModule,
@@ -39,6 +40,7 @@ import { ConsumerAssessmentsModule } from './consumer-assessments/consumer-asses
     InternalToolingModule,
     PsychometricsModule,
     ConsumerAssessmentsModule,
+    ContactModule,
   ],
   controllers: [AppController],
   providers: [AppService],

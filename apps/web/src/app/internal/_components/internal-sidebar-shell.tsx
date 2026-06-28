@@ -17,6 +17,7 @@ import {
   ShieldCheck,
   UserRound,
   Users,
+   Mail,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -153,6 +154,13 @@ const buildNavGroups = (role: InternalRole): NavGroup[] => {
                 href: '/internal/admin/organisations',
                 icon: Building2,
               },
+              {
+  label: 'Inbox',
+  
+  href: '/internal/admin/contact-messages',
+  icon: Mail,
+  
+},
               {
                 label: 'Consumer assessment',
                 href: '/internal/admin/consumer-assessment',

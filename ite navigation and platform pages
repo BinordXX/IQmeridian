@@ -1,0 +1,17 @@
+ .../app/_components/public-homepage-effects.tsx    |  445 [32m+++++++++[m
+ apps/web/src/app/_components/public-page-shell.tsx |  201 [32m++++[m
+ apps/web/src/app/_components/public-site-nav.tsx   |  335 [32m+++++++[m
+ apps/web/src/app/about/page.tsx                    |   98 [32m++[m
+ apps/web/src/app/api/page.tsx                      |   74 [32m++[m
+ apps/web/src/app/careers/page.tsx                  |   62 [32m++[m
+ apps/web/src/app/contact/page.tsx                  |  115 [32m+++[m
+ apps/web/src/app/globals.css                       |  479 [32m+++++++++[m
+ apps/web/src/app/page.tsx                          | 1052 [32m+++++++++++++++++++[m[31m-[m
+ apps/web/src/app/pricing/page.tsx                  |   98 [32m++[m
+ apps/web/src/app/privacy/page.tsx                  |   38 [32m+[m
+ apps/web/src/app/research-governance/page.tsx      |   85 [32m++[m
+ apps/web/src/app/resources/page.tsx                |   68 [32m++[m
+ apps/web/src/app/security/page.tsx                 |   60 [32m++[m
+ apps/web/src/app/term/page.tsx                     |    5 [32m+[m
+ apps/web/src/app/terms/page.tsx                    |   38 [32m+[m
+ 16 files changed, 3249 insertions(+), 4 deletions(-)
