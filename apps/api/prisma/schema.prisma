@@ -184,12 +184,16 @@ model User {
   status          UserStatus    @default(ACTIVE)
   lastLoginAt     DateTime?
   organisationId  String?
+  
   organisation    Organisation? @relation(fields: [organisationId], references: [id])
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
+    deletionRequestedAt DateTime?
+  deletedAt           DateTime?
 
   authAccounts AuthAccount[]
   authSessions AuthSession[]
+    notificationPreference AccountNotificationPreference?
 
   auditLogs               AuditLog[]
   sessions                Session[]
@@ -254,6 +258,20 @@ model AuthSession {
   @@index([authAccountId])
   @@index([status])
   @@index([expiresAt])
+}
+
+model AccountNotificationPreference {
+  id                         String   @id @default(cuid())
+  userId                     String   @unique
+  user                       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  securityAlerts             Boolean  @default(true)
+  assessmentReminders        Boolean  @default(true)
+  productUpdates             Boolean  @default(false)
+  researchGovernanceUpdates  Boolean  @default(false)
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+
+  @@index([userId])
 }
 
 model Organisation {
