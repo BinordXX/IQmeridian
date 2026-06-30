@@ -6,6 +6,43 @@ datasource db {
   provider = "postgresql"
 }
 
+enum CandidateAccessMode {
+  ONE_OFF
+  MANAGED_PROFILE
+}
+
+enum CandidateResultVisibility {
+  NONE
+  COMPLETION_ONLY
+  SUMMARY_ONLY
+  FULL_PERSONAL_REPORT
+}
+
+enum CandidateHistoryVisibility {
+  HIDDEN
+  CURRENT_ORG_HISTORY
+  ALL_USER_HISTORY
+}
+
+enum ReassessmentMode {
+  MANUAL_INVITATION_ONLY
+  RECURRING_ASSIGNMENT
+}
+
+enum OrganisationParticipantType {
+  CANDIDATE
+  EMPLOYEE
+  CONTRACTOR
+  STUDENT
+  OTHER
+}
+
+enum OrganisationParticipantStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
 enum UserRole {
   PLATFORM_ADMIN
   EMPLOYER_ADMIN
@@ -175,25 +212,26 @@ enum ReportVisibility {
 }
 
 model User {
-  id              String        @id @default(cuid())
-  email           String        @unique
+  id              String     @id @default(cuid())
+  email           String     @unique
   name            String?
   role            UserRole
   passwordHash    String?
   emailVerifiedAt DateTime?
-  status          UserStatus    @default(ACTIVE)
+  status          UserStatus @default(ACTIVE)
   lastLoginAt     DateTime?
   organisationId  String?
-  
-  organisation    Organisation? @relation(fields: [organisationId], references: [id])
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-    deletionRequestedAt DateTime?
+
+  organisation        Organisation? @relation(fields: [organisationId], references: [id])
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  deletionRequestedAt DateTime?
   deletedAt           DateTime?
 
-  authAccounts AuthAccount[]
-  authSessions AuthSession[]
-    notificationPreference AccountNotificationPreference?
+  authAccounts             AuthAccount[]
+  authSessions             AuthSession[]
+  organisationParticipants OrganisationParticipant[]
+  notificationPreference   AccountNotificationPreference?
 
   auditLogs               AuditLog[]
   sessions                Session[]
@@ -261,15 +299,15 @@ model AuthSession {
 }
 
 model AccountNotificationPreference {
-  id                         String   @id @default(cuid())
-  userId                     String   @unique
-  user                       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  securityAlerts             Boolean  @default(true)
-  assessmentReminders        Boolean  @default(true)
-  productUpdates             Boolean  @default(false)
-  researchGovernanceUpdates  Boolean  @default(false)
-  createdAt                  DateTime @default(now())
-  updatedAt                  DateTime @updatedAt
+  id                        String   @id @default(cuid())
+  userId                    String   @unique
+  user                      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  securityAlerts            Boolean  @default(true)
+  assessmentReminders       Boolean  @default(true)
+  productUpdates            Boolean  @default(false)
+  researchGovernanceUpdates Boolean  @default(false)
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
 
   @@index([userId])
 }
@@ -280,8 +318,50 @@ model Organisation {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users     User[]
-  campaigns Campaign[]
+  candidateAccessMode             CandidateAccessMode        @default(ONE_OFF)
+  candidateResultVisibility       CandidateResultVisibility  @default(COMPLETION_ONLY)
+  candidateHistoryVisibility      CandidateHistoryVisibility @default(HIDDEN)
+  reassessmentMode                ReassessmentMode           @default(MANUAL_INVITATION_ONLY)
+  participantProfileRetentionDays Int?
+
+  users        User[]
+  campaigns    Campaign[]
+  participants OrganisationParticipant[]
+
+  @@index([candidateAccessMode])
+  @@index([reassessmentMode])
+}
+
+model OrganisationParticipant {
+  id             String       @id @default(cuid())
+  organisationId String
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  participantType OrganisationParticipantType   @default(CANDIDATE)
+  accessMode      CandidateAccessMode           @default(ONE_OFF)
+  status          OrganisationParticipantStatus @default(ACTIVE)
+
+  externalReference String?
+  department        String?
+  jobTitle          String?
+  joinedAt          DateTime?
+  archivedAt        DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  invitations Invitation[]
+  sessions    Session[]
+
+  @@unique([organisationId, userId])
+  @@index([organisationId])
+  @@index([userId])
+  @@index([participantType])
+  @@index([accessMode])
+  @@index([status])
 }
 
 model Campaign {
@@ -413,51 +493,59 @@ model FormItemMapping {
 }
 
 model Invitation {
-  id              String           @id @default(cuid())
+  id              String                   @id @default(cuid())
   campaignId      String
-  campaign        Campaign         @relation(fields: [campaignId], references: [id])
+  campaign        Campaign                 @relation(fields: [campaignId], references: [id])
   email           String
-  token           String           @unique
-  status          InvitationStatus @default(PENDING)
+  token           String                   @unique
+  status          InvitationStatus         @default(PENDING)
   candidateUserId String?
-  candidateUser   User?            @relation("InvitationCandidate", fields: [candidateUserId], references: [id])
-  createdAt       DateTime         @default(now())
+  candidateUser   User?                    @relation("InvitationCandidate", fields: [candidateUserId], references: [id])
+  participantId   String?
+  participant     OrganisationParticipant? @relation(fields: [participantId], references: [id], onDelete: SetNull)
+  createdAt       DateTime                 @default(now())
   expiresAt       DateTime?
   usedAt          DateTime?
 
   sessions Session[]
+
+  @@index([participantId])
 }
 
 model Session {
-  id                         String             @id @default(cuid())
+  id                         String                   @id @default(cuid())
   userId                     String
-  user                       User               @relation(fields: [userId], references: [id])
+  user                       User                     @relation(fields: [userId], references: [id])
   campaignId                 String?
-  campaign                   Campaign?          @relation(fields: [campaignId], references: [id])
+  campaign                   Campaign?                @relation(fields: [campaignId], references: [id])
   invitationId               String?
-  invitation                 Invitation?        @relation(fields: [invitationId], references: [id])
+  invitation                 Invitation?              @relation(fields: [invitationId], references: [id])
+  participantId              String?
+  participant                OrganisationParticipant? @relation(fields: [participantId], references: [id], onDelete: SetNull)
   assessmentFormId           String
-  assessmentForm             AssessmentForm     @relation(fields: [assessmentFormId], references: [id])
-  assessmentFormVersion      Int                @default(1)
+  assessmentForm             AssessmentForm           @relation(fields: [assessmentFormId], references: [id])
+  assessmentFormVersion      Int                      @default(1)
   assessmentFormVersionLabel String?
-  scoringVersion             Int                @default(1)
-  reportVersion              Int                @default(1)
+  scoringVersion             Int                      @default(1)
+  reportVersion              Int                      @default(1)
   formSnapshot               Json?
-  status                     SessionStatus      @default(NOT_STARTED)
+  status                     SessionStatus            @default(NOT_STARTED)
   startedAt                  DateTime?
   completedAt                DateTime?
   currentSectionId           String?
-  currentSection             AssessmentSection? @relation("CurrentSessionSection", fields: [currentSectionId], references: [id])
+  currentSection             AssessmentSection?       @relation("CurrentSessionSection", fields: [currentSectionId], references: [id])
   currentSectionOrder        Int?
   sectionStartedAt           DateTime?
   sectionEndsAt              DateTime?
-  createdAt                  DateTime           @default(now())
-  updatedAt                  DateTime           @updatedAt
+  createdAt                  DateTime                 @default(now())
+  updatedAt                  DateTime                 @updatedAt
 
   responses               Response[]
   score                   Score?
   psychometricScoreResult PsychometricScoreResult?
   report                  Report[]
+
+  @@index([participantId])
 }
 
 model Response {
@@ -906,6 +994,7 @@ enum ContactMessageEnquiryType {
   GOVERNANCE
   GENERAL
 }
+
 enum ContactMessageSource {
   PUBLIC
   CONSUMER
@@ -928,11 +1017,10 @@ model ContactMessage {
   organisation String?
   enquiryType  ContactMessageEnquiryType @default(GENERAL)
   message      String
-  source       ContactMessageSource @default(PUBLIC)
-senderUserId String?
-senderRole   String?
+  source       ContactMessageSource      @default(PUBLIC)
+  senderUserId String?
+  senderRole   String?
   status       ContactMessageStatus      @default(NEW)
   createdAt    DateTime                  @default(now())
   updatedAt    DateTime                  @updatedAt
-  
 }
