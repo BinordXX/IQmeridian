@@ -317,9 +317,11 @@ const existing = await this.prisma.session.findFirst({
         campaign: {
           include: {
             assessmentForm: true,
+            organisation: true,
           },
         },
         candidateUser: true,
+        participant: true,
       },
     });
 
@@ -416,23 +418,34 @@ const existing = await this.prisma.session.findFirst({
       },
     });
 
-if (existing) {
-  if (existing.userId !== input.userId) {
-    throw new ForbiddenException(
-      'This invitation session belongs to another user',
-    );
-  }
+    if (existing) {
+      if (existing.userId !== input.userId) {
+        throw new ForbiddenException(
+          'This invitation session belongs to another user',
+        );
+      }
 
-  const wasAutoFinalised = await this.completeSessionIfTimedOut(existing);
+      const wasAutoFinalised = await this.completeSessionIfTimedOut(existing);
+      const resolvedStatus = wasAutoFinalised
+        ? SessionStatus.COMPLETED
+        : existing.status;
 
-  return {
-    sessionId: existing.id,
-    assessmentId: existing.assessmentFormId,
-    status: wasAutoFinalised
-      ? this.toCandidateStatus(SessionStatus.COMPLETED)
-      : this.toCandidateStatus(existing.status),
-  };
-}
+      return {
+        sessionId: existing.id,
+        assessmentId: existing.assessmentFormId,
+        status: this.toCandidateStatus(resolvedStatus),
+        candidateAccessPolicy: {
+          accessMode:
+            invitation.participant?.accessMode ??
+            invitation.campaign.organisation.candidateAccessMode,
+          resultVisibility:
+            invitation.campaign.organisation.candidateResultVisibility,
+          historyVisibility:
+            invitation.campaign.organisation.candidateHistoryVisibility,
+          reassessmentMode: invitation.campaign.organisation.reassessmentMode,
+        },
+      };
+    }
 
     if (invitation.status === InvitationStatus.PENDING) {
       const acceptedInvitation = await this.prisma.invitation.updateMany({
@@ -471,7 +484,8 @@ if (existing) {
       data: {
         userId: input.userId,
         campaignId: invitation.campaignId,
-        invitationId: invitation.id,
+               invitationId: invitation.id,
+        participantId: invitation.participantId,
         assessmentFormId: form.id,
         assessmentFormVersion: form.version,
         assessmentFormVersionLabel: form.versionLabel,
@@ -487,22 +501,43 @@ if (existing) {
       userId: input.userId,
       entityType: 'Session',
       entityId: session.id,
-      metadata: {
+            metadata: {
         campaignId: session.campaignId,
         invitationId: session.invitationId,
+        participantId: session.participantId,
         assessmentFormId: session.assessmentFormId,
         status: session.status,
         assessmentFormVersion: session.assessmentFormVersion,
         assessmentFormVersionLabel: session.assessmentFormVersionLabel,
         scoringVersion: session.scoringVersion,
         reportVersion: session.reportVersion,
+        candidateAccessPolicy: {
+          accessMode:
+            invitation.participant?.accessMode ??
+            invitation.campaign.organisation.candidateAccessMode,
+          resultVisibility:
+            invitation.campaign.organisation.candidateResultVisibility,
+          historyVisibility:
+            invitation.campaign.organisation.candidateHistoryVisibility,
+          reassessmentMode: invitation.campaign.organisation.reassessmentMode,
+        },
       },
     });
 
-    return {
+        return {
       sessionId: session.id,
       assessmentId: session.assessmentFormId,
       status: this.toCandidateStatus(session.status),
+      candidateAccessPolicy: {
+        accessMode:
+          invitation.participant?.accessMode ??
+          invitation.campaign.organisation.candidateAccessMode,
+        resultVisibility:
+          invitation.campaign.organisation.candidateResultVisibility,
+        historyVisibility:
+          invitation.campaign.organisation.candidateHistoryVisibility,
+        reassessmentMode: invitation.campaign.organisation.reassessmentMode,
+      },
     };
   }
 
@@ -631,8 +666,9 @@ if (session.status === SessionStatus.COMPLETED) {
     entityType: 'Session',
     entityId: finalisedSession.id,
     metadata: {
-      campaignId: finalisedSession.campaignId,
+            campaignId: finalisedSession.campaignId,
       invitationId: finalisedSession.invitationId,
+      participantId: finalisedSession.participantId,
       assessmentFormId: finalisedSession.assessmentFormId,
       completedAt: finalisedSession.completedAt,
       status: finalisedSession.status,
@@ -1035,8 +1071,9 @@ private async completeTimedOutSession(session: {
     entityType: 'Session',
     entityId: updatedSession.id,
     metadata: {
-      campaignId: updatedSession.campaignId,
+            campaignId: updatedSession.campaignId,
       invitationId: updatedSession.invitationId,
+      participantId: updatedSession.participantId,
       assessmentFormId: updatedSession.assessmentFormId,
       completedAt: updatedSession.completedAt,
       status: updatedSession.status,
