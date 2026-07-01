@@ -4,7 +4,12 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { CampaignStatus, InvitationStatus, UserRole } from '@prisma/client';
+import {
+  CampaignStatus,
+  InvitationStatus,
+  UserRole,
+  UserStatus,
+} from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -29,8 +34,17 @@ export class InvitationsService {
     expiresAt?: string;
     requestingUser: RequestUser;
   }) {
+    const email = input.email.trim().toLowerCase();
+
+    if (!email) {
+      throw new BadRequestException('Candidate email is required');
+    }
+
     const campaign = await this.prisma.campaign.findUnique({
       where: { id: input.campaignId },
+      include: {
+        assessmentForm: true,
+      },
     });
 
     if (!campaign) {
@@ -45,13 +59,60 @@ export class InvitationsService {
       );
     }
 
+    if (!campaign.assessmentFormId || !campaign.assessmentForm) {
+      throw new BadRequestException(
+        'Campaign must have an assessment form before candidates can be invited',
+      );
+    }
+
+    if (!campaign.assessmentForm.isActive) {
+      throw new BadRequestException(
+        'Campaign assessment form is not currently active',
+      );
+    }
+
+    const expiresAt = input.expiresAt ? new Date(input.expiresAt) : undefined;
+
+    if (expiresAt && Number.isNaN(expiresAt.getTime())) {
+      throw new BadRequestException('Invitation expiry date is invalid');
+    }
+
+    if (expiresAt && expiresAt <= new Date()) {
+      throw new BadRequestException('Invitation expiry date must be in future');
+    }
+
+    const candidateUserId = await this.resolveCandidateUserId({
+      candidateUserId: input.candidateUserId,
+      email,
+    });
+
+    const existingInvitation = await this.prisma.invitation.findFirst({
+      where: {
+        campaignId: input.campaignId,
+        email,
+        status: {
+          in: [InvitationStatus.PENDING, InvitationStatus.ACCEPTED],
+        },
+      },
+      select: {
+        id: true,
+        status: true,
+      },
+    });
+
+    if (existingInvitation) {
+      throw new BadRequestException(
+        'An active invitation already exists for this candidate email in this campaign',
+      );
+    }
+
     const invitation = await this.prisma.invitation.create({
       data: {
         campaignId: input.campaignId,
-        email: input.email,
+        email,
         token: randomUUID(),
-        candidateUserId: input.candidateUserId,
-        expiresAt: input.expiresAt ? new Date(input.expiresAt) : undefined,
+        candidateUserId,
+        expiresAt,
       },
     });
 
@@ -89,8 +150,11 @@ export class InvitationsService {
       throw new NotFoundException('Invitation not found');
     }
 
-    if (invitation.status !== InvitationStatus.PENDING) {
-      throw new BadRequestException('Invitation is not pending');
+    if (
+      invitation.status !== InvitationStatus.PENDING &&
+      invitation.status !== InvitationStatus.ACCEPTED
+    ) {
+      throw new BadRequestException('Invitation is no longer available');
     }
 
     if (invitation.expiresAt && invitation.expiresAt < new Date()) {
@@ -118,6 +182,79 @@ export class InvitationsService {
     return invitation;
   }
 
+    async listPendingCandidateInvitations(user: RequestUser) {
+    const candidate = await this.prisma.user.findUnique({
+      where: {
+        id: user.id,
+      },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+      },
+    });
+
+    if (!candidate) {
+      throw new NotFoundException('Candidate user not found');
+    }
+
+    if (candidate.role !== UserRole.CANDIDATE) {
+      throw new ForbiddenException('Only candidate accounts can view invitations');
+    }
+
+    const email = candidate.email.trim().toLowerCase();
+    const now = new Date();
+
+    return this.prisma.invitation.findMany({
+      where: {
+        email: {
+          equals: email,
+          mode: 'insensitive',
+        },
+        status: {
+          in: [InvitationStatus.PENDING, InvitationStatus.ACCEPTED],
+        },
+        OR: [
+          {
+            candidateUserId: null,
+          },
+          {
+            candidateUserId: candidate.id,
+          },
+        ],
+        expiresAt: {
+          gt: now,
+        },
+        sessions: {
+          none: {},
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      include: {
+        campaign: {
+          include: {
+            organisation: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+            assessmentForm: {
+              select: {
+                id: true,
+                name: true,
+                version: true,
+                versionLabel: true,
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+  
   async acceptInvitation(id: string, actorUserId?: string) {
     const invitation = await this.prisma.invitation.update({
       where: { id },
@@ -142,6 +279,51 @@ export class InvitationsService {
     });
 
     return invitation;
+  }
+
+  private async resolveCandidateUserId(input: {
+    candidateUserId?: string;
+    email: string;
+  }) {
+    const candidateUserId = input.candidateUserId?.trim();
+
+    if (!candidateUserId) {
+      return undefined;
+    }
+
+    const candidate = await this.prisma.user.findUnique({
+      where: {
+        id: candidateUserId,
+      },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        status: true,
+      },
+    });
+
+    if (!candidate) {
+      throw new NotFoundException('Candidate user was not found');
+    }
+
+    if (candidate.role !== UserRole.CANDIDATE) {
+      throw new BadRequestException(
+        'Selected candidate user must have the CANDIDATE role',
+      );
+    }
+
+    if (candidate.status !== UserStatus.ACTIVE) {
+      throw new BadRequestException('Selected candidate account is not active');
+    }
+
+    if (candidate.email.trim().toLowerCase() !== input.email) {
+      throw new BadRequestException(
+        'Selected candidate user email does not match the invitation email',
+      );
+    }
+
+    return candidate.id;
   }
 
   private assertCanManageCampaign(user: RequestUser, organisationId: string) {

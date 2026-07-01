@@ -36,6 +36,11 @@ export class InvitationsController {
       requestingUser: req.user,
     });
   }
+    @Roles('CANDIDATE')
+  @Get('candidate/pending')
+  listPendingCandidateInvitations(@Req() req: { user: RequestUser }) {
+    return this.invitationsService.listPendingCandidateInvitations(req.user);
+  }
 
   @Roles('PLATFORM_ADMIN', 'EMPLOYER_ADMIN', 'CANDIDATE')
   @Get('validate/:token')

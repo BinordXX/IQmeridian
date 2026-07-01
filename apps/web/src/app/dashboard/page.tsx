@@ -1,11 +1,19 @@
 import {
   AlertTriangle,
+  CheckCircle2,
   ClipboardCheck,
+  Clock3,
   FileText,
+  LockKeyhole,
   PlayCircle,
   UserRound,
   Wrench,
 } from 'lucide-react';
+import { CandidatePendingInvitationsPanel } from './_components/candidate-pending-invitations-panel';
+import {
+  listCandidatePendingInvitations,
+  type CandidatePendingInvitationSummary,
+} from './candidate-dashboard-api';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
@@ -29,32 +37,38 @@ type DashboardPageProps = {
 const profileTools = [
   {
     title: 'Profile',
-    description: 'Review your account identity and dashboard access role.',
+    description: 'Review and update your account identity.',
   },
   {
     title: 'Assessment readiness',
     description:
-      'Check instructions, timing expectations, and assessment preparation notes before starting a test.',
+      'Review instructions, timing expectations, and assessment preparation notes.',
   },
   {
     title: 'Reports',
     description:
-      'View completed assessment results once reports are available for your account.',
+      'View reports only where your account or organisation policy permits access.',
   },
   {
     title: 'Privacy and data',
     description:
-      'Understand how your responses, scores, and reports are handled on IQMeridian.',
+      'Manage account settings, sessions, notification preferences, and data controls.',
   },
 ];
 
 const formatDate = (value?: string | null) => {
   if (!value) return 'Not available';
 
+  const parsed = new Date(value);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return 'Not available';
+  }
+
   return new Intl.DateTimeFormat('en', {
     dateStyle: 'medium',
     timeStyle: 'short',
-  }).format(new Date(value));
+  }).format(parsed);
 };
 
 const formatScoreBand = (value?: string | null) => {
@@ -84,10 +98,6 @@ const formatPercentile = (value?: number | null) => {
   return `${Math.round(value)}th percentile`;
 };
 
-const isCompletedSession = (session: ConsumerSessionSummary) => {
-  return session.status === 'COMPLETED' || session.status === 'FINALISED';
-};
-
 const getTimestampValue = (value?: string | null) => {
   if (!value) return 0;
 
@@ -104,7 +114,7 @@ const MAX_DISPLAYABLE_INTERVAL_WIDTH = 45;
 
 const formatStandardScoreInterval = (
   lowerTheta: number | null | undefined,
-  upperTheta: number | null | undefined
+  upperTheta: number | null | undefined,
 ) => {
   if (typeof lowerTheta !== 'number' || typeof upperTheta !== 'number') {
     return 'Not available';
@@ -112,7 +122,6 @@ const formatStandardScoreInterval = (
 
   const lowerStandardScore = STANDARD_SCORE_MEAN + lowerTheta * STANDARD_SCORE_SD;
   const upperStandardScore = STANDARD_SCORE_MEAN + upperTheta * STANDARD_SCORE_SD;
-
   const rawIntervalWidth = upperStandardScore - lowerStandardScore;
 
   if (
@@ -125,15 +134,15 @@ const formatStandardScoreInterval = (
 
   const clampedLower = Math.max(
     STANDARD_SCORE_MIN,
-    Math.min(STANDARD_SCORE_MAX, lowerStandardScore)
+    Math.min(STANDARD_SCORE_MAX, lowerStandardScore),
   );
 
   const clampedUpper = Math.max(
     STANDARD_SCORE_MIN,
-    Math.min(STANDARD_SCORE_MAX, upperStandardScore)
+    Math.min(STANDARD_SCORE_MAX, upperStandardScore),
   );
 
-  return `${Math.round(clampedLower)}–${Math.round(clampedUpper)}`;
+  return `${Math.round(clampedLower)}-${Math.round(clampedUpper)}`;
 };
 
 const VALIDITY_SEVERITY_RANK: Record<string, number> = {
@@ -148,7 +157,7 @@ const getHighestValiditySeverity = (
         severity: string;
       }[]
     | null
-    | undefined
+    | undefined,
 ) => {
   if (!validityFlags?.length) {
     return null;
@@ -172,21 +181,13 @@ const getAttemptQualityLabel = (
         severity: string;
       }[]
     | null
-    | undefined
+    | undefined,
 ) => {
   const highestSeverity = getHighestValiditySeverity(validityFlags);
 
-  if (highestSeverity === 'HIGH') {
-    return 'Low-validity attempt';
-  }
-
-  if (highestSeverity === 'MEDIUM') {
-    return 'Interpret with caution';
-  }
-
-  if (highestSeverity === 'LOW') {
-    return 'Minor validity notice';
-  }
+  if (highestSeverity === 'HIGH') return 'Low-validity attempt';
+  if (highestSeverity === 'MEDIUM') return 'Interpret with caution';
+  if (highestSeverity === 'LOW') return 'Minor validity notice';
 
   return 'Clean attempt';
 };
@@ -197,7 +198,7 @@ const getAttemptQualityDescription = (
         severity: string;
       }[]
     | null
-    | undefined
+    | undefined,
 ) => {
   const highestSeverity = getHighestValiditySeverity(validityFlags);
 
@@ -222,23 +223,31 @@ const getAttemptQualityClassName = (
         severity: string;
       }[]
     | null
-    | undefined
+    | undefined,
 ) => {
   const highestSeverity = getHighestValiditySeverity(validityFlags);
 
   if (highestSeverity === 'HIGH') {
-    return 'border-red-200 bg-red-50 text-red-900';
+    return 'border-red-300/20 bg-red-400/10 text-red-100';
   }
 
   if (highestSeverity === 'MEDIUM') {
-    return 'border-amber-200 bg-amber-50 text-amber-900';
+    return 'border-amber-300/20 bg-amber-400/10 text-amber-100';
   }
 
   if (highestSeverity === 'LOW') {
-    return 'border-blue-200 bg-blue-50 text-blue-900';
+    return 'border-blue-300/20 bg-blue-400/10 text-blue-100';
   }
 
-  return 'border-emerald-200 bg-emerald-50 text-emerald-900';
+  return 'border-emerald-300/20 bg-emerald-400/10 text-emerald-100';
+};
+
+const isCompletedSession = (session: ConsumerSessionSummary) => {
+  return session.status === 'COMPLETED' || session.status === 'FINALISED';
+};
+
+const isActiveSession = (session: ConsumerSessionSummary) => {
+  return session.status === 'NOT_STARTED' || session.status === 'IN_PROGRESS';
 };
 
 const getCurrentProfileSession = (sessions: ConsumerSessionSummary[]) => {
@@ -250,10 +259,10 @@ const getCurrentProfileSession = (sessions: ConsumerSessionSummary[]) => {
 
       return (
         getTimestampValue(
-          rightScore?.generatedAt ?? right.completedAt ?? right.updatedAt
+          rightScore?.generatedAt ?? right.completedAt ?? right.updatedAt,
         ) -
         getTimestampValue(
-          leftScore?.generatedAt ?? left.completedAt ?? left.updatedAt
+          leftScore?.generatedAt ?? left.completedAt ?? left.updatedAt,
         )
       );
     })[0];
@@ -263,7 +272,7 @@ const getStrongestDomain = (session: ConsumerSessionSummary | undefined) => {
   const domainScores = session?.psychometricScore?.domainScores ?? [];
 
   return [...domainScores].sort(
-    (left, right) => (right.standardScore ?? 0) - (left.standardScore ?? 0)
+    (left, right) => (right.standardScore ?? 0) - (left.standardScore ?? 0),
   )[0];
 };
 
@@ -281,19 +290,35 @@ const getSessionHref = (session: ConsumerSessionSummary) => {
     return `/assessment/session/${session.id}`;
   }
 
+  if (isCompletedSession(session)) {
+    return `/assessment/session/${session.id}/review`;
+  }
+
   return `/assessment/session/${session.id}/instructions`;
 };
 
 const getSessionActionLabel = (session: ConsumerSessionSummary) => {
-  if (session.status === 'COMPLETED' || session.status === 'FINALISED') {
-    return 'Review';
-  }
-
-  if (session.status === 'IN_PROGRESS') {
-    return 'Resume';
-  }
+  if (session.status === 'IN_PROGRESS') return 'Resume';
+  if (session.status === 'NOT_STARTED') return 'Open';
+  if (isCompletedSession(session)) return 'Review';
 
   return 'Open';
+};
+
+const getStatusBadgeClassName = (session: ConsumerSessionSummary) => {
+  if (session.status === 'IN_PROGRESS') {
+    return 'border-cyan-300/20 bg-cyan-400/10 text-cyan-100';
+  }
+
+  if (session.status === 'NOT_STARTED') {
+    return 'border-blue-300/20 bg-blue-400/10 text-blue-100';
+  }
+
+  if (isCompletedSession(session)) {
+    return 'border-emerald-300/20 bg-emerald-400/10 text-emerald-100';
+  }
+
+  return 'border-slate-300/20 bg-white/[0.04] text-slate-300';
 };
 
 export default async function DashboardPage({
@@ -313,7 +338,9 @@ export default async function DashboardPage({
 
   let consumerAssessment: ConsumerAssessmentDefault | null = null;
   let sessions: ConsumerSessionSummary[] = [];
+  let pendingInvitations: CandidatePendingInvitationSummary[] = [];
   let dashboardError: string | null = null;
+  let pendingInvitationError: string | null = null;
 
   try {
     if (role === 'CONSUMER') {
@@ -325,16 +352,54 @@ export default async function DashboardPage({
       consumerAssessment = assessmentDefault;
       sessions = sessionRecords;
     } else {
-      sessions = await listConsumerSessionsWithPsychometricScores();
+      const [sessionRecords, invitationRecords] = await Promise.allSettled([
+        listConsumerSessionsWithPsychometricScores(),
+        listCandidatePendingInvitations(),
+      ]);
+
+      if (sessionRecords.status === 'fulfilled') {
+        sessions = sessionRecords.value;
+      } else {
+        dashboardError =
+          sessionRecords.reason instanceof Error
+            ? sessionRecords.reason.message
+            : 'Unable to load dashboard data.';
+      }
+
+      if (invitationRecords.status === 'fulfilled') {
+        pendingInvitations = invitationRecords.value;
+      } else {
+        pendingInvitationError =
+          invitationRecords.reason instanceof Error
+            ? invitationRecords.reason.message
+            : 'Unable to load pending invitations.';
+      }
     }
   } catch (error) {
     dashboardError =
       error instanceof Error ? error.message : 'Unable to load dashboard data.';
   }
 
-  
+  const isCandidate = role === 'CANDIDATE';
+  const canShowScoreProfile = role === 'CONSUMER';
 
-  const hasSessions = sessions.length > 0;
+  const activeSessions = sessions.filter(isActiveSession);
+  const completedSessions = sessions.filter(isCompletedSession);
+  const visibleSessions = isCandidate ? activeSessions : sessions;
+  const hasVisibleSessions = visibleSessions.length > 0;
+    const candidateAssessmentRecordCount =
+    pendingInvitations.length + activeSessions.length;
+  const candidateHasCompletedOnly =
+    isCandidate && activeSessions.length === 0 && completedSessions.length > 0;
+  const candidateHasNoAssignments =
+    isCandidate && activeSessions.length === 0 && completedSessions.length === 0;
+
+  const currentProfileSession = canShowScoreProfile
+    ? getCurrentProfileSession(sessions)
+    : undefined;
+  const currentProfileScore = currentProfileSession?.psychometricScore ?? null;
+  const strongestDomain = getStrongestDomain(currentProfileSession);
+
   const canStartConsumerAssessment =
     role === 'CONSUMER' && Boolean(consumerAssessment);
 
@@ -343,58 +408,60 @@ export default async function DashboardPage({
       ? consumerAssessment
         ? 'Available'
         : 'Unavailable'
-      : 'Assigned only';
+      : activeSessions.length > 0
+        ? 'Assigned'
+        : pendingInvitations.length > 0
+          ? 'Pending invitation'
+          : 'No active assignment';
 
   const assessmentAvailabilityDescription =
     role === 'CONSUMER'
       ? consumerAssessment
         ? consumerAssessment.assessmentForm.name
         : 'No default consumer assessment has been selected yet.'
-      : 'Candidate assessments are assigned through invitations or employer campaigns.';
+      : activeSessions.length > 0
+        ? 'You have an assigned assessment session available.'
+        : pendingInvitations.length > 0
+          ? 'You have a pending invitation waiting to be opened.'
+          : 'You do not currently have an active assessment assignment.';
 
   const startAssessmentDescription =
-    role === 'CONSUMER' ? (
-      consumerAssessment ? (
-        <>
-          Create a new consumer-owned assessment session for{' '}
-          <span className="font-semibold text-slate-950">
-            {consumerAssessment.assessmentForm.name ??
-              'the active consumer assessment'}
-          </span>
-          . Your session will be saved to your account history.
-        </>
-      ) : (
-        'No consumer assessment is currently available. A platform administrator must select an active default assessment first.'
-      )
-    ) : (
-      'Candidate assessments are assigned through invitations or employer campaigns. When an assessment is assigned to you, it will appear in your assessment history.'
-    );
-
-
-  const currentProfileSession = getCurrentProfileSession(sessions);
-  const currentProfileScore = currentProfileSession?.psychometricScore ?? null;
-  const strongestDomain = getStrongestDomain(currentProfileSession);
-
+  role === 'CONSUMER'
+    ? consumerAssessment
+      ? 'Create a new consumer-owned assessment session. Your completed attempt will update your IQMeridian profile.'
+      : 'No consumer assessment is currently available. A platform administrator must select an active default assessment first.'
+    : pendingInvitations.length > 0
+      ? 'Open your pending invitation to claim it and create your assessment session.'
+      : candidateHasCompletedOnly
+        ? 'Your assigned assessment has been completed. One-off candidate access is now limited to completion status unless a new invitation is issued.'
+        : candidateHasNoAssignments
+          ? 'Candidate assessments are assigned through invitations or organisation campaigns. When a new assignment is issued, it will appear here.'
+          : 'Open or resume your currently assigned assessment. Completed one-off assessments cannot be restarted.';
   return (
-    <div className="space-y-6">
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+    <div className="space-y-6 text-white">
+      <section className="relative overflow-hidden rounded-[2rem] border border-cyan-300/15 bg-[#07142f]/88 p-6 shadow-[0_30px_90px_rgba(0,0,0,0.28)]">
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.14),transparent_28%),radial-gradient(circle_at_90%_20%,rgba(59,130,246,0.13),transparent_24%)]"
+        />
+
+        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.25em] text-slate-500">
-              IQMeridian consumer dashboard
+            <p className="text-xs font-black uppercase tracking-[0.3em] text-cyan-300">
+              IQMeridian dashboard
             </p>
-            <h1 className="mt-3 text-3xl font-bold tracking-tight">
+            <h1 className="mt-3 text-3xl font-black tracking-tight text-white md:text-4xl">
               Welcome, {session.user.name ?? session.user.email}
             </h1>
-            <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
-              This is your personal assessment space. From here, you can start
-              assessments, resume active sessions, review completed test
-              history, and manage your account profile.
+            <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-400">
+              {isCandidate
+                ? 'This is your controlled candidate assessment workspace. You can access active assignments and completion status only.'
+                : 'This is your personal intelligence assessment workspace. Start assessments, review scored attempts, and track your current IQMeridian profile.'}
             </p>
           </div>
 
           <Link
-            className="w-fit rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:border-slate-950 hover:text-slate-950"
+            className="w-fit rounded-full border border-cyan-300/20 bg-cyan-400/10 px-4 py-2 text-sm font-black text-cyan-100 transition hover:bg-cyan-400/15"
             href="/"
           >
             Home
@@ -403,175 +470,219 @@ export default async function DashboardPage({
       </section>
 
       {resolvedSearchParams?.startError ? (
-        <div className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+        <div className="flex items-start gap-3 rounded-2xl border border-red-300/20 bg-red-400/10 p-4 text-sm font-bold text-red-100">
           <AlertTriangle className="mt-0.5 shrink-0" size={18} />
           <span>{resolvedSearchParams.startError}</span>
         </div>
       ) : null}
 
       {dashboardError ? (
-        <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+        <div className="flex items-start gap-3 rounded-2xl border border-amber-300/20 bg-amber-400/10 p-4 text-sm font-bold text-amber-100">
           <AlertTriangle className="mt-0.5 shrink-0" size={18} />
           <span>{dashboardError}</span>
         </div>
       ) : null}
+            {role === 'CANDIDATE' ? (
+        <CandidatePendingInvitationsPanel
+          invitations={pendingInvitations}
+          errorMessage={pendingInvitationError}
+        />
+      ) : null}
+      {isCandidate ? (
+        <section className="rounded-[2rem] border border-white/10 bg-[#07142f]/82 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.22)]">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+            <div className="flex gap-4">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-cyan-300/15 bg-cyan-400/10 text-cyan-200">
+                {activeSessions.length > 0 ? (
+                  <PlayCircle size={22} strokeWidth={2} />
+                ) : (
+                  <CheckCircle2 size={22} strokeWidth={2} />
+                )}
+              </span>
 
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.25em] text-slate-500">
-              Current IQMeridian profile
-            </p>
-            <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-950">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">
+                  Candidate access
+                </p>
+                <h2 className="mt-2 text-2xl font-black text-white">
+                 {activeSessions.length > 0
+  ? 'You have an active assigned assessment'
+  : pendingInvitations.length > 0
+    ? 'You have a pending invitation'
+    : candidateHasCompletedOnly
+      ? 'Assessment completed'
+      : 'No active assessment'}
+                </h2>
+                <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
+                  {startAssessmentDescription}
+                </p>
+              </div>
+            </div>
+
+            <span className="w-fit rounded-full border border-cyan-300/20 bg-cyan-400/10 px-3 py-1 text-xs font-black uppercase tracking-wide text-cyan-100">
+              {assessmentAvailabilityLabel}
+            </span>
+          </div>
+        </section>
+      ) : (
+        <section className="rounded-[2rem] border border-white/10 bg-[#07142f]/82 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.22)]">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.25em] text-cyan-300">
+                Current IQMeridian profile
+              </p>
+              <h2 className="mt-3 text-3xl font-black tracking-tight text-white">
+                {currentProfileScore
+                  ? formatScoreBand(currentProfileScore.overallScoreBand)
+                  : 'Profile not available yet'}
+              </h2>
+              <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-400">
+                {currentProfileScore
+                  ? currentProfileScore.overallInterpretation
+                  : 'Complete an assessment to generate your current IQMeridian intelligence profile. Your profile will update when a new valid score is generated.'}
+              </p>
+            </div>
+
+            <span className="w-fit rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-black text-slate-300">
               {currentProfileScore
-                ? formatScoreBand(currentProfileScore.overallScoreBand)
-                : 'Profile not available yet'}
-            </h2>
-            <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
-              {currentProfileScore
-                ? currentProfileScore.overallInterpretation
-                : 'Complete an assessment to generate your current IQMeridian intelligence profile. Your profile will update when a new valid assessment score is generated.'}
-            </p>
+                ? `Updated ${formatDate(currentProfileScore.generatedAt)}`
+                : 'Awaiting first score'}
+            </span>
           </div>
 
-          <span className="w-fit rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-            {currentProfileScore
-              ? `Updated ${formatDate(currentProfileScore.generatedAt)}`
-              : 'Awaiting first score'}
-          </span>
-        </div>
+          <dl className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4">
+              <dt className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+                Standard score
+              </dt>
+              <dd className="mt-2 text-2xl font-black text-white">
+                {formatWholeNumber(currentProfileScore?.overallStandardScore)}
+              </dd>
+            </div>
 
-        <dl className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-              Standard score
-            </dt>
-            <dd className="mt-2 text-2xl font-bold text-slate-950">
-              {formatWholeNumber(currentProfileScore?.overallStandardScore)}
-            </dd>
-          </div>
+            <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4">
+              <dt className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+                Percentile
+              </dt>
+              <dd className="mt-2 text-2xl font-black text-white">
+                {formatPercentile(currentProfileScore?.overallPercentile)}
+              </dd>
+            </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-              Percentile
-            </dt>
-            <dd className="mt-2 text-2xl font-bold text-slate-950">
-              {formatPercentile(currentProfileScore?.overallPercentile)}
-            </dd>
-          </div>
+            <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4">
+              <dt className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+                Accuracy
+              </dt>
+              <dd className="mt-2 text-2xl font-black text-white">
+                {formatAccuracy(currentProfileScore?.overallAccuracy)}
+              </dd>
+            </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-              Accuracy
-            </dt>
-            <dd className="mt-2 text-2xl font-bold text-slate-950">
-              {formatAccuracy(currentProfileScore?.overallAccuracy)}
-            </dd>
-          </div>
+            <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4">
+              <dt className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+                Strongest domain
+              </dt>
+              <dd className="mt-2 text-2xl font-black text-white">
+                {strongestDomain?.label ?? 'Not available'}
+              </dd>
+            </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-              Strongest domain
-            </dt>
-            <dd className="mt-2 text-2xl font-bold text-slate-950">
-              {strongestDomain?.label ?? 'Not available'}
-            </dd>
-          </div>
+            <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4">
+              <dt className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+                Validity flags
+              </dt>
+              <dd className="mt-2 text-2xl font-black text-white">
+                {currentProfileScore
+                  ? currentProfileScore.validityFlags.length
+                  : 'Not available'}
+              </dd>
+            </div>
+          </dl>
 
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-              Validity flags
-            </dt>
-            <dd className="mt-2 text-2xl font-bold text-slate-950">
-              {currentProfileScore
-                ? currentProfileScore.validityFlags.length
-                : 'Not available'}
-            </dd>
-          </div>
-        </dl>
+          {currentProfileScore ? (
+            <div
+              className={`mt-5 rounded-2xl border p-4 text-sm leading-6 ${getAttemptQualityClassName(
+                currentProfileScore.validityFlags,
+              )}`}
+            >
+              <p className="font-black">
+                {getAttemptQualityLabel(currentProfileScore.validityFlags)}
+              </p>
+              <p className="mt-1">
+                {getAttemptQualityDescription(currentProfileScore.validityFlags)}
+              </p>
+            </div>
+          ) : null}
 
-        {currentProfileScore ? (
-          <div
-            className={`mt-5 rounded-2xl border p-4 text-sm leading-6 ${getAttemptQualityClassName(
-              currentProfileScore.validityFlags
-            )}`}
-          >
-            <p className="font-semibold">
-              {getAttemptQualityLabel(currentProfileScore.validityFlags)}
-            </p>
-            <p className="mt-1">
-              {getAttemptQualityDescription(currentProfileScore.validityFlags)}
-            </p>
-          </div>
-        ) : null}
-
-        {currentProfileScore ? (
-          <div className="mt-5 rounded-2xl border border-amber-100 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
-            This profile currently reflects your latest scored assessment. A
-            future IQMeridian release will recalculate this as a longitudinal
-            ability estimate across valid assessment attempts, with retake
-            interval controls and calibration safeguards.
-          </div>
-        ) : null}
-      </section>
-      
+          {currentProfileScore ? (
+            <div className="mt-5 rounded-2xl border border-amber-300/20 bg-amber-400/10 p-4 text-sm leading-6 text-amber-100">
+              This profile currently reflects your latest scored assessment. A
+              future IQMeridian release will calculate this as a longitudinal
+              ability estimate across valid attempts with retake interval
+              controls and calibration safeguards.
+            </div>
+          ) : null}
+        </section>
+      )}
 
       <section className="grid gap-4 md:grid-cols-3">
-        <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <article className="rounded-2xl border border-white/10 bg-[#07142f]/82 p-5 shadow-[0_24px_70px_rgba(0,0,0,0.18)]">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-sm font-medium text-slate-500">
+              <p className="text-sm font-bold text-slate-500">
                 Assessment availability
               </p>
-              <p className="mt-3 text-2xl font-bold text-slate-950">
+              <p className="mt-3 text-2xl font-black text-white">
                 {assessmentAvailabilityLabel}
               </p>
             </div>
 
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-emerald-100 bg-emerald-50 text-emerald-700">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-emerald-300/15 bg-emerald-400/10 text-emerald-200">
               <ClipboardCheck size={20} strokeWidth={2} />
             </span>
           </div>
 
-          <p className="mt-2 text-sm text-slate-600">
+          <p className="mt-2 text-sm leading-6 text-slate-500">
             {assessmentAvailabilityDescription}
           </p>
         </article>
 
-        <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <article className="rounded-2xl border border-white/10 bg-[#07142f]/82 p-5 shadow-[0_24px_70px_rgba(0,0,0,0.18)]">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-sm font-medium text-slate-500">
+              <p className="text-sm font-bold text-slate-500">
                 Assessment records
               </p>
-              <p className="mt-3 text-2xl font-bold text-slate-950">
-                {sessions.length}
+              <p className="mt-3 text-2xl font-black text-white">
+                {isCandidate ? candidateAssessmentRecordCount : sessions.length}
               </p>
             </div>
 
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-blue-700">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-blue-300/15 bg-blue-400/10 text-blue-200">
               <FileText size={20} strokeWidth={2} />
             </span>
           </div>
 
-          <p className="mt-2 text-sm text-slate-600">
-            Saved sessions in your personal account history.
+          <p className="mt-2 text-sm leading-6 text-slate-500">
+            {isCandidate
+  ? 'Pending invitations and active candidate sessions available to this account.'
+  : 'Saved sessions in your personal account history.'}
           </p>
         </article>
 
-        <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <article className="rounded-2xl border border-white/10 bg-[#07142f]/82 p-5 shadow-[0_24px_70px_rgba(0,0,0,0.18)]">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-sm font-medium text-slate-500">Account role</p>
-              <p className="mt-3 text-2xl font-bold text-slate-950">{role}</p>
+              <p className="text-sm font-bold text-slate-500">Account role</p>
+              <p className="mt-3 text-2xl font-black text-white">{role}</p>
             </div>
 
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-violet-100 bg-violet-50 text-violet-700">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-violet-300/15 bg-violet-400/10 text-violet-200">
               <UserRound size={20} strokeWidth={2} />
             </span>
           </div>
 
-          <p className="mt-2 text-sm text-slate-600">
+          <p className="mt-2 text-sm leading-6 text-slate-500">
             Access level for this dashboard workspace.
           </p>
         </article>
@@ -580,95 +691,203 @@ export default async function DashboardPage({
       <section className="grid gap-6 lg:grid-cols-[1.4fr_0.8fr]">
         <div className="space-y-6">
           <article
-  className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
-  id="assessment"
->
+            className="rounded-[2rem] border border-white/10 bg-[#07142f]/82 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.22)]"
+            id="assessment"
+          >
             <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
               <div className="flex gap-4">
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-emerald-100 bg-emerald-50 text-emerald-700">
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-emerald-300/15 bg-emerald-400/10 text-emerald-200">
                   <PlayCircle size={22} strokeWidth={2} />
                 </span>
 
                 <div>
-                  <p className="text-sm font-semibold text-slate-500">
+                  <p className="text-sm font-black text-slate-500">
                     Assessment
                   </p>
-                  <h2 className="mt-2 text-2xl font-bold">
-                    Start your IQMeridian assessment
+                  <h2 className="mt-2 text-2xl font-black text-white">
+                    {isCandidate ? 'Assigned assessment' : 'Start assessment'}
                   </h2>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">
+                  <p className="mt-2 text-sm leading-6 text-slate-500">
                     {startAssessmentDescription}
                   </p>
                 </div>
               </div>
 
-              <span className="w-fit rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+              <span className="w-fit rounded-full border border-emerald-300/20 bg-emerald-400/10 px-3 py-1 text-xs font-black text-emerald-100">
                 {assessmentAvailabilityLabel}
               </span>
             </div>
 
-            <form action={startConsumerAssessmentAction} className="mt-6">
-              <button
-                className="rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600"
-                disabled={!canStartConsumerAssessment}
-                type="submit"
-              >
-                Start new assessment
-              </button>
-            </form>
+            {isCandidate ? (
+              activeSessions.length > 0 ? (
+                <div className="mt-6 space-y-3">
+                  {activeSessions.map((assessmentSession) => (
+                    <div
+                      className="rounded-2xl border border-white/10 bg-white/[0.035] p-4"
+                      key={assessmentSession.id}
+                    >
+                      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                        <div>
+                          <h3 className="font-black text-white">
+                            {getSessionTitle(assessmentSession)}
+                          </h3>
+                          <p className="mt-1 text-sm leading-6 text-slate-500">
+                            Created: {formatDate(assessmentSession.createdAt)}
+                          </p>
+                          <p className="text-sm leading-6 text-slate-500">
+                            Started: {formatDate(assessmentSession.startedAt)}
+                          </p>
+                        </div>
+
+                        <div className="flex flex-col items-start gap-3 md:items-end">
+                          <span
+                            className={`rounded-full border px-3 py-1 text-xs font-black uppercase tracking-wide ${getStatusBadgeClassName(
+                              assessmentSession,
+                            )}`}
+                          >
+                            {assessmentSession.status}
+                          </span>
+                          <Link
+                            className="rounded-2xl border border-cyan-300/20 bg-cyan-400/10 px-4 py-2 text-xs font-black text-cyan-100 transition hover:bg-cyan-400/15"
+                            href={getSessionHref(assessmentSession)}
+                          >
+                            {getSessionActionLabel(assessmentSession)}
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.035] p-5">
+                  <div className="flex gap-3">
+                    <LockKeyhole
+                      className="mt-0.5 shrink-0 text-cyan-300"
+                      size={18}
+                    />
+                    <div>
+                      <h3 className="font-black text-white">
+                        No active candidate assessment
+                      </h3>
+                      <p className="mt-1 text-sm leading-6 text-slate-500">
+                        {candidateHasCompletedOnly
+                          ? 'Your previous assigned assessment is complete. One-off candidate access is restricted after completion.'
+                          : 'A new assignment must be issued before you can take another assessment.'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )
+            ) : (
+              <form action={startConsumerAssessmentAction} className="mt-6">
+                <button
+                  className="rounded-2xl border border-cyan-300/20 bg-cyan-400/10 px-5 py-3 text-sm font-black text-cyan-100 transition hover:bg-cyan-400/15 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/[0.04] disabled:text-slate-500"
+                  disabled={!canStartConsumerAssessment}
+                  type="submit"
+                >
+                  Start new assessment
+                </button>
+              </form>
+            )}
           </article>
 
           <article
-            className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+            className="rounded-[2rem] border border-white/10 bg-[#07142f]/82 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.22)]"
             id="history"
           >
             <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
               <div className="flex gap-4">
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-blue-700">
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-blue-300/15 bg-blue-400/10 text-blue-200">
                   <FileText size={22} strokeWidth={2} />
                 </span>
 
                 <div>
-                  <p className="text-sm font-semibold text-slate-500">
-                    Test history
+                  <p className="text-sm font-black text-slate-500">
+                    {isCandidate ? 'Completion status' : 'Test history'}
                   </p>
-                  <h2 className="mt-2 text-2xl font-bold">
-                    Your assessment records
+                  <h2 className="mt-2 text-2xl font-black text-white">
+                    {isCandidate
+                      ? 'Your candidate assessment state'
+                      : 'Your assessment records'}
                   </h2>
                 </div>
               </div>
 
-              <span className="w-fit rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                {sessions.length} session{sessions.length === 1 ? '' : 's'}
+              <span className="w-fit rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-black text-slate-300">
+                {isCandidate
+                  ? `${completedSessions.length} completed`
+                  : `${sessions.length} session${sessions.length === 1 ? '' : 's'}`}
               </span>
             </div>
 
             <div className="mt-5 space-y-3">
-              {hasSessions ? (
-                sessions.map((assessmentSession) => (
+              {isCandidate ? (
+                completedSessions.length > 0 ? (
+                  completedSessions.map((assessmentSession) => (
+                    <div
+                      className="rounded-2xl border border-emerald-300/15 bg-emerald-400/10 p-4"
+                      key={assessmentSession.id}
+                    >
+                      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                        <div>
+                          <h3 className="font-black text-emerald-100">
+                            {getSessionTitle(assessmentSession)}
+                          </h3>
+                          <p className="mt-1 text-sm leading-6 text-emerald-100/70">
+                            Completed: {formatDate(assessmentSession.completedAt)}
+                          </p>
+                          <p className="text-sm leading-6 text-emerald-100/70">
+                            Your one-off candidate access is now limited to
+                            completion status.
+                          </p>
+                        </div>
+
+                        <span className="w-fit rounded-full border border-emerald-300/25 bg-emerald-400/10 px-3 py-1 text-xs font-black uppercase tracking-wide text-emerald-100">
+                          Completed
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-5">
+                    <h3 className="font-black text-white">
+                      No completed candidate assessments
+                    </h3>
+                    <p className="mt-1 text-sm leading-6 text-slate-500">
+                      Completion records will appear here after an assigned
+                      assessment is submitted.
+                    </p>
+                  </div>
+                )
+              ) : hasVisibleSessions ? (
+                visibleSessions.map((assessmentSession) => (
                   <div
-                    className="rounded-xl border border-slate-200 bg-slate-50 p-4"
+                    className="rounded-2xl border border-white/10 bg-white/[0.035] p-4"
                     key={assessmentSession.id}
                   >
                     <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                       <div>
-                        <h3 className="font-semibold">
+                        <h3 className="font-black text-white">
                           {getSessionTitle(assessmentSession)}
                         </h3>
-                        <p className="mt-1 text-sm leading-6 text-slate-600">
+                        <p className="mt-1 text-sm leading-6 text-slate-500">
                           Created: {formatDate(assessmentSession.createdAt)}
                         </p>
-                        <p className="text-sm leading-6 text-slate-600">
+                        <p className="text-sm leading-6 text-slate-500">
                           Started: {formatDate(assessmentSession.startedAt)}
                         </p>
                       </div>
 
                       <div className="flex flex-col items-start gap-3 md:items-end">
-                        <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-600">
+                        <span
+                          className={`rounded-full border px-3 py-1 text-xs font-black uppercase tracking-wide ${getStatusBadgeClassName(
+                            assessmentSession,
+                          )}`}
+                        >
                           {assessmentSession.status}
                         </span>
                         <Link
-                          className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-slate-950 hover:text-slate-950"
+                          className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-black text-slate-200 transition hover:border-cyan-300/20 hover:text-cyan-100"
                           href={getSessionHref(assessmentSession)}
                         >
                           {getSessionActionLabel(assessmentSession)}
@@ -676,197 +895,111 @@ export default async function DashboardPage({
                       </div>
                     </div>
 
-                    {isCompletedSession(assessmentSession) ? (
-                      assessmentSession.psychometricScore ? (
-                        <div className="mt-4 rounded-xl border border-emerald-100 bg-white p-4">
-                          <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
-                            <div>
-                              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
-                                Psychometric profile
-                              </p>
-                              <h4 className="mt-1 text-lg font-bold text-slate-950">
-                                {formatScoreBand(
-                                  assessmentSession.psychometricScore
-                                    .overallScoreBand
-                                )}
-                              </h4>
-                              <p className="mt-1 text-sm leading-6 text-slate-600">
-                                {
-                                  assessmentSession.psychometricScore
-                                    .overallInterpretation
-                                }
-                              </p>
-                            </div>
-
-                            <span className="w-fit rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                    {isCompletedSession(assessmentSession) &&
+                    assessmentSession.psychometricScore ? (
+                      <div className="mt-4 rounded-2xl border border-emerald-300/15 bg-emerald-400/10 p-4">
+                        <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                          <div>
+                            <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-200">
+                              Psychometric profile
+                            </p>
+                            <h4 className="mt-1 text-lg font-black text-white">
+                              {formatScoreBand(
+                                assessmentSession.psychometricScore
+                                  .overallScoreBand,
+                              )}
+                            </h4>
+                            <p className="mt-1 text-sm leading-6 text-slate-400">
                               {
                                 assessmentSession.psychometricScore
-                                  .scoringStatus
+                                  .overallInterpretation
                               }
-                            </span>
-                          </div>
-
-                          <dl className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                            <div className="rounded-lg bg-slate-50 p-3">
-                              <dt className="text-xs font-medium text-slate-500">
-                                Standard score
-                              </dt>
-                              <dd className="mt-1 text-lg font-bold text-slate-950">
-                                {formatWholeNumber(
-                                  assessmentSession.psychometricScore
-                                    .overallStandardScore
-                                )}
-                              </dd>
-                            </div>
-
-                            <div className="rounded-lg bg-slate-50 p-3">
-                              <dt className="text-xs font-medium text-slate-500">
-                                Percentile
-                              </dt>
-                              <dd className="mt-1 text-lg font-bold text-slate-950">
-                                {formatPercentile(
-                                  assessmentSession.psychometricScore
-                                    .overallPercentile
-                                )}
-                              </dd>
-                            </div>
-
-                            <div className="rounded-lg bg-slate-50 p-3">
-                              <dt className="text-xs font-medium text-slate-500">
-                                Accuracy
-                              </dt>
-                              <dd className="mt-1 text-lg font-bold text-slate-950">
-                                {formatAccuracy(
-                                  assessmentSession.psychometricScore
-                                    .overallAccuracy
-                                )}
-                              </dd>
-                            </div>
-
-                            <div className="rounded-lg bg-slate-50 p-3">
-                              <dt className="text-xs font-medium text-slate-500">
-                               90% score interval
-                              </dt>
-<dd className="mt-1 text-lg font-bold text-slate-950">
-  {formatStandardScoreInterval(
-    assessmentSession.psychometricScore.overallCi90Lower,
-    assessmentSession.psychometricScore.overallCi90Upper
-  )}
-</dd>
-                            </div>
-                          </dl>
-
-                          {assessmentSession.psychometricScore.domainScores
-                            .length > 0 ? (
-                            <div className="mt-4">
-                              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                                Domain profile
-                              </p>
-
-                              <div className="mt-2 grid gap-2 md:grid-cols-2">
-                                {assessmentSession.psychometricScore.domainScores.map(
-                                  (domainScore) => (
-                                    <div
-                                      className="rounded-lg border border-slate-200 bg-slate-50 p-3"
-                                      key={domainScore.id}
-                                    >
-                                      <div className="flex items-start justify-between gap-3">
-                                        <div>
-                                          <p className="text-sm font-semibold text-slate-950">
-                                            {domainScore.label}
-                                          </p>
-                                          <p className="mt-1 text-xs text-slate-500">
-                                            {formatAccuracy(
-                                              domainScore.accuracy
-                                            )}{' '}
-                                            accuracy
-                                          </p>
-                                        </div>
-
-                                        <span className="rounded-full bg-white px-2 py-1 text-xs font-semibold text-slate-600">
-                                          {formatScoreBand(
-                                            domainScore.scoreBand
-                                          )}
-                                        </span>
-                                      </div>
-                                    </div>
-                                  )
-                                )}
-                              </div>
-                            </div>
-                          ) : null}
-
-                          <div
-  className={`rounded-xl border p-4 text-sm ${getAttemptQualityClassName(
-    assessmentSession.psychometricScore.validityFlags
-  )}`}
->
-  <p className="font-semibold">
-    {getAttemptQualityLabel(
-      assessmentSession.psychometricScore.validityFlags
-    )}
-  </p>
-  <p className="mt-1">
-    {getAttemptQualityDescription(
-      assessmentSession.psychometricScore.validityFlags
-    )}
-  </p>
-
-  {assessmentSession.psychometricScore.validityFlags.length > 0 ? (
-    <ul className="mt-3 space-y-1">
-      {assessmentSession.psychometricScore.validityFlags.map((flag) => (
-        <li key={flag.id}>
-          <span className="font-medium">{flag.label}</span>
-          <span> — {flag.description}</span>
-        </li>
-      ))}
-    </ul>
-  ) : null}
-</div>
-
-                          <div className="mt-4 rounded-lg bg-slate-50 p-3 text-xs leading-5 text-slate-600">
-                            <p>
-                              Model:{' '}
-                              <span className="font-semibold text-slate-800">
-                                {
-                                  assessmentSession.psychometricScore
-                                    .modelVersion
-                                }
-                              </span>
-                            </p>
-                            <p>
-                              Scoring mode:{' '}
-                              <span className="font-semibold text-slate-800">
-                                {
-                                  assessmentSession.psychometricScore
-                                    .scoringModeUsed
-                                }
-                              </span>
-                            </p>
-                            <p className="mt-1">
-                             Scores are provisional until IQMeridian completes formal calibration, norming, reliability validation, and reporting governance.
                             </p>
                           </div>
+
+                          <span className="w-fit rounded-full border border-emerald-300/20 bg-emerald-400/10 px-3 py-1 text-xs font-black text-emerald-100">
+                            {
+                              assessmentSession.psychometricScore.scoringStatus
+                            }
+                          </span>
                         </div>
-                      ) : (
-                        <div className="mt-4 rounded-xl border border-dashed border-amber-200 bg-amber-50 p-4">
-                          <p className="text-sm font-semibold text-amber-900">
-                            Score profile pending
+
+                        <dl className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                          <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
+                            <dt className="text-xs font-bold text-slate-500">
+                              Standard score
+                            </dt>
+                            <dd className="mt-1 text-lg font-black text-white">
+                              {formatWholeNumber(
+                                assessmentSession.psychometricScore
+                                  .overallStandardScore,
+                              )}
+                            </dd>
+                          </div>
+
+                          <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
+                            <dt className="text-xs font-bold text-slate-500">
+                              Percentile
+                            </dt>
+                            <dd className="mt-1 text-lg font-black text-white">
+                              {formatPercentile(
+                                assessmentSession.psychometricScore
+                                  .overallPercentile,
+                              )}
+                            </dd>
+                          </div>
+
+                          <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
+                            <dt className="text-xs font-bold text-slate-500">
+                              Accuracy
+                            </dt>
+                            <dd className="mt-1 text-lg font-black text-white">
+                              {formatAccuracy(
+                                assessmentSession.psychometricScore
+                                  .overallAccuracy,
+                              )}
+                            </dd>
+                          </div>
+
+                          <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
+                            <dt className="text-xs font-bold text-slate-500">
+                              90% score interval
+                            </dt>
+                            <dd className="mt-1 text-lg font-black text-white">
+                              {formatStandardScoreInterval(
+                                assessmentSession.psychometricScore
+                                  .overallCi90Lower,
+                                assessmentSession.psychometricScore
+                                  .overallCi90Upper,
+                              )}
+                            </dd>
+                          </div>
+                        </dl>
+
+                        <div
+                          className={`mt-4 rounded-xl border p-4 text-sm ${getAttemptQualityClassName(
+                            assessmentSession.psychometricScore.validityFlags,
+                          )}`}
+                        >
+                          <p className="font-black">
+                            {getAttemptQualityLabel(
+                              assessmentSession.psychometricScore.validityFlags,
+                            )}
                           </p>
-                          <p className="mt-1 text-sm leading-6 text-amber-800">
-                            This assessment is complete, but the psychometric
-                            score profile has not been generated or persisted
-                            yet.
+                          <p className="mt-1">
+                            {getAttemptQualityDescription(
+                              assessmentSession.psychometricScore.validityFlags,
+                            )}
                           </p>
                         </div>
-                      )
+                      </div>
                     ) : null}
                   </div>
                 ))
               ) : (
-                <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-5">
-                  <h3 className="font-semibold">No assessments yet</h3>
-                  <p className="mt-1 text-sm leading-6 text-slate-600">
+                <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.035] p-5">
+                  <h3 className="font-black text-white">No assessments yet</h3>
+                  <p className="mt-1 text-sm leading-6 text-slate-500">
                     Your assessment history will appear here after you create or
                     complete your first session.
                   </p>
@@ -877,61 +1010,95 @@ export default async function DashboardPage({
         </div>
 
         <aside className="space-y-6">
-          <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <article className="rounded-[2rem] border border-white/10 bg-[#07142f]/82 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.22)]">
             <div className="flex gap-4">
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-violet-100 bg-violet-50 text-violet-700">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-violet-300/15 bg-violet-400/10 text-violet-200">
                 <UserRound size={22} strokeWidth={2} />
               </span>
 
               <div>
-                <p className="text-sm font-semibold text-slate-500">Profile</p>
-                <h2 className="mt-2 text-xl font-bold">Account details</h2>
+                <p className="text-sm font-black text-slate-500">Profile</p>
+                <h2 className="mt-2 text-xl font-black text-white">
+                  Account details
+                </h2>
               </div>
             </div>
 
             <dl className="mt-5 space-y-4 text-sm">
               <div>
-                <dt className="font-medium text-slate-500">Name</dt>
-                <dd className="mt-1 font-semibold">
+                <dt className="font-bold text-slate-500">Name</dt>
+                <dd className="mt-1 font-black text-white">
                   {session.user.name ?? 'Not set'}
                 </dd>
               </div>
               <div>
-                <dt className="font-medium text-slate-500">Email</dt>
-                <dd className="mt-1 font-semibold">{session.user.email}</dd>
+                <dt className="font-bold text-slate-500">Email</dt>
+                <dd className="mt-1 break-all font-black text-white">
+                  {session.user.email}
+                </dd>
               </div>
               <div>
-                <dt className="font-medium text-slate-500">Role</dt>
-                <dd className="mt-1 font-semibold">{role}</dd>
+                <dt className="font-bold text-slate-500">Role</dt>
+                <dd className="mt-1 font-black text-white">{role}</dd>
               </div>
             </dl>
+
+            <Link
+              className="mt-5 inline-flex rounded-2xl border border-cyan-300/20 bg-cyan-400/10 px-4 py-2 text-sm font-black text-cyan-100 transition hover:bg-cyan-400/15"
+              href="/dashboard/settings"
+            >
+              Account settings
+            </Link>
           </article>
 
-          <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <article className="rounded-[2rem] border border-white/10 bg-[#07142f]/82 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.22)]">
             <div className="flex gap-4">
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-amber-100 bg-amber-50 text-amber-700">
-                <Wrench size={22} strokeWidth={2} />
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-amber-300/15 bg-amber-400/10 text-amber-200">
+                {isCandidate ? (
+                  <LockKeyhole size={22} strokeWidth={2} />
+                ) : (
+                  <Wrench size={22} strokeWidth={2} />
+                )}
               </span>
 
               <div>
-                <p className="text-sm font-semibold text-slate-500">Tools</p>
-                <h2 className="mt-2 text-xl font-bold">Consumer workspace</h2>
+                <p className="text-sm font-black text-slate-500">
+                  {isCandidate ? 'Candidate controls' : 'Tools'}
+                </p>
+                <h2 className="mt-2 text-xl font-black text-white">
+                  {isCandidate ? 'Access policy' : 'Consumer workspace'}
+                </h2>
               </div>
             </div>
 
             <div className="mt-5 space-y-3">
               {profileTools.map((tool) => (
                 <div
-                  className="rounded-xl border border-slate-200 bg-slate-50 p-4"
+                  className="rounded-2xl border border-white/10 bg-white/[0.035] p-4"
                   key={tool.title}
                 >
-                  <h3 className="text-sm font-semibold">{tool.title}</h3>
-                  <p className="mt-1 text-sm leading-6 text-slate-600">
+                  <h3 className="text-sm font-black text-white">
+                    {tool.title}
+                  </h3>
+                  <p className="mt-1 text-sm leading-6 text-slate-500">
                     {tool.description}
                   </p>
                 </div>
               ))}
             </div>
+
+            {isCandidate ? (
+              <div className="mt-5 rounded-2xl border border-cyan-300/15 bg-cyan-400/10 p-4 text-sm leading-6 text-cyan-100">
+                <div className="flex gap-2">
+                  <Clock3 className="mt-0.5 shrink-0" size={16} />
+                  <p>
+                    Candidate access is assignment-based. Completed one-off
+                    assessments remain recorded, but they do not keep the
+                    assessment open.
+                  </p>
+                </div>
+              </div>
+            ) : null}
           </article>
         </aside>
       </section>

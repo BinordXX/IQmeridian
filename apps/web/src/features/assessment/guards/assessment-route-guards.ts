@@ -1,7 +1,7 @@
 import { auth } from '@/auth';
 import { getApiBaseUrl } from '@/lib/api-base-url';
 
-import { AssessmentApiError, validateInvitation } from '../api/assessment-api';
+import { AssessmentApiError } from '../api/assessment-api';
 import type {
   AssessmentSessionPayload,
   InvitationValidationResult,
@@ -51,6 +51,15 @@ const statusPath = (
 
   return `/assessment/status?${params.toString()}`;
 };
+
+const loginPathForInvitation = (token: string) => {
+  const callbackUrl = `/assessment/invitation/${encodeURIComponent(
+    token,
+  )}/instructions`;
+
+  return `/login?callbackUrl=${encodeURIComponent(callbackUrl)}`;
+};
+
 
 const readResponsePayload = async (response: Response): Promise<unknown> => {
   const text = await response.text();
@@ -163,11 +172,157 @@ const apiErrorToGuardDecision = <T>(
   };
 };
 
+const mapBackendInvitationValidation = (
+  invitation: BackendInvitationValidationResult,
+): InvitationValidationResult => {
+  if (invitation.status === 'PENDING' || invitation.status === 'ACCEPTED') {
+    return {
+      status: 'valid',
+      token: invitation.token,
+      invitationId: invitation.id,
+      invitationToken: invitation.token,
+      campaignId: invitation.campaignId,
+      candidateName:
+        invitation.candidateUser?.name ?? invitation.email ?? undefined,
+      assessmentTitle:
+        invitation.campaign?.assessmentForm?.name ??
+        invitation.campaign?.name ??
+        'Candidate assessment',
+      sections:
+        invitation.campaign?.assessmentForm?.sections?.map(
+          (section, index) => ({
+            sectionId: section.id,
+            title: section.title,
+            instructions: section.instructions ?? null,
+            position: section.position ?? section.orderIndex ?? index + 1,
+            itemCount:
+              section.itemCount ??
+              section._count?.items ??
+              section._count?.formItemMappings ??
+              section.items?.length ??
+              0,
+            timeLimitSec: section.timeLimitSec ?? undefined,
+          }),
+        ) ?? [],
+    } as InvitationValidationResult;
+  }
+
+  if (invitation.status === 'EXPIRED') {
+    return {
+      status: 'expired',
+      message: 'This invitation has expired.',
+    } as InvitationValidationResult;
+  }
+
+  if (invitation.status === 'CANCELLED') {
+    return {
+      status: 'cancelled',
+      message: 'This invitation has been cancelled.',
+    } as InvitationValidationResult;
+  }
+
+  return {
+    status: 'invalid',
+    message: 'This invitation is not valid.',
+  } as InvitationValidationResult;
+};
+
+type BackendInvitationValidationResult = {
+  id: string;
+  campaignId: string;
+  email: string;
+  token: string;
+  status: 'PENDING' | 'ACCEPTED' | 'EXPIRED' | 'CANCELLED';
+  candidateUserId?: string | null;
+  expiresAt?: string | null;
+  campaign?: {
+    name?: string;
+    assessmentForm?: {
+      name?: string;
+      sections?: Array<{
+        id: string;
+        title: string;
+        instructions?: string | null;
+        orderIndex?: number | null;
+        position?: number | null;
+        itemCount?: number | null;
+        timeLimitSec?: number | null;
+        items?: unknown[];
+        _count?: {
+          items?: number;
+          formItemMappings?: number;
+        };
+      }>;
+    } | null;
+  } | null;
+  candidateUser?: {
+    id?: string;
+    name?: string | null;
+    email?: string | null;
+  } | null;
+};
+
 export const guardInvitationInstructionsRoute = async (
-  token: string
+  token: string,
 ): Promise<AssessmentGuardDecision<InvitationValidationResult>> => {
+  const session = await auth();
+  const role = session?.user?.role;
+  const userEmail = session?.user?.email?.trim().toLowerCase() ?? null;
+
+  if (!session?.user) {
+    return {
+      allowed: false,
+      reason: 'unauthorised',
+      redirectTo: loginPathForInvitation(token),
+    };
+  }
+
+  if (role !== 'CANDIDATE') {
+    return {
+      allowed: false,
+      reason: 'unauthorised',
+      redirectTo: statusPath(
+        'unauthorised',
+        'Sign out and open this invitation with the candidate account assigned to the invitation.',
+      ),
+    };
+  }
+
   try {
-    const validation = await validateInvitation(token);
+    const invitation =
+      await serverAssessmentRequest<BackendInvitationValidationResult>(
+        `/invitations/validate/${encodeURIComponent(token)}`,
+      );
+
+    if (
+      userEmail &&
+      invitation.email.trim().toLowerCase() !== userEmail
+    ) {
+      return {
+        allowed: false,
+        reason: 'unauthorised',
+        redirectTo: statusPath(
+          'unauthorised',
+          'This invitation belongs to a different candidate email address.',
+        ),
+      };
+    }
+
+    if (
+      invitation.candidateUserId &&
+      invitation.candidateUserId !== session.user.id
+    ) {
+      return {
+        allowed: false,
+        reason: 'unauthorised',
+        redirectTo: statusPath(
+          'unauthorised',
+          'This invitation has already been claimed by another candidate account.',
+        ),
+      };
+    }
+
+    const validation = mapBackendInvitationValidation(invitation);
 
     if (validation.status === 'valid') {
       return {
@@ -181,14 +336,6 @@ export const guardInvitationInstructionsRoute = async (
         allowed: false,
         reason: 'expired',
         redirectTo: statusPath('expired', validation.message),
-      };
-    }
-
-    if (validation.status === 'used') {
-      return {
-        allowed: false,
-        reason: 'completed',
-        redirectTo: statusPath('completed', validation.message),
       };
     }
 

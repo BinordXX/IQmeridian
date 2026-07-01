@@ -204,8 +204,10 @@ export const EmployerCampaignDetail = ({
                             {invitation.email}
                           </p>
                           <p className="mt-1 text-xs text-slate-500">
-                            {invitation.candidateUserId ?? 'No candidate user'}
-                          </p>
+  {invitation.candidateUserId
+    ? 'Candidate account linked'
+    : 'Awaiting candidate account claim'}
+</p>
                         </td>
 
                         <td className="px-4 py-4 align-top">
@@ -222,11 +224,12 @@ export const EmployerCampaignDetail = ({
 
                         <td className="px-4 py-4 align-top text-sm">
                           <Link
-                            href={getInvitationAssessmentUrl(invitation.token)}
-                            className="font-semibold text-slate-950 hover:underline"
-                          >
-                            Open link
-                          </Link>
+  href={getInvitationAssessmentUrl(invitation.token)}
+  className="font-semibold text-slate-950 hover:underline"
+  title="Copy this candidate invitation link and send it to the candidate. Do not open it from an employer session."
+>
+  Candidate invite link
+</Link>
                         </td>
                       </tr>
                     ))
