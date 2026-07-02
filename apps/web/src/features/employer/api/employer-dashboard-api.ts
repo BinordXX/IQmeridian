@@ -57,7 +57,6 @@ export type EmployerCampaignDetail = Omit<
 export type CreateEmployerInvitationInput = {
   campaignId: string;
   email: string;
-  candidateUserId?: string;
   expiresAt?: string;
 };
 

@@ -201,7 +201,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.sub = user.id;
         token.role = isAppRole(user.role) ? user.role : undefined;
@@ -213,7 +213,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         return token;
       }
+      if (trigger === 'update') {
+        const nextSession = session as {
+          user?: {
+            name?: unknown;
+          };
+        };
 
+        if (typeof nextSession.user?.name === 'string') {
+          token.name = nextSession.user.name;
+        }
+      }
       if (
         token.accessToken &&
         isAccessTokenStillUsable(token.accessTokenExpiresAt)
@@ -225,6 +235,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
     async session({ session, token }) {
       session.user.id = token.sub ?? '';
+            session.user.name =
+        typeof token.name === 'string' ? token.name : session.user.name;
+      session.user.email =
+        typeof token.email === 'string' ? token.email : session.user.email;
       session.user.role = isAppRole(token.role) ? token.role : undefined;
       session.user.organisationId =
         typeof token.organisationId === 'string' ? token.organisationId : null;

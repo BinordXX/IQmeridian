@@ -20,6 +20,7 @@ import { PsychometricsModule } from './psychometrics/psychometrics.module';
 import { AuthModule } from './auth/auth.module';
 import { ConsumerAssessmentsModule } from './consumer-assessments/consumer-assessments.module';
 import { ContactModule } from './contact/contact.module';
+import { AccountModule } from './account/account.module';
 @Module({
   imports: [
     PrismaModule,
@@ -41,6 +42,7 @@ import { ContactModule } from './contact/contact.module';
     PsychometricsModule,
     ConsumerAssessmentsModule,
     ContactModule,
+    AccountModule,
   ],
   controllers: [AppController],
   providers: [AppService],

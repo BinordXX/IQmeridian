@@ -243,7 +243,7 @@ export const validateInvitation = async (
     { signal }
   );
 
-  if (invitation.status === 'PENDING') {
+   if (invitation.status === 'PENDING' || invitation.status === 'ACCEPTED') {
     return {
       status: 'valid',
       token: invitation.token,
@@ -279,13 +279,6 @@ export const validateInvitation = async (
     return {
       status: 'expired',
       message: 'This invitation has expired.',
-    } as InvitationValidationResult;
-  }
-
-  if (invitation.status === 'ACCEPTED') {
-    return {
-      status: 'used',
-      message: 'This invitation has already been used.',
     } as InvitationValidationResult;
   }
 
