@@ -3,10 +3,51 @@
 import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 
-import {
-  updateEmployerCampaignStatus,
-  type EmployerCampaignSummary,
-} from '../api/employer-dashboard-api';
+type UpdatedEmployerCampaign = {
+  id: string;
+  name: string;
+  status: string;
+};
+
+const updateEmployerCampaignStatusFromClient = async (
+  campaignId: string,
+  input: {
+    status: 'DRAFT' | 'ACTIVE' | 'CLOSED' | 'ARCHIVED';
+  },
+) => {
+  const response = await fetch(
+    `/api/employer/campaigns/${encodeURIComponent(campaignId)}/status`,
+    {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(input),
+    },
+  );
+
+  const payload = (await response.json().catch(() => ({}))) as {
+    id?: string;
+    name?: string;
+    status?: string;
+    message?: string | string[];
+    error?: string;
+  };
+
+  if (!response.ok) {
+    const message = Array.isArray(payload.message)
+      ? payload.message.join(' ')
+      : payload.message;
+
+    throw new Error(
+      message ??
+        payload.error ??
+        `Campaign status update failed with status ${response.status}`,
+    );
+  }
+
+  return payload as UpdatedEmployerCampaign;
+};
 
 type CampaignStatus = 'DRAFT' | 'ACTIVE' | 'CLOSED' | 'ARCHIVED';
 
@@ -53,15 +94,16 @@ export const EmployerCampaignStatusForm = ({
     setErrorMessage(null);
 
     try {
-      await updateEmployerCampaignStatus(campaign.id, { status });
+     await updateEmployerCampaignStatusFromClient(campaign.id, { status });
       router.push('/employer/campaigns');
       router.refresh();
-    } catch {
-      setErrorMessage(
-        'The campaign status could not be updated. Confirm that the requested transition is permitted.'
-      );
-      setIsSaving(false);
-    }
+    } catch (error) {
+  setErrorMessage(
+    error instanceof Error
+      ? error.message
+      : 'The campaign status could not be updated.',
+  );
+}
   };
 
   return (

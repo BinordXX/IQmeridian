@@ -275,7 +275,20 @@ export const createEmployerCampaign = async (
   });
 
   if (!response.ok) {
-    throw new Error(`Campaign creation failed with status ${response.status}`);
+    const payload = (await response.json().catch(() => ({}))) as {
+      message?: string | string[];
+      error?: string;
+    };
+
+    const message = Array.isArray(payload.message)
+      ? payload.message.join(' ')
+      : payload.message;
+
+    throw new Error(
+      message ??
+        payload.error ??
+        `Campaign creation failed with status ${response.status}`,
+    );
   }
 
   return (await response.json()) as EmployerCampaignSummary;

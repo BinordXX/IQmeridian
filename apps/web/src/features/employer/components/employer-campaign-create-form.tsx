@@ -3,14 +3,52 @@
 import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 
-import {
-  createEmployerCampaign,
-  type EmployerAssessmentFormSummary,
-} from '../api/employer-dashboard-api';
 
 type EmployerCampaignCreateFormProps = {
   activeForms: EmployerAssessmentFormSummary[];
   organisationId: string;
+};
+
+type CreatedEmployerCampaign = {
+  id: string;
+  name: string;
+  status: string;
+};
+
+const createEmployerCampaignFromClient = async (input: {
+  name: string;
+  organisationId: string;
+  assessmentFormId?: string;
+}) => {
+  const response = await fetch('/api/employer/campaigns', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(input),
+  });
+
+  const payload = (await response.json().catch(() => ({}))) as {
+    id?: string;
+    name?: string;
+    status?: string;
+    message?: string | string[];
+    error?: string;
+  };
+
+  if (!response.ok) {
+    const message = Array.isArray(payload.message)
+      ? payload.message.join(' ')
+      : payload.message;
+
+    throw new Error(
+      message ??
+        payload.error ??
+        `Campaign creation failed with status ${response.status}`,
+    );
+  }
+
+  return payload as CreatedEmployerCampaign;
 };
 
 export const EmployerCampaignCreateForm = ({
@@ -59,7 +97,7 @@ export const EmployerCampaignCreateForm = ({
         ? `${name.trim()} — ${roleContext.trim()}`
         : name.trim();
 
-      await createEmployerCampaign({
+     await createEmployerCampaignFromClient({
         name: campaignName,
         organisationId,
         assessmentFormId,
@@ -67,12 +105,13 @@ export const EmployerCampaignCreateForm = ({
 
       router.push('/employer/campaigns');
       router.refresh();
-    } catch {
-      setErrorMessage(
-        'The campaign could not be created. Confirm that the API is running and the selected assessment form is active.'
-      );
-      setIsSaving(false);
-    }
+    } catch (error) {
+  setErrorMessage(
+    error instanceof Error
+      ? error.message
+      : 'The campaign could not be created.',
+  );
+}
   };
 
   return (
