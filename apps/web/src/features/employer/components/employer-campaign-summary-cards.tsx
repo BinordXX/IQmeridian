@@ -18,10 +18,12 @@ const SummaryCard = ({
   helper: string;
 }) => {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <p className="text-sm font-medium text-slate-500">{label}</p>
-      <p className="mt-3 text-3xl font-bold text-slate-950">{value}</p>
-      <p className="mt-2 text-sm text-slate-600">{helper}</p>
+    <div className="rounded-[1.5rem] border border-white/10 bg-[#07142f]/88 p-5 shadow-[0_20px_60px_rgba(0,0,0,0.2)]">
+      <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">
+        {label}
+      </p>
+      <p className="mt-3 text-3xl font-black text-white">{value}</p>
+      <p className="mt-2 text-sm leading-6 text-slate-400">{helper}</p>
     </div>
   );
 };

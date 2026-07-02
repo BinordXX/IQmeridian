@@ -19,7 +19,7 @@ type EmployerCampaignDetailProps = {
 };
 
 const getInvitationDisplayStatus = (
-  invitation: EmployerInvitationSummary
+  invitation: EmployerInvitationSummary,
 ): string => {
   if (invitation.status !== 'PENDING') {
     return invitation.status;
@@ -36,10 +36,6 @@ const getInvitationDisplayStatus = (
   return invitation.status;
 };
 
-const getInvitationAssessmentUrl = (token: string): string => {
-  return `/assessment/invitation/${encodeURIComponent(token)}/instructions`;
-};
-
 export const EmployerCampaignDetail = ({
   campaign,
 }: EmployerCampaignDetailProps) => {
@@ -51,36 +47,43 @@ export const EmployerCampaignDetail = ({
 
   return (
     <div className="space-y-8">
-      <section className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-            Campaign workspace
-          </p>
+      <section className="relative overflow-hidden rounded-[2rem] border border-cyan-300/15 bg-[#07142f]/88 p-8 shadow-[0_24px_70px_rgba(0,0,0,0.24)]">
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.14),transparent_34%),radial-gradient(circle_at_90%_10%,rgba(59,130,246,0.14),transparent_30%)]"
+        />
 
-          <h2 className="mt-2 text-3xl font-bold text-slate-950">
-            {campaign.name}
-          </h2>
+        <div className="relative flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.24em] text-cyan-300">
+              Campaign workspace
+            </p>
 
-          <p className="mt-3 max-w-3xl text-base leading-7 text-slate-600">
-            Manage invitations, monitor candidate progress, and access campaign
-            outcomes from a single employer workspace.
-          </p>
-        </div>
+            <h1 className="mt-3 text-4xl font-black tracking-tight text-white">
+              {campaign.name}
+            </h1>
 
-        <div className="flex items-center gap-3">
-          <Link
-            href={`/employer/campaigns/${encodeURIComponent(campaign.id)}/edit`}
-            className="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-white"
-          >
-            Edit status
-          </Link>
+            <p className="mt-4 max-w-3xl text-sm leading-6 text-slate-400">
+              Manage invitations, monitor participant progress, and access
+              campaign outcomes from a single employer workspace.
+            </p>
+          </div>
 
-          <Link
-            href="/employer/campaigns"
-            className="rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800"
-          >
-            Back to campaigns
-          </Link>
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href={`/employer/campaigns/${encodeURIComponent(campaign.id)}/edit`}
+              className="rounded-2xl border border-cyan-300/20 bg-cyan-400/10 px-5 py-3 text-sm font-black text-cyan-100 transition hover:bg-cyan-400/15"
+            >
+              Edit status
+            </Link>
+
+            <Link
+              href="/employer/campaigns"
+              className="rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-black text-slate-200 transition hover:bg-white/[0.07]"
+            >
+              Back to campaigns
+            </Link>
+          </div>
         </div>
       </section>
 
@@ -89,14 +92,12 @@ export const EmployerCampaignDetail = ({
         sessions={sessions}
       />
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="rounded-[2rem] border border-white/10 bg-[#07142f]/88 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.22)]">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-slate-950">
-              Campaign exports
-            </h3>
+            <h3 className="text-lg font-black text-white">Campaign exports</h3>
 
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
               Campaign-level exports provide structured summaries for employer
               review. CSV exports download the candidate result table, while PDF
               export uses the browser print workflow for the current campaign
@@ -120,17 +121,17 @@ export const EmployerCampaignDetail = ({
 
       <section className="grid gap-6 xl:grid-cols-[1fr_380px]">
         <div className="space-y-6">
-          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h3 className="text-lg font-semibold text-slate-950">
+          <section className="rounded-[2rem] border border-white/10 bg-[#07142f]/88 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.22)]">
+            <h3 className="text-lg font-black text-white">
               Campaign metadata
             </h3>
 
             <dl className="mt-5 grid gap-4 md:grid-cols-2">
               <div>
-                <dt className="text-sm font-medium text-slate-500">
+                <dt className="text-sm font-bold text-slate-500">
                   Assessment form
                 </dt>
-                <dd className="mt-1 text-sm text-slate-950">
+                <dd className="mt-1 text-sm font-black text-slate-200">
                   {campaign.assessmentForm?.name ??
                     campaign.assessmentFormId ??
                     'No assessment form assigned'}
@@ -138,26 +139,26 @@ export const EmployerCampaignDetail = ({
               </div>
 
               <div>
-                <dt className="text-sm font-medium text-slate-500">
+                <dt className="text-sm font-bold text-slate-500">
                   Organisation
                 </dt>
-                <dd className="mt-1 text-sm text-slate-950">
+                <dd className="mt-1 text-sm font-black text-slate-200">
                   {campaign.organisation?.name ?? 'Employer organisation'}
                 </dd>
               </div>
 
               <div>
-                <dt className="text-sm font-medium text-slate-500">Owner</dt>
-                <dd className="mt-1 text-sm text-slate-950">
+                <dt className="text-sm font-bold text-slate-500">Owner</dt>
+                <dd className="mt-1 text-sm font-black text-slate-200">
                   {campaign.owner?.email ?? campaign.owner?.name ?? 'Owner'}
                 </dd>
               </div>
 
               <div>
-                <dt className="text-sm font-medium text-slate-500">
+                <dt className="text-sm font-bold text-slate-500">
                   Campaign ID
                 </dt>
-                <dd className="mt-1 break-all text-sm text-slate-950">
+                <dd className="mt-1 break-all font-mono text-xs text-slate-400">
                   {campaign.id}
                 </dd>
               </div>
@@ -171,25 +172,25 @@ export const EmployerCampaignDetail = ({
             sessions={sessions}
           />
 
-          <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="border-b border-slate-100 px-5 py-4">
-              <h3 className="text-lg font-semibold text-slate-950">
+          <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-[#07142f]/88 shadow-[0_24px_70px_rgba(0,0,0,0.22)]">
+            <div className="border-b border-white/10 px-5 py-4">
+              <h3 className="text-lg font-black text-white">
                 Invitation status
               </h3>
 
-              <p className="mt-1 text-sm text-slate-600">
+              <p className="mt-1 text-sm leading-6 text-slate-400">
                 Track candidate invitation links and their operational state.
               </p>
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-left">
+              <table className="w-full min-w-[980px] text-left">
                 <thead>
-                  <tr className="text-sm text-slate-500">
-                    <th className="px-4 py-3 font-medium">Candidate</th>
-                    <th className="px-4 py-3 font-medium">Status</th>
-                    <th className="px-4 py-3 font-medium">Expires</th>
-                    <th className="px-4 py-3 font-medium">Controls</th>
+                  <tr className="border-b border-white/10 text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+                    <th className="px-4 py-3">Candidate</th>
+                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3">Expires</th>
+                    <th className="px-4 py-3">Controls</th>
                   </tr>
                 </thead>
 
@@ -198,41 +199,41 @@ export const EmployerCampaignDetail = ({
                     invitations.map((invitation) => (
                       <tr
                         key={invitation.id}
-                        className="border-t border-slate-100"
+                        className="border-b border-white/10 align-top last:border-b-0"
                       >
-                        <td className="px-4 py-4 align-top">
-                          <p className="font-medium text-slate-950">
+                        <td className="px-4 py-4">
+                          <p className="font-black text-white">
                             {invitation.email}
                           </p>
                           <p className="mt-1 text-xs text-slate-500">
-  {invitation.candidateUserId
-    ? 'Candidate account linked'
-    : 'Awaiting candidate account claim'}
-</p>
+                            {invitation.candidateUserId
+                              ? 'Candidate account linked'
+                              : 'Awaiting candidate account claim'}
+                          </p>
                         </td>
 
-                        <td className="px-4 py-4 align-top">
-                          <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700">
+                        <td className="px-4 py-4">
+                          <span className="inline-flex rounded-full border border-cyan-300/15 bg-cyan-400/10 px-3 py-1 text-xs font-black text-cyan-100">
                             {getInvitationDisplayStatus(invitation)}
                           </span>
                         </td>
 
-                        <td className="px-4 py-4 align-top text-sm text-slate-700">
+                        <td className="px-4 py-4 text-sm text-slate-400">
                           {invitation.expiresAt
                             ? new Date(invitation.expiresAt).toLocaleString()
                             : 'No expiry shown'}
                         </td>
 
-                        <td className="px-4 py-4 align-top text-sm">
-  <EmployerInvitationControls
-    invitationId={invitation.id}
-    token={invitation.token}
-    status={getInvitationDisplayStatus(invitation)}
-    hasSession={sessions.some((session) => {
-      return session.invitationId === invitation.id;
-    })}
-  />
-</td>
+                        <td className="px-4 py-4 text-sm">
+                          <EmployerInvitationControls
+                            invitationId={invitation.id}
+                            token={invitation.token}
+                            status={getInvitationDisplayStatus(invitation)}
+                            hasSession={sessions.some((session) => {
+                              return session.invitationId === invitation.id;
+                            })}
+                          />
+                        </td>
                       </tr>
                     ))
                   ) : (
@@ -263,12 +264,12 @@ export const EmployerCampaignDetail = ({
         />
       </section>
 
-      <section className="rounded-2xl border border-slate-200 bg-slate-50 p-6">
-        <h3 className="text-lg font-semibold text-slate-950">
+      <section className="rounded-[2rem] border border-amber-300/15 bg-amber-400/10 p-6">
+        <h3 className="text-lg font-black text-white">
           Interpretation guidance
         </h3>
 
-        <p className="mt-3 max-w-4xl text-sm leading-6 text-slate-600">
+        <p className="mt-3 max-w-4xl text-sm leading-6 text-amber-100/80">
           These results provide structured evidence from this assessment only.
           They should not be treated as a final hiring decision, a diagnosis, or
           a complete measure of candidate capability. The bands are intended to
@@ -277,7 +278,7 @@ export const EmployerCampaignDetail = ({
           selection criteria.
         </p>
 
-        <p className="mt-3 max-w-4xl text-sm leading-6 text-slate-600">
+        <p className="mt-3 max-w-4xl text-sm leading-6 text-amber-100/80">
           Differences between candidates should be interpreted cautiously,
           especially where completion conditions, accessibility needs, or
           contextual factors may have shaped performance. The platform supports

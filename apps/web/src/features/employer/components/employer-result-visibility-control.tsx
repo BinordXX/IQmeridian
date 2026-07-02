@@ -6,12 +6,12 @@ export const EmployerResultVisibilityControl = ({
   campaignStatus,
 }: EmployerResultVisibilityControlProps) => {
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-      <h3 className="text-lg font-semibold text-slate-950">
+    <section className="rounded-[2rem] border border-white/10 bg-[#07142f]/88 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.22)]">
+      <h3 className="text-lg font-black text-white">
         Candidate result visibility
       </h3>
 
-      <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+      <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
         Candidate-facing result visibility is governed separately from
         employer-facing reporting. In the current MVP, employer reports remain
         available only to authorised employer users, while candidate result
@@ -22,7 +22,7 @@ export const EmployerResultVisibilityControl = ({
         <div>
           <label
             htmlFor="candidate-result-visibility"
-            className="text-sm font-medium text-slate-700"
+            className="text-sm font-black text-slate-300"
           >
             Candidate result access
           </label>
@@ -31,15 +31,15 @@ export const EmployerResultVisibilityControl = ({
             id="candidate-result-visibility"
             value="hidden"
             disabled
-            className="mt-2 w-full rounded-xl border border-slate-300 bg-slate-100 px-4 py-3 text-sm text-slate-500"
+            className="mt-2 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-slate-500 outline-none"
           >
             <option value="hidden">Hidden from candidate</option>
             <option value="summary">Limited summary visible</option>
           </select>
         </div>
 
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-600">
-          <p className="font-medium text-slate-950">Current campaign state</p>
+        <div className="rounded-2xl border border-cyan-300/15 bg-cyan-400/10 p-4 text-sm leading-6 text-cyan-100">
+          <p className="font-black text-white">Current campaign state</p>
           <p className="mt-1">{campaignStatus}</p>
         </div>
       </div>
