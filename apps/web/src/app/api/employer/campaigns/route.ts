@@ -12,7 +12,7 @@ export async function POST(request: Request) {
 
   return proxyEmployerApi({
     method: 'POST',
-    path: '/invitations',
+    path: '/campaigns',
     body: parsedRequest.body,
   });
 }

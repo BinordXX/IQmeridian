@@ -4,6 +4,7 @@ import type {
   EmployerCampaignDetail as EmployerCampaignDetailData,
   EmployerInvitationSummary,
 } from '../api/employer-dashboard-api';
+import { EmployerInvitationControls } from './employer-invitation-controls';
 import { EmployerResultVisibilityControl } from './employer-result-visibility-control';
 import { EmployerCampaignCsvExport } from './employer-campaign-csv-export';
 import { EmployerCampaignResultOverview } from './employer-campaign-result-overview';
@@ -188,7 +189,7 @@ export const EmployerCampaignDetail = ({
                     <th className="px-4 py-3 font-medium">Candidate</th>
                     <th className="px-4 py-3 font-medium">Status</th>
                     <th className="px-4 py-3 font-medium">Expires</th>
-                    <th className="px-4 py-3 font-medium">Link</th>
+                    <th className="px-4 py-3 font-medium">Controls</th>
                   </tr>
                 </thead>
 
@@ -223,14 +224,15 @@ export const EmployerCampaignDetail = ({
                         </td>
 
                         <td className="px-4 py-4 align-top text-sm">
-                          <Link
-  href={getInvitationAssessmentUrl(invitation.token)}
-  className="font-semibold text-slate-950 hover:underline"
-  title="Copy this candidate invitation link and send it to the candidate. Do not open it from an employer session."
->
-  Candidate invite link
-</Link>
-                        </td>
+  <EmployerInvitationControls
+    invitationId={invitation.id}
+    token={invitation.token}
+    status={getInvitationDisplayStatus(invitation)}
+    hasSession={sessions.some((session) => {
+      return session.invitationId === invitation.id;
+    })}
+  />
+</td>
                       </tr>
                     ))
                   ) : (

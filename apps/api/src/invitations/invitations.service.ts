@@ -254,7 +254,7 @@ export class InvitationsService {
       },
     });
   }
-  
+
   async acceptInvitation(id: string, actorUserId?: string) {
     const invitation = await this.prisma.invitation.update({
       where: { id },
@@ -279,6 +279,152 @@ export class InvitationsService {
     });
 
     return invitation;
+  }
+
+    async resendInvitation(id: string, user: RequestUser) {
+    const invitation = await this.getManageableInvitation(id, user);
+
+    this.assertInvitationHasNoSession(invitation.sessions.length);
+
+    if (
+      invitation.status !== InvitationStatus.PENDING &&
+      invitation.status !== InvitationStatus.ACCEPTED
+    ) {
+      throw new BadRequestException(
+        'Only pending or accepted invitations without sessions can be resent',
+      );
+    }
+
+    if (invitation.expiresAt && invitation.expiresAt <= new Date()) {
+      throw new BadRequestException(
+        'Invitation has expired. Extend the invitation before resending it',
+      );
+    }
+
+    await this.auditService.record({
+      action: 'INVITATION_RESEND_REQUESTED',
+      userId: user.id,
+      entityType: 'Invitation',
+      entityId: invitation.id,
+      metadata: {
+        campaignId: invitation.campaignId,
+        email: invitation.email,
+        status: invitation.status,
+        expiresAt: invitation.expiresAt,
+      },
+    });
+
+    return invitation;
+  }
+
+  async cancelInvitation(id: string, user: RequestUser) {
+    const invitation = await this.getManageableInvitation(id, user);
+
+    this.assertInvitationHasNoSession(invitation.sessions.length);
+
+    if (invitation.status === InvitationStatus.CANCELLED) {
+      return invitation;
+    }
+
+    if (invitation.status === InvitationStatus.EXPIRED) {
+      throw new BadRequestException('Expired invitations cannot be cancelled');
+    }
+
+    const cancelledInvitation = await this.prisma.invitation.update({
+      where: { id },
+      data: {
+        status: InvitationStatus.CANCELLED,
+      },
+      include: {
+        campaign: {
+          include: {
+            organisation: true,
+            assessmentForm: true,
+          },
+        },
+        sessions: true,
+      },
+    });
+
+    await this.auditService.record({
+      action: 'INVITATION_CANCELLED',
+      userId: user.id,
+      entityType: 'Invitation',
+      entityId: cancelledInvitation.id,
+      metadata: {
+        campaignId: cancelledInvitation.campaignId,
+        email: cancelledInvitation.email,
+        previousStatus: invitation.status,
+        status: cancelledInvitation.status,
+      },
+    });
+
+    return cancelledInvitation;
+  }
+
+  async extendInvitation(
+    id: string,
+    input: {
+      expiresAt: string;
+    },
+    user: RequestUser,
+  ) {
+    const invitation = await this.getManageableInvitation(id, user);
+
+    this.assertInvitationHasNoSession(invitation.sessions.length);
+
+    if (invitation.status === InvitationStatus.CANCELLED) {
+      throw new BadRequestException('Cancelled invitations cannot be extended');
+    }
+
+    const expiresAt = new Date(input.expiresAt);
+
+    if (Number.isNaN(expiresAt.getTime())) {
+      throw new BadRequestException('Invitation expiry date is invalid');
+    }
+
+    if (expiresAt <= new Date()) {
+      throw new BadRequestException('Invitation expiry date must be in future');
+    }
+
+    const nextStatus =
+      invitation.status === InvitationStatus.EXPIRED
+        ? InvitationStatus.PENDING
+        : invitation.status;
+
+    const extendedInvitation = await this.prisma.invitation.update({
+      where: { id },
+      data: {
+        expiresAt,
+        status: nextStatus,
+      },
+      include: {
+        campaign: {
+          include: {
+            organisation: true,
+            assessmentForm: true,
+          },
+        },
+        sessions: true,
+      },
+    });
+
+    await this.auditService.record({
+      action: 'INVITATION_EXTENDED',
+      userId: user.id,
+      entityType: 'Invitation',
+      entityId: extendedInvitation.id,
+      metadata: {
+        campaignId: extendedInvitation.campaignId,
+        email: extendedInvitation.email,
+        previousStatus: invitation.status,
+        status: extendedInvitation.status,
+        previousExpiresAt: invitation.expiresAt,
+        expiresAt: extendedInvitation.expiresAt,
+      },
+    });
+
+    return extendedInvitation;
   }
 
   private async resolveCandidateUserId(input: {
@@ -324,6 +470,37 @@ export class InvitationsService {
     }
 
     return candidate.id;
+  }
+
+    private async getManageableInvitation(id: string, user: RequestUser) {
+    const invitation = await this.prisma.invitation.findUnique({
+      where: { id },
+      include: {
+        campaign: {
+          include: {
+            organisation: true,
+            assessmentForm: true,
+          },
+        },
+        sessions: true,
+      },
+    });
+
+    if (!invitation) {
+      throw new NotFoundException('Invitation not found');
+    }
+
+    this.assertCanManageCampaign(user, invitation.campaign.organisationId);
+
+    return invitation;
+  }
+
+  private assertInvitationHasNoSession(sessionCount: number) {
+    if (sessionCount > 0) {
+      throw new BadRequestException(
+        'This invitation already has an assessment session and cannot be modified',
+      );
+    }
   }
 
   private assertCanManageCampaign(user: RequestUser, organisationId: string) {

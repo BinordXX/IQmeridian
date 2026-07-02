@@ -3,7 +3,14 @@ import {
   proxyEmployerApi,
 } from '@/lib/employer-api-proxy';
 
-export async function POST(request: Request) {
+type RouteContext = {
+  params: Promise<{
+    invitationId: string;
+  }>;
+};
+
+export async function PATCH(request: Request, context: RouteContext) {
+  const { invitationId } = await context.params;
   const parsedRequest = await parseEmployerRequestJson(request);
 
   if (!parsedRequest.ok) {
@@ -11,8 +18,8 @@ export async function POST(request: Request) {
   }
 
   return proxyEmployerApi({
-    method: 'POST',
-    path: '/invitations',
+    method: 'PATCH',
+    path: `/invitations/${encodeURIComponent(invitationId)}/extend`,
     body: parsedRequest.body,
   });
 }
