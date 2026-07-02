@@ -16,6 +16,7 @@ type ApiUser = {
   role: AppRole;
   status: string;
   organisationId: string | null;
+  organisationName: string | null;
 };
 
 type ApiAuthResponse = {
@@ -36,6 +37,7 @@ declare module 'next-auth' {
       id: string;
       role?: AppRole;
       organisationId?: string | null;
+      organisationName?: string | null;
       name?: string | null;
       email?: string | null;
       image?: string | null;
@@ -45,6 +47,7 @@ declare module 'next-auth' {
   interface User {
     role?: AppRole;
     organisationId?: string | null;
+    organisationName?: string | null;
     accessToken?: string;
     refreshToken?: string;
     accessTokenExpiresAt?: string;
@@ -188,15 +191,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const data = (await response.json()) as ApiAuthResponse;
 
         return {
-          id: data.user.id,
-          name: data.user.name,
-          email: data.user.email,
-          role: data.user.role,
-          organisationId: data.user.organisationId,
-          accessToken: data.accessToken,
-          refreshToken: data.refreshToken,
-          accessTokenExpiresAt: data.accessTokenExpiresAt,
-        };
+  id: data.user.id,
+  name: data.user.name,
+  email: data.user.email,
+  role: data.user.role,
+  organisationId: data.user.organisationId,
+  organisationName: data.user.organisationName,
+  accessToken: data.accessToken,
+  refreshToken: data.refreshToken,
+  accessTokenExpiresAt: data.accessTokenExpiresAt,
+};
       },
     }),
   ],
@@ -206,6 +210,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.sub = user.id;
         token.role = isAppRole(user.role) ? user.role : undefined;
         token.organisationId = user.organisationId ?? null;
+        token.organisationName = user.organisationName ?? null;
         token.accessToken = user.accessToken;
         token.refreshToken = user.refreshToken;
         token.accessTokenExpiresAt = user.accessTokenExpiresAt;
@@ -242,6 +247,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       session.user.role = isAppRole(token.role) ? token.role : undefined;
       session.user.organisationId =
         typeof token.organisationId === 'string' ? token.organisationId : null;
+        session.user.organisationName =
+  typeof token.organisationName === 'string'
+    ? token.organisationName
+    : null;
 
       session.accessToken =
         typeof token.accessToken === 'string' ? token.accessToken : undefined;

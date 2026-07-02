@@ -13,6 +13,9 @@ import {
   Prisma,
   SessionStatus,
   UserRole,
+  CandidateAccessMode,
+OrganisationParticipantStatus,
+OrganisationParticipantType,
 } from '@prisma/client';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -307,231 +310,164 @@ const existing = await this.prisma.session.findFirst({
     return session;
   }
 
-  async createSessionFromInvitation(input: {
-    userId: string;
-    invitationToken: string;
-  }) {
-    const invitation = await this.prisma.invitation.findUnique({
-      where: { token: input.invitationToken },
-      include: {
-        campaign: {
-          include: {
-            assessmentForm: true,
-            organisation: true,
+ async createSessionFromInvitation(input: {
+  userId: string;
+  invitationToken: string;
+}) {
+  const invitation = await this.prisma.invitation.findUnique({
+    where: { token: input.invitationToken },
+    include: {
+      campaign: {
+        include: {
+          assessmentForm: true,
+          organisation: {
+            select: {
+              id: true,
+              candidateAccessMode: true,
+              candidateResultVisibility: true,
+              candidateHistoryVisibility: true,
+              reassessmentMode: true,
+            },
           },
         },
-        candidateUser: true,
-        participant: true,
       },
-    });
+      candidateUser: true,
+      participant: true,
+    },
+  });
 
-    if (!invitation) {
-      throw new NotFoundException('Invitation not found');
-    }
+  if (!invitation) {
+    throw new NotFoundException('Invitation not found');
+  }
 
-    const candidate = await this.prisma.user.findUnique({
+  const candidate = await this.prisma.user.findUnique({
+    where: {
+      id: input.userId,
+    },
+    select: {
+      id: true,
+      email: true,
+    },
+  });
+
+  if (!candidate) {
+    throw new NotFoundException('Candidate user not found');
+  }
+
+  if (
+    invitation.email.trim().toLowerCase() !==
+    candidate.email.trim().toLowerCase()
+  ) {
+    throw new ForbiddenException(
+      'This invitation is assigned to a different email address',
+    );
+  }
+
+  if (
+    invitation.status === InvitationStatus.PENDING &&
+    invitation.expiresAt &&
+    invitation.expiresAt < new Date()
+  ) {
+    const expiredInvitation = await this.prisma.invitation.update({
       where: {
-        id: input.userId,
+        id: invitation.id,
       },
-      select: {
-        id: true,
-        email: true,
-      },
-    });
-
-    if (!candidate) {
-      throw new NotFoundException('Candidate user not found');
-    }
-
-    if (
-      invitation.email.trim().toLowerCase() !==
-      candidate.email.trim().toLowerCase()
-    ) {
-      throw new ForbiddenException(
-        'This invitation is assigned to a different email address',
-      );
-    }
-
-    if (
-      invitation.status === InvitationStatus.PENDING &&
-      invitation.expiresAt &&
-      invitation.expiresAt < new Date()
-    ) {
-      const expiredInvitation = await this.prisma.invitation.update({
-        where: {
-          id: invitation.id,
-        },
-        data: {
-          status: InvitationStatus.EXPIRED,
-        },
-      });
-
-      await this.auditService.record({
-        action: 'INVITATION_EXPIRED',
-        userId: null,
-        entityType: 'Invitation',
-        entityId: expiredInvitation.id,
-        metadata: {
-          campaignId: expiredInvitation.campaignId,
-          email: expiredInvitation.email,
-          status: expiredInvitation.status,
-          expiredAt: expiredInvitation.expiresAt,
-        },
-      });
-
-      throw new BadRequestException('Invitation has expired');
-    }
-
-    if (
-      invitation.status !== InvitationStatus.PENDING &&
-      invitation.status !== InvitationStatus.ACCEPTED
-    ) {
-      throw new BadRequestException('Invitation is no longer available');
-    }
-
-    if (
-      invitation.candidateUserId &&
-      invitation.candidateUserId !== input.userId
-    ) {
-      throw new ForbiddenException(
-        'This invitation has already been assigned to another candidate',
-      );
-    }
-
-    if (!invitation.campaign.assessmentFormId) {
-      throw new BadRequestException('Campaign has no assessment form assigned');
-    }
-
-    const form = invitation.campaign.assessmentForm;
-
-    if (!form) {
-      throw new BadRequestException('Campaign assessment form was not found');
-    }
-
-    if (!form.isActive) {
-      throw new BadRequestException('Campaign assessment form is not active');
-    }
-
-    const existing = await this.prisma.session.findFirst({
-      where: {
-        invitationId: invitation.id,
-      },
-    });
-
-    if (existing) {
-      if (existing.userId !== input.userId) {
-        throw new ForbiddenException(
-          'This invitation session belongs to another user',
-        );
-      }
-
-      const wasAutoFinalised = await this.completeSessionIfTimedOut(existing);
-      const resolvedStatus = wasAutoFinalised
-        ? SessionStatus.COMPLETED
-        : existing.status;
-
-      return {
-        sessionId: existing.id,
-        assessmentId: existing.assessmentFormId,
-        status: this.toCandidateStatus(resolvedStatus),
-        candidateAccessPolicy: {
-          accessMode:
-            invitation.participant?.accessMode ??
-            invitation.campaign.organisation.candidateAccessMode,
-          resultVisibility:
-            invitation.campaign.organisation.candidateResultVisibility,
-          historyVisibility:
-            invitation.campaign.organisation.candidateHistoryVisibility,
-          reassessmentMode: invitation.campaign.organisation.reassessmentMode,
-        },
-      };
-    }
-
-    if (invitation.status === InvitationStatus.PENDING) {
-      const acceptedInvitation = await this.prisma.invitation.updateMany({
-        where: {
-          id: invitation.id,
-          status: InvitationStatus.PENDING,
-          candidateUserId: null,
-        },
-        data: {
-          candidateUserId: input.userId,
-          status: InvitationStatus.ACCEPTED,
-          usedAt: new Date(),
-        },
-      });
-
-      if (acceptedInvitation.count !== 1) {
-        throw new BadRequestException(
-          'Invitation could not be accepted. It may have already been used.',
-        );
-      }
-
-      await this.auditService.record({
-        action: 'INVITATION_ACCEPTED',
-        userId: input.userId,
-        entityType: 'Invitation',
-        entityId: invitation.id,
-        metadata: {
-          campaignId: invitation.campaignId,
-          email: invitation.email,
-          candidateUserId: input.userId,
-        },
-      });
-    }
-
-    const session = await this.prisma.session.create({
       data: {
-        userId: input.userId,
-        campaignId: invitation.campaignId,
-               invitationId: invitation.id,
-        participantId: invitation.participantId,
-        assessmentFormId: form.id,
-        assessmentFormVersion: form.version,
-        assessmentFormVersionLabel: form.versionLabel,
-        scoringVersion: form.scoringVersion,
-        reportVersion: form.reportVersion,
-        formSnapshot: this.toFormSnapshot(form),
-        status: SessionStatus.NOT_STARTED,
+        status: InvitationStatus.EXPIRED,
       },
     });
 
     await this.auditService.record({
-      action: 'INVITATION_SESSION_CREATED',
-      userId: input.userId,
-      entityType: 'Session',
-      entityId: session.id,
-            metadata: {
-        campaignId: session.campaignId,
-        invitationId: session.invitationId,
-        participantId: session.participantId,
-        assessmentFormId: session.assessmentFormId,
-        status: session.status,
-        assessmentFormVersion: session.assessmentFormVersion,
-        assessmentFormVersionLabel: session.assessmentFormVersionLabel,
-        scoringVersion: session.scoringVersion,
-        reportVersion: session.reportVersion,
-        candidateAccessPolicy: {
-          accessMode:
-            invitation.participant?.accessMode ??
-            invitation.campaign.organisation.candidateAccessMode,
-          resultVisibility:
-            invitation.campaign.organisation.candidateResultVisibility,
-          historyVisibility:
-            invitation.campaign.organisation.candidateHistoryVisibility,
-          reassessmentMode: invitation.campaign.organisation.reassessmentMode,
-        },
+      action: 'INVITATION_EXPIRED',
+      userId: null,
+      entityType: 'Invitation',
+      entityId: expiredInvitation.id,
+      metadata: {
+        campaignId: expiredInvitation.campaignId,
+        email: expiredInvitation.email,
+        status: expiredInvitation.status,
+        expiredAt: expiredInvitation.expiresAt,
       },
     });
 
-        return {
-      sessionId: session.id,
-      assessmentId: session.assessmentFormId,
-      status: this.toCandidateStatus(session.status),
+    throw new BadRequestException('Invitation has expired');
+  }
+
+  if (
+    invitation.status !== InvitationStatus.PENDING &&
+    invitation.status !== InvitationStatus.ACCEPTED
+  ) {
+    throw new BadRequestException('Invitation is no longer available');
+  }
+
+  if (
+    invitation.candidateUserId &&
+    invitation.candidateUserId !== input.userId
+  ) {
+    throw new ForbiddenException(
+      'This invitation has already been assigned to another candidate',
+    );
+  }
+
+  if (!invitation.campaign.assessmentFormId) {
+    throw new BadRequestException('Campaign has no assessment form assigned');
+  }
+
+  const form = invitation.campaign.assessmentForm;
+
+  if (!form) {
+    throw new BadRequestException('Campaign assessment form was not found');
+  }
+
+  if (!form.isActive) {
+    throw new BadRequestException('Campaign assessment form is not active');
+  }
+
+  const participant =
+    invitation.participant ??
+    (await this.ensureOrganisationParticipant({
+      organisationId: invitation.campaign.organisationId,
+      userId: input.userId,
+      accessMode:
+        invitation.campaign.organisation?.candidateAccessMode ??
+        CandidateAccessMode.ONE_OFF,
+    }));
+
+  const existing = await this.prisma.session.findFirst({
+    where: {
+      invitationId: invitation.id,
+    },
+  });
+
+  if (existing) {
+    if (existing.userId !== input.userId) {
+      throw new ForbiddenException(
+        'This invitation session belongs to another user',
+      );
+    }
+
+    if (!existing.participantId) {
+      await this.prisma.session.update({
+        where: {
+          id: existing.id,
+        },
+        data: {
+          participantId: participant.id,
+        },
+      });
+    }
+
+    const wasAutoFinalised = await this.completeSessionIfTimedOut(existing);
+    const resolvedStatus = wasAutoFinalised
+      ? SessionStatus.COMPLETED
+      : existing.status;
+
+    return {
+      sessionId: existing.id,
+      assessmentId: existing.assessmentFormId,
+      status: this.toCandidateStatus(resolvedStatus),
       candidateAccessPolicy: {
-        accessMode:
-          invitation.participant?.accessMode ??
-          invitation.campaign.organisation.candidateAccessMode,
+        accessMode: participant.accessMode,
         resultVisibility:
           invitation.campaign.organisation.candidateResultVisibility,
         historyVisibility:
@@ -541,6 +477,121 @@ const existing = await this.prisma.session.findFirst({
     };
   }
 
+  if (invitation.status === InvitationStatus.PENDING) {
+    const acceptedInvitation = await this.prisma.invitation.updateMany({
+      where: {
+        id: invitation.id,
+        status: InvitationStatus.PENDING,
+        OR: [
+          {
+            candidateUserId: null,
+          },
+          {
+            candidateUserId: input.userId,
+          },
+        ],
+      },
+      data: {
+        candidateUserId: input.userId,
+        participantId: participant.id,
+        status: InvitationStatus.ACCEPTED,
+        usedAt: new Date(),
+      },
+    });
+
+    if (acceptedInvitation.count !== 1) {
+      throw new BadRequestException(
+        'Invitation could not be accepted. It may have already been used.',
+      );
+    }
+
+    await this.auditService.record({
+      action: 'INVITATION_ACCEPTED',
+      userId: input.userId,
+      entityType: 'Invitation',
+      entityId: invitation.id,
+      metadata: {
+        campaignId: invitation.campaignId,
+        email: invitation.email,
+        candidateUserId: input.userId,
+        participantId: participant.id,
+      },
+    });
+  }
+
+  if (invitation.status === InvitationStatus.ACCEPTED) {
+    const invitationNeedsRepair =
+      !invitation.participantId || !invitation.candidateUserId;
+
+    if (invitationNeedsRepair) {
+      await this.prisma.invitation.update({
+        where: {
+          id: invitation.id,
+        },
+        data: {
+          candidateUserId: input.userId,
+          participantId: participant.id,
+        },
+      });
+    }
+  }
+
+  const session = await this.prisma.session.create({
+    data: {
+      userId: input.userId,
+      campaignId: invitation.campaignId,
+      invitationId: invitation.id,
+      participantId: participant.id,
+      assessmentFormId: form.id,
+      assessmentFormVersion: form.version,
+      assessmentFormVersionLabel: form.versionLabel,
+      scoringVersion: form.scoringVersion,
+      reportVersion: form.reportVersion,
+      formSnapshot: this.toFormSnapshot(form),
+      status: SessionStatus.NOT_STARTED,
+    },
+  });
+
+  await this.auditService.record({
+    action: 'INVITATION_SESSION_CREATED',
+    userId: input.userId,
+    entityType: 'Session',
+    entityId: session.id,
+    metadata: {
+      campaignId: session.campaignId,
+      invitationId: session.invitationId,
+      participantId: session.participantId,
+      assessmentFormId: session.assessmentFormId,
+      status: session.status,
+      assessmentFormVersion: session.assessmentFormVersion,
+      assessmentFormVersionLabel: session.assessmentFormVersionLabel,
+      scoringVersion: session.scoringVersion,
+      reportVersion: session.reportVersion,
+      candidateAccessPolicy: {
+        accessMode: participant.accessMode,
+        resultVisibility:
+          invitation.campaign.organisation.candidateResultVisibility,
+        historyVisibility:
+          invitation.campaign.organisation.candidateHistoryVisibility,
+        reassessmentMode: invitation.campaign.organisation.reassessmentMode,
+      },
+    },
+  });
+
+  return {
+    sessionId: session.id,
+    assessmentId: session.assessmentFormId,
+    status: this.toCandidateStatus(session.status),
+    candidateAccessPolicy: {
+      accessMode: participant.accessMode,
+      resultVisibility:
+        invitation.campaign.organisation.candidateResultVisibility,
+      historyVisibility:
+        invitation.campaign.organisation.candidateHistoryVisibility,
+      reassessmentMode: invitation.campaign.organisation.reassessmentMode,
+    },
+  };
+}
   async startSession(sessionId: string, userId: string) {
     const session = await this.getSessionForUser(sessionId, userId);
 
@@ -694,6 +745,48 @@ return {
   submittedAt: completedAt.toISOString(),
   psychometricScoring,
 };
+}
+
+private async ensureOrganisationParticipant(input: {
+  organisationId: string;
+  userId: string;
+  accessMode?: CandidateAccessMode;
+}) {
+  const existingParticipant =
+    await this.prisma.organisationParticipant.findUnique({
+      where: {
+        organisationId_userId: {
+          organisationId: input.organisationId,
+          userId: input.userId,
+        },
+      },
+    });
+
+  if (existingParticipant) {
+    if (existingParticipant.status === OrganisationParticipantStatus.ARCHIVED) {
+      return this.prisma.organisationParticipant.update({
+        where: {
+          id: existingParticipant.id,
+        },
+        data: {
+          status: OrganisationParticipantStatus.ACTIVE,
+          archivedAt: null,
+        },
+      });
+    }
+
+    return existingParticipant;
+  }
+
+  return this.prisma.organisationParticipant.create({
+    data: {
+      organisationId: input.organisationId,
+      userId: input.userId,
+      participantType: OrganisationParticipantType.CANDIDATE,
+      accessMode: input.accessMode ?? CandidateAccessMode.ONE_OFF,
+      status: OrganisationParticipantStatus.ACTIVE,
+    },
+  });
 }
 
   private async getCandidateAssessmentSessionPayload(

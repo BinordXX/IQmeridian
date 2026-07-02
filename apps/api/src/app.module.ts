@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { OrganisationParticipantsModule } from './organisation-participants/organisation-participants.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
@@ -43,6 +44,7 @@ import { AccountModule } from './account/account.module';
     ConsumerAssessmentsModule,
     ContactModule,
     AccountModule,
+    OrganisationParticipantsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

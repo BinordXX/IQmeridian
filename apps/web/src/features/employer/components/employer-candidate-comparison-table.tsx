@@ -43,40 +43,41 @@ export const EmployerCandidateComparisonTable = ({
   });
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div className="border-b border-slate-100 px-5 py-4">
-        <h3 className="text-lg font-semibold text-slate-950">
+    <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-[#07142f]/88 shadow-[0_24px_70px_rgba(0,0,0,0.22)]">
+      <div className="border-b border-white/10 px-5 py-4">
+        <h3 className="text-lg font-black text-white">
           Candidate comparison
         </h3>
 
-        <p className="mt-1 text-sm text-slate-600">
+        <p className="mt-1 text-sm leading-6 text-slate-400">
           Compare candidates within this campaign only. The table supports
           structured review and should be interpreted alongside wider hiring
-          evidence rather than as an automatic selection order. If no results
-          are ready, candidates will remain visible with unavailable bands until
-          scoring and reporting are complete.
+          evidence rather than as an automatic selection order.
         </p>
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-left">
+        <table className="w-full min-w-[880px] text-left">
           <thead>
-            <tr className="text-sm text-slate-500">
-              <th className="px-4 py-3 font-medium">Candidate</th>
-              <th className="px-4 py-3 font-medium">Overall</th>
-              <th className="px-4 py-3 font-medium">Abstract</th>
-              <th className="px-4 py-3 font-medium">Numerical</th>
-              <th className="px-4 py-3 font-medium">Completion</th>
-              <th className="px-4 py-3 font-medium">Action</th>
+            <tr className="border-b border-white/10 text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+              <th className="px-4 py-3">Candidate</th>
+              <th className="px-4 py-3">Overall</th>
+              <th className="px-4 py-3">Abstract</th>
+              <th className="px-4 py-3">Numerical</th>
+              <th className="px-4 py-3">Completion</th>
+              <th className="px-4 py-3">Action</th>
             </tr>
           </thead>
 
           <tbody>
             {rankedSessions.length > 0 ? (
               rankedSessions.map((session) => (
-                <tr key={session.id} className="border-t border-slate-100">
-                  <td className="px-4 py-4 align-top">
-                    <p className="font-medium text-slate-950">
+                <tr
+                  key={session.id}
+                  className="border-b border-white/10 align-top last:border-b-0"
+                >
+                  <td className="px-4 py-4">
+                    <p className="font-black text-white">
                       {getCandidateIdentifier(session)}
                     </p>
                     <p className="mt-1 text-xs text-slate-500">
@@ -84,30 +85,30 @@ export const EmployerCandidateComparisonTable = ({
                     </p>
                   </td>
 
-                  <td className="px-4 py-4 align-top text-sm text-slate-700">
+                  <td className="px-4 py-4 text-sm font-bold text-slate-300">
                     {session.score?.overallBand ?? 'Not available'}
                   </td>
 
-                  <td className="px-4 py-4 align-top text-sm text-slate-700">
+                  <td className="px-4 py-4 text-sm text-slate-400">
                     {session.score?.abstractBand ?? 'Not available'}
                   </td>
 
-                  <td className="px-4 py-4 align-top text-sm text-slate-700">
+                  <td className="px-4 py-4 text-sm text-slate-400">
                     {session.score?.numericalBand ?? 'Not available'}
                   </td>
 
-                  <td className="px-4 py-4 align-top text-sm text-slate-700">
+                  <td className="px-4 py-4 text-sm text-slate-400">
                     {session.status === 'COMPLETED'
                       ? 'Completed'
                       : session.status}
                   </td>
 
-                  <td className="px-4 py-4 align-top text-sm">
+                  <td className="px-4 py-4 text-sm">
                     <Link
                       href={`/employer/campaigns/${encodeURIComponent(
-                        campaignId
+                        campaignId,
                       )}/candidates/${encodeURIComponent(session.id)}`}
-                      className="font-semibold text-slate-950 hover:underline"
+                      className="font-black text-cyan-100 hover:underline"
                     >
                       View details
                     </Link>

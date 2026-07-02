@@ -31,16 +31,18 @@ const MetricCard = ({
   tone: string;
 }) => {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <div className="rounded-[1.5rem] border border-white/10 bg-[#07142f]/88 p-5 shadow-[0_20px_60px_rgba(0,0,0,0.2)]">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-sm font-medium text-slate-500">{label}</p>
-          <p className="mt-3 text-3xl font-bold text-slate-950">{value}</p>
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">
+            {label}
+          </p>
+          <p className="mt-3 text-3xl font-black text-white">{value}</p>
         </div>
 
         <span
           className={[
-            'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border',
+            'flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border',
             tone,
           ].join(' ')}
         >
@@ -48,7 +50,7 @@ const MetricCard = ({
         </span>
       </div>
 
-      <p className="mt-2 text-sm text-slate-600">{helper}</p>
+      <p className="mt-2 text-sm leading-6 text-slate-400">{helper}</p>
     </div>
   );
 };
@@ -57,32 +59,38 @@ const CampaignRow = ({ campaign }: { campaign: EmployerCampaignSummary }) => {
   const invitationCount = campaign.invitations?.length ?? 0;
 
   return (
-    <tr className="border-t border-slate-100">
+    <tr className="border-t border-white/10">
       <td className="px-4 py-4">
-        <p className="font-medium text-slate-950">{campaign.name}</p>
+        <p className="font-black text-white">{campaign.name}</p>
         <p className="mt-1 text-xs text-slate-500">
           {campaign.assessmentForm?.name ?? 'No assessment form shown'}
         </p>
       </td>
-      <td className="px-4 py-4 text-sm text-slate-700">{campaign.status}</td>
-      <td className="px-4 py-4 text-sm text-slate-700">{invitationCount}</td>
+      <td className="px-4 py-4 text-sm font-bold text-slate-300">
+        {campaign.status}
+      </td>
+      <td className="px-4 py-4 text-sm font-bold text-slate-300">
+        {invitationCount}
+      </td>
     </tr>
   );
 };
 
 const SessionRow = ({ session }: { session: EmployerSessionSummary }) => {
   return (
-    <tr className="border-t border-slate-100">
+    <tr className="border-t border-white/10">
       <td className="px-4 py-4">
-        <p className="font-medium text-slate-950">
+        <p className="font-black text-white">
           {session.user?.name ?? session.candidateName ?? session.userId}
         </p>
         <p className="mt-1 text-xs text-slate-500">
           {session.user?.email ?? session.invitationId ?? 'Candidate session'}
         </p>
       </td>
-      <td className="px-4 py-4 text-sm text-slate-700">{session.status}</td>
-      <td className="px-4 py-4 text-sm text-slate-700">
+      <td className="px-4 py-4 text-sm font-bold text-slate-300">
+        {session.status}
+      </td>
+      <td className="px-4 py-4 text-sm text-slate-400">
         {session.completedAt
           ? new Date(session.completedAt).toLocaleString()
           : 'Not completed'}
@@ -98,19 +106,27 @@ export const EmployerDashboardOverview = ({
 
   return (
     <div className="space-y-8">
-      <section>
-        <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-          Employer dashboard
-        </p>
+      <section className="relative overflow-hidden rounded-[2rem] border border-cyan-300/15 bg-[#07142f]/88 p-8 shadow-[0_24px_70px_rgba(0,0,0,0.24)]">
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.14),transparent_34%),radial-gradient(circle_at_90%_10%,rgba(59,130,246,0.14),transparent_30%)]"
+        />
 
-        <h2 className="mt-2 text-3xl font-bold text-slate-950">
-          Workspace overview
-        </h2>
+        <div className="relative">
+          <p className="text-xs font-black uppercase tracking-[0.24em] text-cyan-300">
+            Employer dashboard
+          </p>
 
-        <p className="mt-3 max-w-3xl text-base leading-7 text-slate-600">
-          Monitor active assessment campaigns, invitation activity, candidate
-          progress, and completion state from one controlled employer workspace.
-        </p>
+          <h2 className="mt-3 text-4xl font-black tracking-tight text-white">
+            Workspace overview
+          </h2>
+
+          <p className="mt-4 max-w-3xl text-sm leading-6 text-slate-400">
+            Monitor active assessment campaigns, invitation activity,
+            participant progress, and completion state from one controlled
+            employer workspace.
+          </p>
+        </div>
       </section>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
@@ -119,50 +135,50 @@ export const EmployerDashboardOverview = ({
           value={data.metrics.activeCampaigns}
           helper="Campaigns currently open"
           icon={BriefcaseBusiness}
-          tone="border-blue-100 bg-blue-50 text-blue-700"
+          tone="border-blue-300/20 bg-blue-400/10 text-blue-100"
         />
         <MetricCard
           label="Total campaigns"
           value={data.metrics.totalCampaigns}
           helper="All employer campaigns"
           icon={ClipboardList}
-          tone="border-violet-100 bg-violet-50 text-violet-700"
+          tone="border-violet-300/20 bg-violet-400/10 text-violet-100"
         />
         <MetricCard
           label="Invitations"
           value={data.metrics.totalInvitations}
           helper="Known campaign invitations"
           icon={Send}
-          tone="border-emerald-100 bg-emerald-50 text-emerald-700"
+          tone="border-emerald-300/20 bg-emerald-400/10 text-emerald-100"
         />
         <MetricCard
           label="Started sessions"
           value={data.metrics.startedSessions}
-          helper="Candidates who entered testing"
+          helper="Participants who entered testing"
           icon={UsersRound}
-          tone="border-amber-100 bg-amber-50 text-amber-700"
+          tone="border-amber-300/20 bg-amber-400/10 text-amber-100"
         />
         <MetricCard
           label="Completion rate"
           value={`${data.metrics.completionRate}%`}
           helper="Completed out of started"
           icon={BarChart3}
-          tone="border-indigo-100 bg-indigo-50 text-indigo-700"
+          tone="border-indigo-300/20 bg-indigo-400/10 text-indigo-100"
         />
         <MetricCard
           label="Report-ready results"
           value={data.metrics.reportReadyResults}
           helper="Sessions with available scores"
           icon={FileText}
-          tone="border-rose-100 bg-rose-50 text-rose-700"
+          tone="border-rose-300/20 bg-rose-400/10 text-rose-100"
         />
       </section>
 
       <section className="grid gap-6 xl:grid-cols-2">
-        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-100 px-5 py-4">
-            <h3 className="text-lg font-semibold text-slate-950">Campaigns</h3>
-            <p className="mt-1 text-sm text-slate-600">
+        <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-[#07142f]/88 shadow-[0_24px_70px_rgba(0,0,0,0.22)]">
+          <div className="border-b border-white/10 px-5 py-4">
+            <h3 className="text-lg font-black text-white">Campaigns</h3>
+            <p className="mt-1 text-sm text-slate-400">
               Active and recent assessment campaigns.
             </p>
           </div>
@@ -170,10 +186,10 @@ export const EmployerDashboardOverview = ({
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
-                <tr className="text-sm text-slate-500">
-                  <th className="px-4 py-3 font-medium">Campaign</th>
-                  <th className="px-4 py-3 font-medium">Status</th>
-                  <th className="px-4 py-3 font-medium">Invitations</th>
+                <tr className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+                  <th className="px-4 py-3">Campaign</th>
+                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3">Invitations</th>
                 </tr>
               </thead>
               <tbody>
@@ -196,12 +212,12 @@ export const EmployerDashboardOverview = ({
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-100 px-5 py-4">
-            <h3 className="text-lg font-semibold text-slate-950">
-              Recent candidate activity
+        <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-[#07142f]/88 shadow-[0_24px_70px_rgba(0,0,0,0.22)]">
+          <div className="border-b border-white/10 px-5 py-4">
+            <h3 className="text-lg font-black text-white">
+              Recent participant activity
             </h3>
-            <p className="mt-1 text-sm text-slate-600">
+            <p className="mt-1 text-sm text-slate-400">
               Latest assessment session states.
             </p>
           </div>
@@ -209,10 +225,10 @@ export const EmployerDashboardOverview = ({
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
-                <tr className="text-sm text-slate-500">
-                  <th className="px-4 py-3 font-medium">Candidate</th>
-                  <th className="px-4 py-3 font-medium">Status</th>
-                  <th className="px-4 py-3 font-medium">Completed</th>
+                <tr className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+                  <th className="px-4 py-3">Participant</th>
+                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3">Completed</th>
                 </tr>
               </thead>
               <tbody>
@@ -226,7 +242,7 @@ export const EmployerDashboardOverview = ({
                       colSpan={3}
                       className="px-4 py-8 text-center text-sm text-slate-500"
                     >
-                      No candidate sessions are available yet.
+                      No participant sessions are available yet.
                     </td>
                   </tr>
                 )}

@@ -27,7 +27,7 @@ type CandidateRow = {
 };
 
 const getInvitationDisplayStatus = (
-  invitation: EmployerInvitationSummary
+  invitation: EmployerInvitationSummary,
 ): string => {
   if (invitation.status !== 'PENDING') {
     return invitation.status;
@@ -74,7 +74,7 @@ const normaliseSearchValue = (value: string): string => {
 
 const buildCandidateRows = (
   invitations: EmployerInvitationSummary[],
-  sessions: EmployerSessionSummary[]
+  sessions: EmployerSessionSummary[],
 ): CandidateRow[] => {
   return invitations.map((invitation) => {
     const session = sessions.find((entry) => {
@@ -125,7 +125,7 @@ export const EmployerCandidateStatusTable = ({
         normaliseSearchValue(row.candidateIdentifier).includes(searchValue) ||
         normaliseSearchValue(row.invitation.email).includes(searchValue) ||
         normaliseSearchValue(row.invitation.candidateUserId ?? '').includes(
-          searchValue
+          searchValue,
         );
 
       const matchesInvitationStatus =
@@ -158,25 +158,23 @@ export const EmployerCandidateStatusTable = ({
   ]);
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div className="border-b border-slate-100 px-5 py-4">
-        <h3 className="text-lg font-semibold text-slate-950">
-          Candidate status
-        </h3>
+    <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-[#07142f]/88 shadow-[0_24px_70px_rgba(0,0,0,0.22)]">
+      <div className="border-b border-white/10 px-5 py-4">
+        <h3 className="text-lg font-black text-white">Candidate status</h3>
 
-        <p className="mt-1 text-sm text-slate-600">
+        <p className="mt-1 text-sm leading-6 text-slate-400">
           Track candidate invitation state, assessment progress, completion, and
           result availability.
         </p>
       </div>
 
-      <div className="grid gap-3 border-b border-slate-100 px-5 py-4 md:grid-cols-4">
+      <div className="grid gap-3 border-b border-white/10 px-5 py-4 md:grid-cols-4">
         <input
           type="search"
           value={searchQuery}
           onChange={(event) => setSearchQuery(event.currentTarget.value)}
           placeholder="Search candidate"
-          className="rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-950"
+          className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-300/40"
         />
 
         <select
@@ -184,7 +182,7 @@ export const EmployerCandidateStatusTable = ({
           onChange={(event) =>
             setInvitationStatusFilter(event.currentTarget.value)
           }
-          className="rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-950"
+          className="rounded-2xl border border-white/10 bg-[#020817] px-4 py-3 text-sm text-white outline-none focus:border-cyan-300/40"
         >
           <option value="ALL">All invitation statuses</option>
           <option value="PENDING">Pending</option>
@@ -196,7 +194,7 @@ export const EmployerCandidateStatusTable = ({
         <select
           value={completionFilter}
           onChange={(event) => setCompletionFilter(event.currentTarget.value)}
-          className="rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-950"
+          className="rounded-2xl border border-white/10 bg-[#020817] px-4 py-3 text-sm text-white outline-none focus:border-cyan-300/40"
         >
           <option value="ALL">All completion states</option>
           <option value="Not started">Not started</option>
@@ -209,7 +207,7 @@ export const EmployerCandidateStatusTable = ({
         <select
           value={resultFilter}
           onChange={(event) => setResultFilter(event.currentTarget.value)}
-          className="rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-950"
+          className="rounded-2xl border border-white/10 bg-[#020817] px-4 py-3 text-sm text-white outline-none focus:border-cyan-300/40"
         >
           <option value="ALL">All result states</option>
           <option value="AVAILABLE">Result available</option>
@@ -218,25 +216,28 @@ export const EmployerCandidateStatusTable = ({
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-left">
+        <table className="w-full min-w-[1050px] text-left">
           <thead>
-            <tr className="text-sm text-slate-500">
-              <th className="px-4 py-3 font-medium">Candidate</th>
-              <th className="px-4 py-3 font-medium">Invitation</th>
-              <th className="px-4 py-3 font-medium">Session</th>
-              <th className="px-4 py-3 font-medium">Completion</th>
-              <th className="px-4 py-3 font-medium">Overall band</th>
-              <th className="px-4 py-3 font-medium">Completed</th>
-              <th className="px-4 py-3 font-medium">Action</th>
+            <tr className="border-b border-white/10 text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+              <th className="px-4 py-3">Candidate</th>
+              <th className="px-4 py-3">Invitation</th>
+              <th className="px-4 py-3">Session</th>
+              <th className="px-4 py-3">Completion</th>
+              <th className="px-4 py-3">Overall band</th>
+              <th className="px-4 py-3">Completed</th>
+              <th className="px-4 py-3">Action</th>
             </tr>
           </thead>
 
           <tbody>
             {filteredRows.length > 0 ? (
               filteredRows.map((row) => (
-                <tr key={row.id} className="border-t border-slate-100">
-                  <td className="px-4 py-4 align-top">
-                    <p className="font-medium text-slate-950">
+                <tr
+                  key={row.id}
+                  className="border-b border-white/10 align-top last:border-b-0"
+                >
+                  <td className="px-4 py-4">
+                    <p className="font-black text-white">
                       {row.candidateIdentifier}
                     </p>
                     <p className="mt-1 text-xs text-slate-500">
@@ -244,36 +245,36 @@ export const EmployerCandidateStatusTable = ({
                     </p>
                   </td>
 
-                  <td className="px-4 py-4 align-top text-sm text-slate-700">
+                  <td className="px-4 py-4 text-sm font-bold text-slate-300">
                     {row.invitationStatus}
                   </td>
 
-                  <td className="px-4 py-4 align-top text-sm text-slate-700">
+                  <td className="px-4 py-4 text-sm text-slate-400">
                     {row.sessionStatus}
                   </td>
 
-                  <td className="px-4 py-4 align-top text-sm text-slate-700">
+                  <td className="px-4 py-4 text-sm text-slate-400">
                     {row.completionState}
                   </td>
 
-                  <td className="px-4 py-4 align-top">
-                    <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700">
+                  <td className="px-4 py-4">
+                    <span className="inline-flex rounded-full border border-cyan-300/15 bg-cyan-400/10 px-3 py-1 text-xs font-black text-cyan-100">
                       {row.overallBand}
                     </span>
                   </td>
 
-                  <td className="px-4 py-4 align-top text-sm text-slate-700">
+                  <td className="px-4 py-4 text-sm text-slate-400">
                     {row.completedAt
                       ? new Date(row.completedAt).toLocaleString()
                       : 'Not completed'}
                   </td>
 
-                  <td className="px-4 py-4 align-top text-sm">
+                  <td className="px-4 py-4 text-sm">
                     <Link
                       href={`/employer/campaigns/${encodeURIComponent(
-                        campaignId
+                        campaignId,
                       )}/candidates/${encodeURIComponent(row.id)}`}
-                      className="font-semibold text-slate-950 hover:underline"
+                      className="font-black text-cyan-100 hover:underline"
                     >
                       View details
                     </Link>

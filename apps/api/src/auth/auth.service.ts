@@ -41,6 +41,7 @@ type SafeUser = {
   role: UserRole;
   status: UserStatus;
   organisationId: string | null;
+  organisationName: string | null;
   emailVerifiedAt: Date | null;
   lastLoginAt: Date | null;
   createdAt: Date;
@@ -768,9 +769,9 @@ export class AuthService {
       throw new ForbiddenException('This account is not active.');
     }
 
-    return {
-      user: this.toSafeUser(freshUser),
-    };
+return {
+  user: await this.toSafeUser(freshUser),
+};
   }
 
   private async createAuthenticatedSession(input: {
@@ -814,28 +815,41 @@ export class AuthService {
     });
 
     return {
-      user: this.toSafeUser(input.user),
-      accessToken,
-      refreshToken: input.refreshToken,
-      accessTokenExpiresAt: this.tokenService.getAccessTokenExpiresAt(),
-      refreshTokenExpiresAt: input.refreshTokenExpiresAt,
-    };
+  user: await this.toSafeUser(input.user),
+  accessToken,
+  refreshToken: input.refreshToken,
+  accessTokenExpiresAt: this.tokenService.getAccessTokenExpiresAt(),
+  refreshTokenExpiresAt: input.refreshTokenExpiresAt,
+};
   }
 
-  private toSafeUser(user: User): SafeUser {
-    return {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role,
-      status: user.status,
-      organisationId: user.organisationId,
-      emailVerifiedAt: user.emailVerifiedAt,
-      lastLoginAt: user.lastLoginAt,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-    };
-  }
+private async toSafeUser(user: User): Promise<SafeUser> {
+  const organisation = user.organisationId
+    ? await this.prisma.organisation.findUnique({
+        where: {
+          id: user.organisationId,
+        },
+        select: {
+          id: true,
+          name: true,
+        },
+      })
+    : null;
+
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role,
+    status: user.status,
+    organisationId: user.organisationId,
+    organisationName: organisation?.name ?? null,
+    emailVerifiedAt: user.emailVerifiedAt,
+    lastLoginAt: user.lastLoginAt,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
+  };
+}
 
   private normaliseEmail(email: string): string {
     return email.trim().toLowerCase();
