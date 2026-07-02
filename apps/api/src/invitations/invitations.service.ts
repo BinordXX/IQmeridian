@@ -5,8 +5,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  CandidateAccessMode,
   CampaignStatus,
   InvitationStatus,
+  OrganisationParticipantStatus,
+  OrganisationParticipantType,
   UserRole,
   UserStatus,
 } from '@prisma/client';
@@ -40,12 +43,18 @@ export class InvitationsService {
       throw new BadRequestException('Candidate email is required');
     }
 
-    const campaign = await this.prisma.campaign.findUnique({
-      where: { id: input.campaignId },
-      include: {
-        assessmentForm: true,
+const campaign = await this.prisma.campaign.findUnique({
+  where: { id: input.campaignId },
+  include: {
+    assessmentForm: true,
+    organisation: {
+      select: {
+        id: true,
+        candidateAccessMode: true,
       },
-    });
+    },
+  },
+});
 
     if (!campaign) {
       throw new NotFoundException('Campaign not found');
@@ -81,10 +90,20 @@ export class InvitationsService {
       throw new BadRequestException('Invitation expiry date must be in future');
     }
 
-    const candidateUserId = await this.resolveCandidateUserId({
-      candidateUserId: input.candidateUserId,
-      email,
-    });
+const candidateUserId = await this.resolveCandidateUserId({
+  candidateUserId: input.candidateUserId,
+  email,
+});
+
+const participant = candidateUserId
+  ? await this.ensureOrganisationParticipant({
+      organisationId: campaign.organisationId,
+      userId: candidateUserId,
+      accessMode:
+        campaign.organisation?.candidateAccessMode ??
+        CandidateAccessMode.ONE_OFF,
+    })
+  : null;
 
     const existingInvitation = await this.prisma.invitation.findFirst({
       where: {
@@ -107,13 +126,14 @@ export class InvitationsService {
     }
 
     const invitation = await this.prisma.invitation.create({
-      data: {
-        campaignId: input.campaignId,
-        email,
-        token: randomUUID(),
-        candidateUserId,
-        expiresAt,
-      },
+     data: {
+  campaignId: input.campaignId,
+  email,
+  token: randomUUID(),
+  candidateUserId,
+  participantId: participant?.id,
+  expiresAt,
+},
     });
 
     await this.auditService.record({
@@ -127,6 +147,7 @@ export class InvitationsService {
         status: invitation.status,
         candidateUserId: invitation.candidateUserId,
         expiresAt: invitation.expiresAt,
+        participantId: invitation.participantId,
       },
     });
 
@@ -502,6 +523,48 @@ export class InvitationsService {
       );
     }
   }
+
+  private async ensureOrganisationParticipant(input: {
+  organisationId: string;
+  userId: string;
+  accessMode?: CandidateAccessMode;
+}) {
+  const existingParticipant =
+    await this.prisma.organisationParticipant.findUnique({
+      where: {
+        organisationId_userId: {
+          organisationId: input.organisationId,
+          userId: input.userId,
+        },
+      },
+    });
+
+  if (existingParticipant) {
+    if (existingParticipant.status === OrganisationParticipantStatus.ARCHIVED) {
+      return this.prisma.organisationParticipant.update({
+        where: {
+          id: existingParticipant.id,
+        },
+        data: {
+          status: OrganisationParticipantStatus.ACTIVE,
+          archivedAt: null,
+        },
+      });
+    }
+
+    return existingParticipant;
+  }
+
+  return this.prisma.organisationParticipant.create({
+    data: {
+      organisationId: input.organisationId,
+      userId: input.userId,
+      participantType: OrganisationParticipantType.CANDIDATE,
+      accessMode: input.accessMode ?? CandidateAccessMode.ONE_OFF,
+      status: OrganisationParticipantStatus.ACTIVE,
+    },
+  });
+}
 
   private assertCanManageCampaign(user: RequestUser, organisationId: string) {
     if (user.role === UserRole.PLATFORM_ADMIN) {
