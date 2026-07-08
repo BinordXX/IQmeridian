@@ -579,17 +579,22 @@ export default function HomePage() {
                 and research governance into one evolving intelligence platform.
               </p>
 
-              <div className="mt-9 flex flex-col gap-4 sm:flex-row">
-                <MagneticLink className={primaryButtonClassName} href="/register">
-                  Create account
-                  <ArrowRight size={17} strokeWidth={2.4} />
-                </MagneticLink>
+              <div className="mt-9 flex flex-col gap-4 sm:flex-row sm:flex-wrap">
+  <MagneticLink className={primaryButtonClassName} href="/register">
+    Create account
+    <ArrowRight size={17} strokeWidth={2.4} />
+  </MagneticLink>
 
-                <MagneticLink className={secondaryButtonClassName} href="#platform">
-                  Explore platform
-                  <ChevronRight size={17} strokeWidth={2.4} />
-                </MagneticLink>
-              </div>
+  <MagneticLink className={secondaryButtonClassName} href="/employers/apply">
+    Request employer access
+    <ChevronRight size={17} strokeWidth={2.4} />
+  </MagneticLink>
+
+  <MagneticLink className={secondaryButtonClassName} href="#platform">
+    Explore platform
+    <ChevronRight size={17} strokeWidth={2.4} />
+  </MagneticLink>
+</div>
 
               <div className="mt-10 grid max-w-3xl gap-3 sm:grid-cols-3">
                 {[
@@ -1033,17 +1038,25 @@ export default function HomePage() {
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-3">
-              <Link
-                className="rounded-full border border-white/10 px-5 py-3 text-sm font-bold text-blue-50/75 transition hover:bg-white/10 hover:text-white"
-                href="/login"
-              >
-                Sign in
-              </Link>
-              <Link className={primaryButtonClassName} href="/register">
-                Create account
-              </Link>
-            </div>
+<div className="flex flex-wrap gap-3">
+  <Link
+    className="rounded-full border border-white/10 px-5 py-3 text-sm font-bold text-blue-50/75 transition hover:bg-white/10 hover:text-white"
+    href="/login"
+  >
+    Sign in
+  </Link>
+
+  <Link
+    className="rounded-full border border-white/10 px-5 py-3 text-sm font-bold text-blue-50/75 transition hover:bg-white/10 hover:text-white"
+    href="/employers/apply"
+  >
+    Request employer access
+  </Link>
+
+  <Link className={primaryButtonClassName} href="/register">
+    Create account
+  </Link>
+</div>
           </div>
         </footer>
       </div>

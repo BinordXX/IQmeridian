@@ -224,6 +224,8 @@ model User {
 
   organisation        Organisation? @relation(fields: [organisationId], references: [id])
   reviewedOrganisationAccessRequests OrganisationAccessRequest[] @relation("OrganisationAccessRequestReviewer")
+  sentOrganisationAdminInvitations OrganisationAdminInvitation[] @relation("OrganisationAdminInvitationInviter")
+acceptedOrganisationAdminInvitations OrganisationAdminInvitation[] @relation("OrganisationAdminInvitationAcceptedBy")
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
   deletionRequestedAt DateTime?
@@ -245,6 +247,43 @@ model User {
   @@index([role])
   @@index([status])
   @@index([organisationId])
+}
+
+model OrganisationAdminInvitation {
+  id String @id @default(cuid())
+
+  organisationId String
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+
+  organisationAccessRequestId String? @unique
+  organisationAccessRequest   OrganisationAccessRequest? @relation(fields: [organisationAccessRequestId], references: [id], onDelete: SetNull)
+
+  email String
+  token String @unique
+  role  UserRole @default(EMPLOYER_ADMIN)
+
+  status OrganisationAdminInvitationStatus @default(PENDING)
+
+  invitedById String?
+  invitedBy   User? @relation("OrganisationAdminInvitationInviter", fields: [invitedById], references: [id], onDelete: SetNull)
+
+  acceptedById String?
+  acceptedBy   User? @relation("OrganisationAdminInvitationAcceptedBy", fields: [acceptedById], references: [id], onDelete: SetNull)
+
+  expiresAt DateTime
+  usedAt    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organisationId])
+  @@index([organisationAccessRequestId])
+  @@index([email])
+  @@index([token])
+  @@index([status])
+  @@index([invitedById])
+  @@index([acceptedById])
+  @@index([expiresAt])
 }
 
 model AuthRateLimitEvent {
@@ -331,6 +370,7 @@ model OrganisationAccessRequest {
   convertedOrganisationId String?
   createdAt      DateTime                        @default(now())
   updatedAt      DateTime                        @updatedAt
+  adminInvitation OrganisationAdminInvitation?
 
   reviewedBy User? @relation("OrganisationAccessRequestReviewer", fields: [reviewedById], references: [id])
 
@@ -354,6 +394,7 @@ model Organisation {
   users        User[]
   campaigns    Campaign[]
   participants OrganisationParticipant[]
+  adminInvitations OrganisationAdminInvitation[]
 
   @@index([candidateAccessMode])
   @@index([reassessmentMode])
@@ -885,6 +926,13 @@ enum OrganisationAccessRequestStatus {
   APPROVED
   DECLINED
   CONVERTED
+}
+
+enum OrganisationAdminInvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  CANCELLED
 }
 
 enum InvitationStatus {

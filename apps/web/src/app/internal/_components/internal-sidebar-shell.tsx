@@ -165,6 +165,11 @@ const buildNavGroups = (role: InternalRole): NavGroup[] => {
                 icon: Mail,
               },
               {
+  label: 'Access requests',
+  href: '/internal/admin/organisation-access-requests',
+  icon: Building2,
+},
+              {
                 label: 'Consumer assessment',
                 href: '/internal/admin/consumer-assessment',
                 icon: ClipboardList,

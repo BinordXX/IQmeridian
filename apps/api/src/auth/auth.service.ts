@@ -16,11 +16,14 @@ import {
   User,
   UserRole,
   UserStatus,
+  OrganisationAdminInvitationStatus,
 } from '@prisma/client';
+
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthThrottleService } from './auth-throttle.service';
 import { LoginDto } from './dto/login.dto';
 import { LogoutDto } from './dto/logout.dto';
+import { AcceptOrganisationAdminInvitationDto } from './dto/accept-organisation-admin-invitation.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { RegisterCandidateDto } from './dto/register-candidate.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
@@ -64,6 +67,232 @@ export class AuthService {
     private readonly tokenService: TokenService,
     private readonly authThrottleService: AuthThrottleService,
   ) {}
+
+    async getOrganisationAdminInvitationByToken(token: string) {
+    const invitation = await this.prisma.organisationAdminInvitation.findUnique({
+      where: {
+        token,
+      },
+      include: {
+        organisation: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    if (!invitation) {
+      throw new BadRequestException('Employer admin invitation token is invalid.');
+    }
+
+    if (
+      invitation.status === OrganisationAdminInvitationStatus.PENDING &&
+      invitation.expiresAt < new Date()
+    ) {
+      const expiredInvitation =
+        await this.prisma.organisationAdminInvitation.update({
+          where: {
+            id: invitation.id,
+          },
+          data: {
+            status: OrganisationAdminInvitationStatus.EXPIRED,
+          },
+          include: {
+            organisation: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        });
+
+      await this.recordAudit('auth.organisation_admin_invitation_expired', null, {
+        invitationId: expiredInvitation.id,
+        organisationId: expiredInvitation.organisationId,
+        email: expiredInvitation.email,
+      });
+
+      return {
+        id: expiredInvitation.id,
+        email: expiredInvitation.email,
+        role: expiredInvitation.role,
+        status: expiredInvitation.status,
+        expiresAt: expiredInvitation.expiresAt,
+        organisation: expiredInvitation.organisation,
+      };
+    }
+
+    return {
+      id: invitation.id,
+      email: invitation.email,
+      role: invitation.role,
+      status: invitation.status,
+      expiresAt: invitation.expiresAt,
+      organisation: invitation.organisation,
+    };
+  }
+
+    async acceptOrganisationAdminInvitation(
+    token: string,
+    dto: AcceptOrganisationAdminInvitationDto,
+    metadata: RequestMetadata,
+  ): Promise<AuthResponse> {
+    if (dto.password !== dto.confirmPassword) {
+      throw new BadRequestException('Password confirmation does not match.');
+    }
+
+    const invitation = await this.prisma.organisationAdminInvitation.findUnique({
+      where: {
+        token,
+      },
+      include: {
+        organisation: true,
+      },
+    });
+
+    if (!invitation) {
+      throw new BadRequestException('Employer admin invitation token is invalid.');
+    }
+
+    const email = this.normaliseEmail(invitation.email);
+    const throttleIdentifier = this.buildThrottleIdentifier({
+      action: 'accept-organisation-admin-invitation',
+      metadata,
+      email,
+    });
+
+    await this.authThrottleService.assertAllowed({
+      action: AuthRateLimitAction.REGISTER,
+      identifier: throttleIdentifier,
+      maxAttempts: 5,
+      windowSeconds: 15 * 60,
+    });
+
+    try {
+      if (invitation.status !== OrganisationAdminInvitationStatus.PENDING) {
+        throw new BadRequestException('Employer admin invitation is no longer available.');
+      }
+
+      if (invitation.expiresAt < new Date()) {
+        const expiredInvitation =
+          await this.prisma.organisationAdminInvitation.update({
+            where: {
+              id: invitation.id,
+            },
+            data: {
+              status: OrganisationAdminInvitationStatus.EXPIRED,
+            },
+          });
+
+        await this.recordAudit(
+          'auth.organisation_admin_invitation_expired',
+          null,
+          {
+            invitationId: expiredInvitation.id,
+            organisationId: expiredInvitation.organisationId,
+            email: expiredInvitation.email,
+          },
+        );
+
+        throw new BadRequestException('Employer admin invitation has expired.');
+      }
+
+      const existingUser = await this.prisma.user.findUnique({
+        where: {
+          email,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      if (existingUser) {
+        throw new ConflictException(
+          'An account with this email already exists. Sign in or contact platform support before using this invitation.',
+        );
+      }
+
+      const passwordHash = await this.passwordService.hashPassword(
+        dto.password,
+      );
+      const name = dto.name?.trim() || null;
+
+      const result = await this.prisma.$transaction(async (tx) => {
+        const user = await tx.user.create({
+          data: {
+            email,
+            name,
+            role: UserRole.EMPLOYER_ADMIN,
+            organisationId: invitation.organisationId,
+            passwordHash,
+            status: UserStatus.ACTIVE,
+          },
+        });
+
+        const authAccount = await tx.authAccount.create({
+          data: {
+            userId: user.id,
+            provider: AuthProvider.LOCAL,
+            providerAccountId: email,
+            email,
+          },
+        });
+
+        const invitationClaim =
+          await tx.organisationAdminInvitation.updateMany({
+            where: {
+              id: invitation.id,
+              status: OrganisationAdminInvitationStatus.PENDING,
+              acceptedById: null,
+            },
+            data: {
+              status: OrganisationAdminInvitationStatus.ACCEPTED,
+              acceptedById: user.id,
+              usedAt: new Date(),
+            },
+          });
+
+        if (invitationClaim.count !== 1) {
+          throw new ConflictException(
+            'Employer admin invitation could not be claimed. It may have already been used.',
+          );
+        }
+
+        return {
+          user,
+          authAccount,
+        };
+      });
+
+      await this.recordAudit('auth.accept_organisation_admin_invitation', result.user.id, {
+        provider: AuthProvider.LOCAL,
+        invitationId: invitation.id,
+        organisationId: invitation.organisationId,
+        role: result.user.role,
+      });
+
+      await this.recordThrottleSuccess({
+        action: AuthRateLimitAction.REGISTER,
+        identifier: throttleIdentifier,
+      });
+
+      return this.createAuthenticatedSession({
+        user: result.user,
+        authAccountId: result.authAccount.id,
+        metadata,
+      });
+    } catch (error) {
+      await this.recordThrottleFailure({
+        action: AuthRateLimitAction.REGISTER,
+        identifier: throttleIdentifier,
+      });
+
+      throw error;
+    }
+  }
 
   async register(
     dto: RegisterDto,

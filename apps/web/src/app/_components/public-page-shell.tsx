@@ -110,6 +110,9 @@ export function PublicPageShell({
               <Link className="hover:text-cyan-300" href="/about">
                 About
               </Link>
+              <Link className="hover:text-cyan-300" href="/employers/apply">
+  Employer access
+</Link>
               <Link className="hover:text-cyan-300" href="/pricing">
                 Pricing
               </Link>

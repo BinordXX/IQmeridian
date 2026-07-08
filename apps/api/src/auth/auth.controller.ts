@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Req,Param, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { CurrentUser } from './current-user.decorator';
 import { LoginDto } from './dto/login.dto';
@@ -9,6 +9,8 @@ import { RegisterDto } from './dto/register.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { RequestUser } from './request-user.type';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { AcceptOrganisationAdminInvitationDto } from './dto/accept-organisation-admin-invitation.dto';
+import type { Request } from 'express';
 
 type RequestMetadataSource = {
   ip?: string;
@@ -21,6 +23,24 @@ type RequestMetadataSource = {
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
+
+    @Get('organisation-admin-invitations/:token')
+  getOrganisationAdminInvitation(@Param('token') token: string) {
+    return this.authService.getOrganisationAdminInvitationByToken(token);
+  }
+
+  @Post('organisation-admin-invitations/:token/accept')
+  acceptOrganisationAdminInvitation(
+    @Param('token') token: string,
+    @Body() dto: AcceptOrganisationAdminInvitationDto,
+    @Req() request: Request,
+  ) {
+    return this.authService.acceptOrganisationAdminInvitation(
+      token,
+      dto,
+      this.getRequestMetadata(request),
+    );
+  }
 
   @Post('register')
   register(@Body() body: RegisterDto, @Req() request: RequestMetadataSource) {

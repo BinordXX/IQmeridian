@@ -79,11 +79,11 @@ const navGroups: PublicNavGroup[] = [
         icon: UserRound,
       },
       {
-        label: 'Employers',
-        description: 'Campaigns, invitations, and future reporting.',
-        href: '/pricing',
-        icon: Building2,
-      },
+  label: 'Employers',
+  description: 'Request reviewed employer access.',
+  href: '/employers/apply',
+  icon: Building2,
+},
       {
         label: 'Research governance',
         description: 'Calibration, validation, and controlled exports.',
@@ -270,13 +270,14 @@ export function PublicSiteNav() {
           >
             Sign in
           </Link>
-          <Link
-            className="inline-flex items-center gap-2 rounded-full border border-cyan-300/30 bg-cyan-400/10 px-5 py-2.5 text-sm font-black text-cyan-100 shadow-[0_0_0_1px_rgba(34,211,238,0.14),0_12px_40px_rgba(34,211,238,0.18)] backdrop-blur-md transition hover:scale-[1.02] hover:bg-cyan-400/15"
-            href="/register"
-          >
-            Get started
-            <ArrowRight size={16} strokeWidth={2.4} />
-          </Link>
+
+<Link
+  className="inline-flex items-center gap-2 rounded-full border border-cyan-300/30 bg-cyan-400/10 px-5 py-2.5 text-sm font-black text-cyan-100 shadow-[0_0_0_1px_rgba(34,211,238,0.14),0_12px_40px_rgba(34,211,238,0.18)] backdrop-blur-md transition hover:scale-[1.02] hover:bg-cyan-400/15"
+  href="/register"
+>
+  Get started
+  <ArrowRight size={16} strokeWidth={2.4} />
+</Link>
         </div>
 
         <button
