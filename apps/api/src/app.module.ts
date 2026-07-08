@@ -21,7 +21,8 @@ import { PsychometricsModule } from './psychometrics/psychometrics.module';
 import { AuthModule } from './auth/auth.module';
 import { ConsumerAssessmentsModule } from './consumer-assessments/consumer-assessments.module';
 import { ContactModule } from './contact/contact.module';
-import { AccountModule } from './account/account.module';
+import { AccountModule } from './account/account.module';import { OrganisationAccessRequestsModule } from './organisation-access-requests/organisation-access-requests.module';
+
 @Module({
   imports: [
     PrismaModule,
@@ -45,6 +46,7 @@ import { AccountModule } from './account/account.module';
     ContactModule,
     AccountModule,
     OrganisationParticipantsModule,
+    OrganisationAccessRequestsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

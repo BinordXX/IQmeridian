@@ -223,6 +223,7 @@ model User {
   organisationId  String?
 
   organisation        Organisation? @relation(fields: [organisationId], references: [id])
+  reviewedOrganisationAccessRequests OrganisationAccessRequest[] @relation("OrganisationAccessRequestReviewer")
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
   deletionRequestedAt DateTime?
@@ -310,6 +311,32 @@ model AccountNotificationPreference {
   updatedAt                 DateTime @updatedAt
 
   @@index([userId])
+}
+
+model OrganisationAccessRequest {
+  id             String                          @id @default(cuid())
+  organisationName String
+  website        String?
+  industry       String?
+  country        String?
+  contactName    String
+  contactEmail   String
+  contactPhone   String?
+  intendedUse    String
+  expectedVolume String?
+  status         OrganisationAccessRequestStatus @default(PENDING)
+  reviewedAt     DateTime?
+  reviewedById   String?
+  reviewNotes    String?
+  convertedOrganisationId String?
+  createdAt      DateTime                        @default(now())
+  updatedAt      DateTime                        @updatedAt
+
+  reviewedBy User? @relation("OrganisationAccessRequestReviewer", fields: [reviewedById], references: [id])
+
+  @@index([status])
+  @@index([contactEmail])
+  @@index([createdAt])
 }
 
 model Organisation {
@@ -851,6 +878,13 @@ model AuditLog {
 enum FormItemMappingStatus {
   ACTIVE
   INACTIVE
+}
+
+enum OrganisationAccessRequestStatus {
+  PENDING
+  APPROVED
+  DECLINED
+  CONVERTED
 }
 
 enum InvitationStatus {
