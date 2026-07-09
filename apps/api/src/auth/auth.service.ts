@@ -17,7 +17,11 @@ import {
   UserRole,
   UserStatus,
   OrganisationAdminInvitationStatus,
+  
+  VerificationTokenPurpose,
+  
 } from '@prisma/client';
+import { VerificationTokensService } from '../verification-tokens/verification-tokens.service';
 
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthThrottleService } from './auth-throttle.service';
@@ -66,30 +70,45 @@ export class AuthService {
     private readonly passwordService: PasswordService,
     private readonly tokenService: TokenService,
     private readonly authThrottleService: AuthThrottleService,
+    private readonly verificationTokensService: VerificationTokensService,
+    
   ) {}
 
-    async getOrganisationAdminInvitationByToken(token: string) {
-    const invitation = await this.prisma.organisationAdminInvitation.findUnique({
+      async getOrganisationAdminInvitationByToken(token: string) {
+    const tokenHash = this.verificationTokensService.hashRawToken(token);
+
+    const verificationToken = await this.prisma.verificationToken.findUnique({
       where: {
-        token,
+        tokenHash,
       },
       include: {
-        organisation: {
-          select: {
-            id: true,
-            name: true,
+        organisationAdminInvitation: {
+          include: {
+            organisation: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
           },
         },
       },
     });
 
-    if (!invitation) {
+    if (
+      !verificationToken ||
+      verificationToken.purpose !==
+        VerificationTokenPurpose.ORGANISATION_ADMIN_INVITATION ||
+      !verificationToken.organisationAdminInvitation
+    ) {
       throw new BadRequestException('Employer admin invitation token is invalid.');
     }
 
+    const invitation = verificationToken.organisationAdminInvitation;
+
     if (
       invitation.status === OrganisationAdminInvitationStatus.PENDING &&
-      invitation.expiresAt < new Date()
+      verificationToken.expiresAt < new Date()
     ) {
       const expiredInvitation =
         await this.prisma.organisationAdminInvitation.update({
@@ -125,6 +144,16 @@ export class AuthService {
       };
     }
 
+    if (verificationToken.revokedAt) {
+      throw new BadRequestException('Employer admin invitation has been revoked.');
+    }
+
+    if (verificationToken.usedAt) {
+      throw new BadRequestException(
+        'Employer admin invitation has already been used.',
+      );
+    }
+
     return {
       id: invitation.id,
       email: invitation.email,
@@ -135,7 +164,7 @@ export class AuthService {
     };
   }
 
-    async acceptOrganisationAdminInvitation(
+     async acceptOrganisationAdminInvitation(
     token: string,
     dto: AcceptOrganisationAdminInvitationDto,
     metadata: RequestMetadata,
@@ -144,14 +173,13 @@ export class AuthService {
       throw new BadRequestException('Password confirmation does not match.');
     }
 
-    const invitation = await this.prisma.organisationAdminInvitation.findUnique({
-      where: {
-        token,
-      },
-      include: {
-        organisation: true,
-      },
-    });
+    const verificationToken =
+      await this.verificationTokensService.findUsableToken({
+        rawToken: token,
+        purpose: VerificationTokenPurpose.ORGANISATION_ADMIN_INVITATION,
+      });
+
+    const invitation = verificationToken.organisationAdminInvitation;
 
     if (!invitation) {
       throw new BadRequestException('Employer admin invitation token is invalid.');
@@ -173,7 +201,9 @@ export class AuthService {
 
     try {
       if (invitation.status !== OrganisationAdminInvitationStatus.PENDING) {
-        throw new BadRequestException('Employer admin invitation is no longer available.');
+        throw new BadRequestException(
+          'Employer admin invitation is no longer available.',
+        );
       }
 
       if (invitation.expiresAt < new Date()) {
@@ -221,6 +251,26 @@ export class AuthService {
       const name = dto.name?.trim() || null;
 
       const result = await this.prisma.$transaction(async (tx) => {
+        const tokenClaim = await tx.verificationToken.updateMany({
+          where: {
+            id: verificationToken.id,
+            usedAt: null,
+            revokedAt: null,
+            expiresAt: {
+              gt: new Date(),
+            },
+          },
+          data: {
+            usedAt: new Date(),
+          },
+        });
+
+        if (tokenClaim.count !== 1) {
+          throw new ConflictException(
+            'Employer admin invitation token could not be claimed.',
+          );
+        }
+
         const user = await tx.user.create({
           data: {
             email,
@@ -267,12 +317,16 @@ export class AuthService {
         };
       });
 
-      await this.recordAudit('auth.accept_organisation_admin_invitation', result.user.id, {
-        provider: AuthProvider.LOCAL,
-        invitationId: invitation.id,
-        organisationId: invitation.organisationId,
-        role: result.user.role,
-      });
+      await this.recordAudit(
+        'auth.accept_organisation_admin_invitation',
+        result.user.id,
+        {
+          provider: AuthProvider.LOCAL,
+          invitationId: invitation.id,
+          organisationId: invitation.organisationId,
+          role: result.user.role,
+        },
+      );
 
       await this.recordThrottleSuccess({
         action: AuthRateLimitAction.REGISTER,
@@ -293,6 +347,7 @@ export class AuthService {
       throw error;
     }
   }
+
 
   async register(
     dto: RegisterDto,

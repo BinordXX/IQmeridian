@@ -1,4 +1,5 @@
 import { Global, Module } from '@nestjs/common';
+import { VerificationTokensModule } from '../verification-tokens/verification-tokens.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
@@ -7,9 +8,10 @@ import { PasswordService } from './password.service';
 import { TokenService } from './token.service';
 import { AuthThrottleService } from './auth-throttle.service';
 
+
 @Global()
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, VerificationTokensModule],
   controllers: [AuthController],
   providers: [
     AuthService,
@@ -17,6 +19,8 @@ import { AuthThrottleService } from './auth-throttle.service';
     PasswordService,
     TokenService,
     JwtAuthGuard,
+    VerificationTokensModule,
+
   ],
   exports: [
     AuthService,

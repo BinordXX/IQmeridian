@@ -80,5 +80,17 @@ export class OrganisationAccessRequestsController {
       request.user,
     );
   }
+    @Post(':id/resend-admin-invitation')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.PLATFORM_ADMIN)
+  resendAdminInvitationEmail(
+    @Param() params: OrganisationAccessRequestIdParamDto,
+    @Req() request: RequestWithUser,
+  ) {
+    return this.organisationAccessRequestsService.resendAdminInvitationEmail(
+      params.id,
+      request.user,
+    );
+  }
 }
 

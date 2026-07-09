@@ -1,5 +1,5 @@
 import Link from 'next/link';
-
+import { OrganisationAccessRequestResendInvitationButton } from './_components/organisation-access-request-resend-invitation-button';
 import { getApiBaseUrl } from '@/lib/api-url';
 import { getRequiredServerApiAuthHeaders } from '@/lib/server-api-auth';
 
@@ -22,9 +22,11 @@ type ReviewedBy = {
 type OrganisationAdminInvitation = {
   id: string;
   email: string;
-  token: string;
   role: string;
   status: string;
+  emailDeliveryStatus: string;
+  lastEmailSentAt: string | null;
+  lastEmailFailure: string | null;
   expiresAt: string;
   usedAt: string | null;
   createdAt: string;
@@ -392,19 +394,31 @@ export default async function OrganisationAccessRequestsPage({
       </span>
     </p>
 
-    <p className="mt-3 break-all font-mono text-xs leading-6 text-cyan-100/75">
-  Token: {request.adminInvitation.token}
+  <p className="mt-1 text-sm leading-6 text-cyan-100">
+  Email delivery:{' '}
+  <span className="font-bold">
+    {request.adminInvitation.emailDeliveryStatus}
+  </span>
 </p>
 
-<Link
-  className="mt-4 inline-flex rounded-2xl border border-cyan-300/20 bg-cyan-400/10 px-4 py-2 text-xs font-black text-cyan-100 transition hover:bg-cyan-400/15"
-  href={`/employer-admin-invitations/${encodeURIComponent(
-    request.adminInvitation.token,
-  )}`}
-  target="_blank"
->
-  Open invitation acceptance page
-</Link>
+<p className="mt-1 text-sm leading-6 text-cyan-100">
+  Last sent:{' '}
+  <span className="font-bold">
+    {formatDateTime(request.adminInvitation.lastEmailSentAt)}
+  </span>
+</p>
+
+{request.adminInvitation.lastEmailFailure ? (
+  <p className="mt-3 rounded-2xl border border-red-300/20 bg-red-400/10 p-3 text-xs font-bold leading-6 text-red-100">
+    {request.adminInvitation.lastEmailFailure}
+  </p>
+
+  
+) : null}
+<OrganisationAccessRequestResendInvitationButton
+  invitationStatus={request.adminInvitation.status}
+  requestId={request.id}
+/>
   </div>
 ) : null}
 

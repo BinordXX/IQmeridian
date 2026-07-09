@@ -5,15 +5,19 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  EmailDeliveryStatus,
   OrganisationAccessRequestStatus,
   OrganisationAdminInvitationStatus,
   Prisma,
   UserRole,
+  VerificationTokenPurpose,
 } from '@prisma/client';
 import { randomBytes } from 'crypto';
 
 import { AuditService } from '../audit/audit.service';
+import { EmailService } from '../email/email.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { VerificationTokensService } from '../verification-tokens/verification-tokens.service';
 import { CreateOrganisationAccessRequestDto } from './dto/create-organisation-access-request.dto';
 import { ReviewOrganisationAccessRequestDto } from './dto/review-organisation-access-request.dto';
 
@@ -28,6 +32,8 @@ export class OrganisationAccessRequestsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
+    private readonly emailService: EmailService,
+    private readonly verificationTokensService: VerificationTokensService,
   ) {}
 
   async create(dto: CreateOrganisationAccessRequestDto) {
@@ -110,9 +116,11 @@ export class OrganisationAccessRequestsService {
           select: {
             id: true,
             email: true,
-            token: true,
             role: true,
             status: true,
+            emailDeliveryStatus: true,
+            lastEmailSentAt: true,
+            lastEmailFailure: true,
             expiresAt: true,
             usedAt: true,
             createdAt: true,
@@ -140,9 +148,11 @@ export class OrganisationAccessRequestsService {
           select: {
             id: true,
             email: true,
-            token: true,
             role: true,
             status: true,
+            emailDeliveryStatus: true,
+            lastEmailSentAt: true,
+            lastEmailFailure: true,
             expiresAt: true,
             usedAt: true,
             createdAt: true,
@@ -203,9 +213,11 @@ export class OrganisationAccessRequestsService {
             select: {
               id: true,
               email: true,
-              token: true,
               role: true,
               status: true,
+              emailDeliveryStatus: true,
+              lastEmailSentAt: true,
+              lastEmailFailure: true,
               expiresAt: true,
               usedAt: true,
               createdAt: true,
@@ -263,25 +275,7 @@ export class OrganisationAccessRequestsService {
       );
     }
 
-    const existingOrganisation = request.convertedOrganisationId
-      ? await this.prisma.organisation.findUnique({
-          where: {
-            id: request.convertedOrganisationId,
-          },
-          select: {
-            id: true,
-          },
-        })
-      : null;
-
-    if (existingOrganisation) {
-      throw new ConflictException(
-        'This organisation access request already points to an organisation.',
-      );
-    }
-
-    const token = this.generateInvitationToken();
-    const expiresAt = this.getAdminInvitationExpiryDate();
+    const tokenExpiryDate = this.getAdminInvitationExpiryDate();
 
     const result = await this.prisma.$transaction(async (tx) => {
       const organisation = await tx.organisation.create({
@@ -295,11 +289,12 @@ export class OrganisationAccessRequestsService {
           organisationId: organisation.id,
           organisationAccessRequestId: request.id,
           email: request.contactEmail,
-          token,
+          token: this.generateLegacyInvitationReference(),
           role: UserRole.EMPLOYER_ADMIN,
           status: OrganisationAdminInvitationStatus.PENDING,
+          emailDeliveryStatus: EmailDeliveryStatus.NOT_SENT,
           invitedById: user.id,
-          expiresAt,
+          expiresAt: tokenExpiryDate,
         },
       });
 
@@ -324,9 +319,11 @@ export class OrganisationAccessRequestsService {
             select: {
               id: true,
               email: true,
-              token: true,
               role: true,
               status: true,
+              emailDeliveryStatus: true,
+              lastEmailSentAt: true,
+              lastEmailFailure: true,
               expiresAt: true,
               usedAt: true,
               createdAt: true,
@@ -342,6 +339,64 @@ export class OrganisationAccessRequestsService {
       };
     });
 
+    const verificationToken = await this.verificationTokensService.createToken({
+      purpose: VerificationTokenPurpose.ORGANISATION_ADMIN_INVITATION,
+      email: result.adminInvitation.email,
+      expiresAt: tokenExpiryDate,
+      organisationAdminInvitationId: result.adminInvitation.id,
+      metadata: {
+        organisationAccessRequestId: result.request.id,
+        organisationId: result.organisation.id,
+      },
+      revokeExisting: true,
+    });
+
+    const invitationUrl = `${this.getWebAppBaseUrl()}/employer-admin-invitations/${encodeURIComponent(
+      verificationToken.rawToken,
+    )}`;
+
+    let emailDeliveryStatus: EmailDeliveryStatus = EmailDeliveryStatus.SENT;
+    let emailFailure: string | null = null;
+
+    try {
+      await this.emailService.sendOrganisationAdminInvitationEmail({
+        to: {
+          email: result.adminInvitation.email,
+          name: request.contactName,
+        },
+        organisationName: result.organisation.name,
+        invitationUrl,
+        expiresAt: tokenExpiryDate,
+      });
+
+      await this.prisma.organisationAdminInvitation.update({
+        where: {
+          id: result.adminInvitation.id,
+        },
+        data: {
+          emailDeliveryStatus: EmailDeliveryStatus.SENT,
+          lastEmailSentAt: new Date(),
+          lastEmailFailure: null,
+        },
+      });
+    } catch (error) {
+      emailDeliveryStatus = EmailDeliveryStatus.FAILED;
+      emailFailure =
+        error instanceof Error
+          ? error.message.slice(0, 500)
+          : 'Email delivery failed.';
+
+      await this.prisma.organisationAdminInvitation.update({
+        where: {
+          id: result.adminInvitation.id,
+        },
+        data: {
+          emailDeliveryStatus: EmailDeliveryStatus.FAILED,
+          lastEmailFailure: emailFailure,
+        },
+      });
+    }
+
     await this.auditService.record({
       action: 'ORGANISATION_ACCESS_REQUEST_CONVERTED',
       userId: user.id,
@@ -353,11 +408,13 @@ export class OrganisationAccessRequestsService {
         adminInvitationId: result.adminInvitation.id,
         contactEmail: result.adminInvitation.email,
         status: result.request.status,
+        emailDeliveryStatus,
+        emailFailure,
       }),
     });
 
     return {
-      request: result.request,
+      request: await this.getById(result.request.id),
       organisation: {
         id: result.organisation.id,
         name: result.organisation.name,
@@ -366,11 +423,155 @@ export class OrganisationAccessRequestsService {
       adminInvitation: {
         id: result.adminInvitation.id,
         email: result.adminInvitation.email,
-        token: result.adminInvitation.token,
         role: result.adminInvitation.role,
         status: result.adminInvitation.status,
+        emailDeliveryStatus,
+        lastEmailFailure: emailFailure,
         expiresAt: result.adminInvitation.expiresAt,
         createdAt: result.adminInvitation.createdAt,
+      },
+    };
+  }
+
+  async resendAdminInvitationEmail(id: string, user: RequestUser) {
+    const request = await this.prisma.organisationAccessRequest.findUnique({
+      where: {
+        id,
+      },
+      include: {
+        adminInvitation: {
+          include: {
+            organisation: true,
+          },
+        },
+      },
+    });
+
+    if (!request) {
+      throw new NotFoundException('Organisation access request not found');
+    }
+
+    if (request.status !== OrganisationAccessRequestStatus.CONVERTED) {
+      throw new BadRequestException(
+        'Only converted organisation access requests can have employer-admin invitations resent.',
+      );
+    }
+
+    if (!request.adminInvitation) {
+      throw new NotFoundException(
+        'Employer-admin invitation not found for this request.',
+      );
+    }
+
+    if (
+      request.adminInvitation.status !== OrganisationAdminInvitationStatus.PENDING
+    ) {
+      throw new BadRequestException(
+        'Only pending employer-admin invitations can be resent.',
+      );
+    }
+
+    const expiresAt = this.getAdminInvitationExpiryDate();
+
+    const updatedInvitation =
+      await this.prisma.organisationAdminInvitation.update({
+        where: {
+          id: request.adminInvitation.id,
+        },
+        data: {
+          expiresAt,
+          emailDeliveryStatus: EmailDeliveryStatus.NOT_SENT,
+          lastEmailFailure: null,
+        },
+        include: {
+          organisation: true,
+        },
+      });
+
+    const verificationToken = await this.verificationTokensService.createToken({
+      purpose: VerificationTokenPurpose.ORGANISATION_ADMIN_INVITATION,
+      email: updatedInvitation.email,
+      expiresAt,
+      organisationAdminInvitationId: updatedInvitation.id,
+      metadata: {
+        organisationAccessRequestId: request.id,
+        organisationId: updatedInvitation.organisationId,
+        resentByUserId: user.id,
+      },
+      revokeExisting: true,
+    });
+
+    const invitationUrl = `${this.getWebAppBaseUrl()}/employer-admin-invitations/${encodeURIComponent(
+      verificationToken.rawToken,
+    )}`;
+
+    let emailDeliveryStatus: EmailDeliveryStatus = EmailDeliveryStatus.SENT;
+    let emailFailure: string | null = null;
+
+    try {
+      await this.emailService.sendOrganisationAdminInvitationEmail({
+        to: {
+          email: updatedInvitation.email,
+          name: request.contactName,
+        },
+        organisationName: updatedInvitation.organisation.name,
+        invitationUrl,
+        expiresAt,
+      });
+
+      await this.prisma.organisationAdminInvitation.update({
+        where: {
+          id: updatedInvitation.id,
+        },
+        data: {
+          emailDeliveryStatus: EmailDeliveryStatus.SENT,
+          lastEmailSentAt: new Date(),
+          lastEmailFailure: null,
+        },
+      });
+    } catch (error) {
+      emailDeliveryStatus = EmailDeliveryStatus.FAILED;
+      emailFailure =
+        error instanceof Error
+          ? error.message.slice(0, 500)
+          : 'Email delivery failed.';
+
+      await this.prisma.organisationAdminInvitation.update({
+        where: {
+          id: updatedInvitation.id,
+        },
+        data: {
+          emailDeliveryStatus: EmailDeliveryStatus.FAILED,
+          lastEmailFailure: emailFailure,
+        },
+      });
+    }
+
+    await this.auditService.record({
+      action: 'ORGANISATION_ADMIN_INVITATION_EMAIL_RESENT',
+      userId: user.id,
+      entityType: 'OrganisationAdminInvitation',
+      entityId: updatedInvitation.id,
+      metadata: this.toJsonValue({
+        organisationAccessRequestId: request.id,
+        organisationId: updatedInvitation.organisationId,
+        adminInvitationId: updatedInvitation.id,
+        contactEmail: updatedInvitation.email,
+        emailDeliveryStatus,
+        emailFailure,
+      }),
+    });
+
+    return {
+      request: await this.getById(request.id),
+      adminInvitation: {
+        id: updatedInvitation.id,
+        email: updatedInvitation.email,
+        role: updatedInvitation.role,
+        status: updatedInvitation.status,
+        emailDeliveryStatus,
+        lastEmailFailure: emailFailure,
+        expiresAt,
       },
     };
   }
@@ -399,8 +600,8 @@ export class OrganisationAccessRequestsService {
     return trimmedValue ? trimmedValue : null;
   }
 
-  private generateInvitationToken() {
-    return randomBytes(32).toString('base64url');
+  private generateLegacyInvitationReference() {
+    return `legacy_${randomBytes(24).toString('base64url')}`;
   }
 
   private getAdminInvitationExpiryDate() {
@@ -409,6 +610,19 @@ export class OrganisationAccessRequestsService {
     expiresAt.setDate(expiresAt.getDate() + 14);
 
     return expiresAt;
+  }
+
+  private getWebAppBaseUrl() {
+    const baseUrl =
+      process.env.WEB_APP_URL ??
+      process.env.NEXT_PUBLIC_APP_URL ??
+      'http://localhost:3000';
+
+    if (process.env.NODE_ENV === 'production' && !process.env.WEB_APP_URL) {
+      throw new Error('WEB_APP_URL is required in production.');
+    }
+
+    return baseUrl.replace(/\/$/, '');
   }
 
   private toJsonValue(value: unknown): Prisma.InputJsonValue {

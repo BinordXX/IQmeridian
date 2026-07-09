@@ -64,6 +64,13 @@ enum AuthRateLimitAction {
   REFRESH
 }
 
+enum VerificationTokenPurpose {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+  ORGANISATION_ADMIN_INVITATION
+  CANDIDATE_INVITATION_NOTIFICATION
+}
+
 enum AuthProvider {
   LOCAL
   GOOGLE
@@ -226,6 +233,7 @@ model User {
   reviewedOrganisationAccessRequests OrganisationAccessRequest[] @relation("OrganisationAccessRequestReviewer")
   sentOrganisationAdminInvitations OrganisationAdminInvitation[] @relation("OrganisationAdminInvitationInviter")
 acceptedOrganisationAdminInvitations OrganisationAdminInvitation[] @relation("OrganisationAdminInvitationAcceptedBy")
+verificationTokens VerificationToken[] @relation("VerificationTokenSubjectUser")
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
   deletionRequestedAt DateTime?
@@ -261,8 +269,13 @@ model OrganisationAdminInvitation {
   email String
   token String @unique
   role  UserRole @default(EMPLOYER_ADMIN)
+  verificationTokens VerificationToken[]
 
   status OrganisationAdminInvitationStatus @default(PENDING)
+
+    emailDeliveryStatus EmailDeliveryStatus @default(NOT_SENT)
+  lastEmailSentAt     DateTime?
+  lastEmailFailure    String?
 
   invitedById String?
   invitedBy   User? @relation("OrganisationAdminInvitationInviter", fields: [invitedById], references: [id], onDelete: SetNull)
@@ -296,6 +309,47 @@ model AuthRateLimitEvent {
   @@index([action, keyHash, createdAt])
   @@index([createdAt])
 }
+
+
+model VerificationToken {
+  id String @id @default(cuid())
+
+  purpose   VerificationTokenPurpose
+  tokenHash String                   @unique
+  tokenLastFour String?
+
+  email String
+
+  subjectUserId String?
+  subjectUser   User?   @relation("VerificationTokenSubjectUser", fields: [subjectUserId], references: [id], onDelete: SetNull)
+
+  organisationAdminInvitationId String?
+  organisationAdminInvitation   OrganisationAdminInvitation? @relation(fields: [organisationAdminInvitationId], references: [id], onDelete: Cascade)
+
+  candidateInvitationId String?
+  candidateInvitation   Invitation? @relation(fields: [candidateInvitationId], references: [id], onDelete: Cascade)
+
+  expiresAt DateTime
+  usedAt    DateTime?
+
+  revokedAt     DateTime?
+  revokedReason String?
+
+  metadata Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([purpose])
+  @@index([email])
+  @@index([subjectUserId])
+  @@index([organisationAdminInvitationId])
+  @@index([candidateInvitationId])
+  @@index([expiresAt])
+  @@index([usedAt])
+  @@index([revokedAt])
+}
+
 
 model AuthAccount {
   id                String       @id @default(cuid())
@@ -576,7 +630,7 @@ model Invitation {
   usedAt          DateTime?
 
   sessions Session[]
-
+verificationTokens VerificationToken[]
   @@index([participantId])
 }
 
@@ -940,6 +994,12 @@ enum InvitationStatus {
   ACCEPTED
   EXPIRED
   CANCELLED
+}
+
+enum EmailDeliveryStatus {
+  NOT_SENT
+  SENT
+  FAILED
 }
 
 enum PsychometricScoringStatus {
