@@ -10,6 +10,8 @@ import { JwtAuthGuard } from './jwt-auth.guard';
 import { RequestUser } from './request-user.type';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { AcceptOrganisationAdminInvitationDto } from './dto/accept-organisation-admin-invitation.dto';
+import { ResendEmailVerificationDto } from './dto/resend-email-verification.dto';
+import { VerifyEmailDto } from './dto/verify-email.dto';
 import type { Request } from 'express';
 
 type RequestMetadataSource = {
@@ -42,6 +44,22 @@ export class AuthController {
     );
   }
 
+    @Post('verify-email')
+  verifyEmail(@Body() dto: VerifyEmailDto) {
+    return this.authService.verifyEmail(dto);
+  }
+
+  @Post('resend-email-verification')
+  resendEmailVerification(
+    @Body() dto: ResendEmailVerificationDto,
+    @Req() request: Request,
+  ) {
+    return this.authService.resendEmailVerification(
+      dto,
+      this.getRequestMetadata(request),
+    );
+  }
+  
   @Post('register')
   register(@Body() body: RegisterDto, @Req() request: RequestMetadataSource) {
     return this.authService.register(body, this.getRequestMetadata(request));

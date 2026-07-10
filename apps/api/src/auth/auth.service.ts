@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   Injectable,
   UnauthorizedException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 
 import {
@@ -17,11 +18,15 @@ import {
   UserRole,
   UserStatus,
   OrganisationAdminInvitationStatus,
-  
   VerificationTokenPurpose,
   
 } from '@prisma/client';
+
+import { EmailService } from '../email/email.service';
 import { VerificationTokensService } from '../verification-tokens/verification-tokens.service';
+import { ResendEmailVerificationDto } from './dto/resend-email-verification.dto';
+import { VerifyEmailDto } from './dto/verify-email.dto';
+
 
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthThrottleService } from './auth-throttle.service';
@@ -63,6 +68,19 @@ type AuthResponse = {
   refreshTokenExpiresAt: Date;
 };
 
+type RegistrationVerificationResponse = {
+  status: 'verification_required';
+  userId: string;
+  email: string;
+  verificationExpiresAt: Date;
+  message: string;
+};
+
+type EmailVerificationResponse = {
+  status: 'ok';
+  message: string;
+};
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -71,7 +89,7 @@ export class AuthService {
     private readonly tokenService: TokenService,
     private readonly authThrottleService: AuthThrottleService,
     private readonly verificationTokensService: VerificationTokensService,
-    
+    private readonly emailService: EmailService,
   ) {}
 
       async getOrganisationAdminInvitationByToken(token: string) {
@@ -349,10 +367,10 @@ export class AuthService {
   }
 
 
-  async register(
+    async register(
     dto: RegisterDto,
     metadata: RequestMetadata,
-  ): Promise<AuthResponse> {
+  ): Promise<RegistrationVerificationResponse> {
     const email = this.normaliseEmail(dto.email);
     const throttleIdentifier = this.buildThrottleIdentifier({
       action: 'register',
@@ -395,7 +413,8 @@ export class AuthService {
           name,
           role: UserRole.CONSUMER,
           passwordHash,
-          status: UserStatus.ACTIVE,
+          status: UserStatus.PENDING_EMAIL_VERIFICATION,
+          emailVerifiedAt: null,
           authAccounts: {
             create: {
               provider: AuthProvider.LOCAL,
@@ -404,17 +423,32 @@ export class AuthService {
             },
           },
         },
-        include: {
-          authAccounts: {
-            where: {
-              provider: AuthProvider.LOCAL,
-            },
-            take: 1,
-          },
-        },
       });
 
-      await this.recordAudit('auth.register', user.id, {
+      const verificationExpiresAt =
+        this.verificationTokensService.getExpiryDate(15);
+
+      const verificationToken =
+        await this.verificationTokensService.createToken({
+          purpose: VerificationTokenPurpose.EMAIL_VERIFICATION,
+          email,
+          subjectUserId: user.id,
+          expiresAt: verificationExpiresAt,
+          metadata: {
+            registrationUserId: user.id,
+            role: user.role,
+          },
+          revokeExisting: true,
+        });
+
+      await this.sendEmailVerification({
+        email,
+        name,
+        rawToken: verificationToken.rawToken,
+        expiresAt: verificationExpiresAt,
+      });
+
+      await this.recordAudit('auth.register_verification_required', user.id, {
         provider: AuthProvider.LOCAL,
         role: user.role,
       });
@@ -424,11 +458,14 @@ export class AuthService {
         identifier: throttleIdentifier,
       });
 
-      return this.createAuthenticatedSession({
-        user,
-        authAccountId: user.authAccounts[0]?.id ?? null,
-        metadata,
-      });
+      return {
+        status: 'verification_required',
+        userId: user.id,
+        email,
+        verificationExpiresAt,
+        message:
+          'Registration created. Check your email to verify your account before signing in.',
+      };
     } catch (error) {
       if (!(error instanceof ConflictException)) {
         await this.recordThrottleFailure({
@@ -437,9 +474,188 @@ export class AuthService {
         });
       }
 
+      if (error instanceof ServiceUnavailableException) {
+        throw error;
+      }
+
       throw error;
     }
   }
+
+    async verifyEmail(dto: VerifyEmailDto): Promise<EmailVerificationResponse> {
+    const verificationToken =
+      await this.verificationTokensService.findUsableToken({
+        rawToken: dto.token,
+        purpose: VerificationTokenPurpose.EMAIL_VERIFICATION,
+      });
+
+    if (!verificationToken.subjectUser) {
+      throw new BadRequestException('Email verification token is invalid.');
+    }
+
+    const now = new Date();
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      const tokenClaim = await tx.verificationToken.updateMany({
+        where: {
+          id: verificationToken.id,
+          usedAt: null,
+          revokedAt: null,
+          expiresAt: {
+            gt: now,
+          },
+        },
+        data: {
+          usedAt: now,
+        },
+      });
+
+      if (tokenClaim.count !== 1) {
+        throw new ConflictException(
+          'Email verification token could not be claimed.',
+        );
+      }
+
+      const user = await tx.user.update({
+        where: {
+          id: verificationToken.subjectUserId ?? '',
+        },
+        data: {
+          status: UserStatus.ACTIVE,
+          emailVerifiedAt: now,
+        },
+      });
+
+      await tx.verificationToken.updateMany({
+        where: {
+          purpose: VerificationTokenPurpose.EMAIL_VERIFICATION,
+          subjectUserId: user.id,
+          id: {
+            not: verificationToken.id,
+          },
+          usedAt: null,
+          revokedAt: null,
+        },
+        data: {
+          revokedAt: now,
+          revokedReason: 'email-verified',
+        },
+      });
+
+      return {
+        user,
+      };
+    });
+
+    await this.recordAudit('auth.email_verified', result.user.id, {
+      provider: AuthProvider.LOCAL,
+      email: result.user.email,
+    });
+
+    return {
+      status: 'ok',
+      message: 'Email verified successfully. You can now sign in.',
+    };
+  }
+
+  async resendEmailVerification(
+    dto: ResendEmailVerificationDto,
+    metadata: RequestMetadata,
+  ): Promise<EmailVerificationResponse> {
+    const email = this.normaliseEmail(dto.email);
+    const throttleIdentifier = this.buildThrottleIdentifier({
+      action: 'resend-email-verification',
+      metadata,
+      email,
+    });
+
+    await this.authThrottleService.assertAllowed({
+      action: AuthRateLimitAction.REGISTER,
+      identifier: throttleIdentifier,
+      maxAttempts: 5,
+      windowSeconds: 15 * 60,
+    });
+
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: {
+          email,
+        },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          status: true,
+          emailVerifiedAt: true,
+        },
+      });
+
+      if (
+        !user ||
+        user.status !== UserStatus.PENDING_EMAIL_VERIFICATION ||
+        user.emailVerifiedAt
+      ) {
+        await this.recordThrottleSuccess({
+          action: AuthRateLimitAction.REGISTER,
+          identifier: throttleIdentifier,
+        });
+
+        return {
+          status: 'ok',
+          message:
+            'If this email still needs verification, a new verification email will be sent.',
+        };
+      }
+
+      const verificationExpiresAt =
+        this.verificationTokensService.getExpiryDate(15);
+
+      const verificationToken =
+        await this.verificationTokensService.createToken({
+          purpose: VerificationTokenPurpose.EMAIL_VERIFICATION,
+          email,
+          subjectUserId: user.id,
+          expiresAt: verificationExpiresAt,
+          metadata: {
+            resent: true,
+            role: user.role,
+          },
+          revokeExisting: true,
+        });
+
+      await this.sendEmailVerification({
+        email,
+        name: user.name,
+        rawToken: verificationToken.rawToken,
+        expiresAt: verificationExpiresAt,
+      });
+
+      await this.recordAudit('auth.email_verification_resent', user.id, {
+        provider: AuthProvider.LOCAL,
+        email,
+      });
+
+      await this.recordThrottleSuccess({
+        action: AuthRateLimitAction.REGISTER,
+        identifier: throttleIdentifier,
+      });
+
+      return {
+        status: 'ok',
+        message:
+          'If this email still needs verification, a new verification email will be sent.',
+      };
+    } catch (error) {
+      await this.recordThrottleFailure({
+        action: AuthRateLimitAction.REGISTER,
+        identifier: throttleIdentifier,
+      });
+
+      throw error;
+    }
+  }
+
 
   async registerCandidate(
     dto: RegisterCandidateDto,
@@ -668,6 +884,18 @@ export class AuthService {
         action: AuthRateLimitAction.LOGIN,
         identifier: throttleIdentifier,
       });
+
+          if (user.status === UserStatus.PENDING_EMAIL_VERIFICATION) {
+      await this.recordAudit('auth.login_failed', user.id, {
+        provider: AuthProvider.LOCAL,
+        reason: 'EMAIL_NOT_VERIFIED',
+        status: user.status,
+      });
+
+      throw new ForbiddenException(
+        'Email verification is required before sign in.',
+      );
+    }
 
       await this.recordAudit('auth.login_failed', user.id, {
         provider: AuthProvider.LOCAL,
@@ -1134,6 +1362,54 @@ private async toSafeUser(user: User): Promise<SafeUser> {
     updatedAt: user.updatedAt,
   };
 }
+
+  private async sendEmailVerification(input: {
+    email: string;
+    name: string | null;
+    rawToken: string;
+    expiresAt: Date;
+  }) {
+    const verificationUrl = `${this.getWebAppBaseUrl()}/verify-email?token=${encodeURIComponent(
+      input.rawToken,
+    )}`;
+
+    try {
+      await this.emailService.sendVerificationEmail({
+        to: {
+          email: input.email,
+          name: input.name,
+        },
+        verificationCode: input.rawToken.slice(-8).toUpperCase(),
+        verificationUrl,
+        expiresInMinutes: 15,
+      });
+    } catch (error) {
+      await this.recordAudit('auth.email_verification_delivery_failed', null, {
+        email: input.email,
+        error:
+          error instanceof Error
+            ? error.message.slice(0, 500)
+            : 'Email delivery failed.',
+      });
+
+      throw new ServiceUnavailableException(
+        'Verification email could not be sent. Try again later.',
+      );
+    }
+  }
+
+  private getWebAppBaseUrl() {
+    const baseUrl =
+      process.env.WEB_APP_URL ??
+      process.env.NEXT_PUBLIC_APP_URL ??
+      'http://localhost:3000';
+
+    if (process.env.NODE_ENV === 'production' && !process.env.WEB_APP_URL) {
+      throw new Error('WEB_APP_URL is required in production.');
+    }
+
+    return baseUrl.replace(/\/$/, '');
+  }
 
   private normaliseEmail(email: string): string {
     return email.trim().toLowerCase();

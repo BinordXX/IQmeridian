@@ -7,11 +7,12 @@ import { JwtAuthGuard } from './jwt-auth.guard';
 import { PasswordService } from './password.service';
 import { TokenService } from './token.service';
 import { AuthThrottleService } from './auth-throttle.service';
+import { EmailModule } from '../email/email.module';
 
 
 @Global()
 @Module({
-  imports: [PrismaModule, VerificationTokensModule],
+  imports: [PrismaModule, VerificationTokensModule, EmailModule],
   controllers: [AuthController],
   providers: [
     AuthService,
