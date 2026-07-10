@@ -20,8 +20,11 @@ import {
   OrganisationAdminInvitationStatus,
   VerificationTokenPurpose,
   
+  
 } from '@prisma/client';
 
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import { EmailService } from '../email/email.service';
 import { VerificationTokensService } from '../verification-tokens/verification-tokens.service';
 import { ResendEmailVerificationDto } from './dto/resend-email-verification.dto';
@@ -40,6 +43,7 @@ import { RegisterDto } from './dto/register.dto';
 import { PasswordService } from './password.service';
 import { RequestUser } from './request-user.type';
 import { TokenService } from './token.service';
+
 
 type RequestMetadata = {
   ipAddress?: string;
@@ -66,6 +70,11 @@ type AuthResponse = {
   refreshToken: string;
   accessTokenExpiresAt: Date;
   refreshTokenExpiresAt: Date;
+};
+
+type PasswordResetResponse = {
+  status: 'ok';
+  message: string;
 };
 
 type RegistrationVerificationResponse = {
@@ -656,7 +665,256 @@ export class AuthService {
     }
   }
 
+  async forgotPassword(
+    dto: ForgotPasswordDto,
+    metadata: RequestMetadata,
+  ): Promise<PasswordResetResponse> {
+    const email = this.normaliseEmail(dto.email);
+    const throttleIdentifier = this.buildThrottleIdentifier({
+      action: 'forgot-password',
+      metadata,
+      email,
+    });
 
+    await this.authThrottleService.assertAllowed({
+      action: AuthRateLimitAction.PASSWORD_RESET,
+      identifier: throttleIdentifier,
+      maxAttempts: 5,
+      windowSeconds: 15 * 60,
+    });
+
+    const genericResponse: PasswordResetResponse = {
+      status: 'ok',
+      message:
+        'If an eligible account exists for this email, a password reset link will be sent.',
+    };
+
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: {
+          email,
+        },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          status: true,
+        },
+      });
+
+      if (
+        !user ||
+        user.status === UserStatus.DISABLED ||
+        user.status === UserStatus.SUSPENDED
+      ) {
+        await this.recordThrottleSuccess({
+          action: AuthRateLimitAction.PASSWORD_RESET,
+          identifier: throttleIdentifier,
+        });
+
+        return genericResponse;
+      }
+
+      const resetExpiresAt = this.verificationTokensService.getExpiryDate(15);
+
+      const resetToken = await this.verificationTokensService.createToken({
+        purpose: VerificationTokenPurpose.PASSWORD_RESET,
+        email,
+        subjectUserId: user.id,
+        expiresAt: resetExpiresAt,
+        metadata: {
+          userId: user.id,
+          role: user.role,
+        },
+        revokeExisting: true,
+      });
+
+      const resetUrl = `${this.getWebAppBaseUrl()}/reset-password?token=${encodeURIComponent(
+        resetToken.rawToken,
+      )}`;
+
+      try {
+        await this.emailService.sendPasswordResetEmail({
+          to: {
+            email: user.email,
+            name: user.name,
+          },
+          resetUrl,
+          expiresInMinutes: 15,
+        });
+      } catch (error) {
+        await this.recordAudit('auth.password_reset_delivery_failed', user.id, {
+          email,
+          error:
+            error instanceof Error
+              ? error.message.slice(0, 500)
+              : 'Password reset email delivery failed.',
+        });
+
+        throw new ServiceUnavailableException(
+          'Password reset email could not be sent. Try again later.',
+        );
+      }
+
+      await this.recordAudit('auth.password_reset_requested', user.id, {
+        email,
+        provider: AuthProvider.LOCAL,
+      });
+
+      await this.recordThrottleSuccess({
+        action: AuthRateLimitAction.PASSWORD_RESET,
+        identifier: throttleIdentifier,
+      });
+
+      return genericResponse;
+    } catch (error) {
+      await this.recordThrottleFailure({
+        action: AuthRateLimitAction.PASSWORD_RESET,
+        identifier: throttleIdentifier,
+      });
+
+      throw error;
+    }
+  }
+
+  async resetPassword(
+    dto: ResetPasswordDto,
+    metadata: RequestMetadata,
+  ): Promise<PasswordResetResponse> {
+    if (dto.password !== dto.confirmPassword) {
+      throw new BadRequestException('Password confirmation does not match.');
+    }
+
+    const verificationToken =
+      await this.verificationTokensService.findUsableToken({
+        rawToken: dto.token,
+        purpose: VerificationTokenPurpose.PASSWORD_RESET,
+      });
+
+    if (!verificationToken.subjectUser) {
+      throw new BadRequestException('Password reset token is invalid.');
+    }
+
+    const user = verificationToken.subjectUser;
+    const throttleIdentifier = this.buildThrottleIdentifier({
+      action: 'reset-password',
+      metadata,
+      email: user.email,
+    });
+
+    await this.authThrottleService.assertAllowed({
+      action: AuthRateLimitAction.PASSWORD_RESET,
+      identifier: throttleIdentifier,
+      maxAttempts: 5,
+      windowSeconds: 15 * 60,
+    });
+
+    if (
+      user.status === UserStatus.DISABLED ||
+      user.status === UserStatus.SUSPENDED
+    ) {
+      await this.recordThrottleFailure({
+        action: AuthRateLimitAction.PASSWORD_RESET,
+        identifier: throttleIdentifier,
+      });
+
+      throw new ForbiddenException('This account is not eligible for reset.');
+    }
+
+    try {
+      const now = new Date();
+      const passwordHash = await this.passwordService.hashPassword(
+        dto.password,
+      );
+
+      const result = await this.prisma.$transaction(async (tx) => {
+        const tokenClaim = await tx.verificationToken.updateMany({
+          where: {
+            id: verificationToken.id,
+            usedAt: null,
+            revokedAt: null,
+            expiresAt: {
+              gt: now,
+            },
+          },
+          data: {
+            usedAt: now,
+          },
+        });
+
+        if (tokenClaim.count !== 1) {
+          throw new ConflictException(
+            'Password reset token could not be claimed.',
+          );
+        }
+
+        const updatedUser = await tx.user.update({
+          where: {
+            id: user.id,
+          },
+          data: {
+            passwordHash,
+          },
+        });
+
+        await tx.verificationToken.updateMany({
+          where: {
+            purpose: VerificationTokenPurpose.PASSWORD_RESET,
+            subjectUserId: user.id,
+            id: {
+              not: verificationToken.id,
+            },
+            usedAt: null,
+            revokedAt: null,
+          },
+          data: {
+            revokedAt: now,
+            revokedReason: 'password-reset-completed',
+          },
+        });
+
+        await tx.authSession.updateMany({
+          where: {
+            userId: user.id,
+            status: AuthSessionStatus.ACTIVE,
+          },
+          data: {
+            status: AuthSessionStatus.REVOKED,
+            revokedAt: now,
+            revokedReason: 'password-reset-completed',
+          },
+        });
+
+        return {
+          user: updatedUser,
+        };
+      });
+
+      await this.recordAudit('auth.password_reset_completed', result.user.id, {
+        email: result.user.email,
+        provider: AuthProvider.LOCAL,
+      });
+
+      await this.recordThrottleSuccess({
+        action: AuthRateLimitAction.PASSWORD_RESET,
+        identifier: throttleIdentifier,
+      });
+
+      return {
+        status: 'ok',
+        message: 'Password reset successfully. You can now sign in.',
+      };
+    } catch (error) {
+      await this.recordThrottleFailure({
+        action: AuthRateLimitAction.PASSWORD_RESET,
+        identifier: throttleIdentifier,
+      });
+
+      throw error;
+    }
+  }
+  
   async registerCandidate(
     dto: RegisterCandidateDto,
     metadata: RequestMetadata,

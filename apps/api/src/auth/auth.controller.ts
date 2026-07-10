@@ -13,6 +13,8 @@ import { AcceptOrganisationAdminInvitationDto } from './dto/accept-organisation-
 import { ResendEmailVerificationDto } from './dto/resend-email-verification.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import type { Request } from 'express';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 
 type RequestMetadataSource = {
   ip?: string;
@@ -60,6 +62,21 @@ export class AuthController {
     );
   }
   
+    @Post('forgot-password')
+  forgotPassword(@Body() dto: ForgotPasswordDto, @Req() request: Request) {
+    return this.authService.forgotPassword(
+      dto,
+      this.getRequestMetadata(request),
+    );
+  }
+
+  @Post('reset-password')
+  resetPassword(@Body() dto: ResetPasswordDto, @Req() request: Request) {
+    return this.authService.resetPassword(
+      dto,
+      this.getRequestMetadata(request),
+    );
+  }
   @Post('register')
   register(@Body() body: RegisterDto, @Req() request: RequestMetadataSource) {
     return this.authService.register(body, this.getRequestMetadata(request));

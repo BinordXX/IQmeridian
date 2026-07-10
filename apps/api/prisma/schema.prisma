@@ -64,6 +64,7 @@ enum AuthRateLimitAction {
   REGISTER
   REGISTER_CANDIDATE
   REFRESH
+  PASSWORD_RESET
 }
 
 enum VerificationTokenPurpose {

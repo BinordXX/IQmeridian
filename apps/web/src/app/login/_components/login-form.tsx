@@ -207,6 +207,12 @@ export function LoginForm({ callbackUrl }: LoginFormProps) {
             </>
           )}
         </button>
+        <Link
+  className="text-sm font-black text-cyan-300 transition hover:text-cyan-200"
+  href="/forgot-password"
+>
+  Forgot password?
+</Link>
       </form>
 
       <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.035] p-4">
