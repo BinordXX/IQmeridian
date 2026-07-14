@@ -48,7 +48,9 @@ const getErrorMessage = (payload: {
     return payload.message.join(' ');
   }
 
-  return payload.message ?? payload.error ?? 'The request could not be submitted.';
+  return (
+    payload.message ?? payload.error ?? 'The request could not be submitted.'
+  );
 };
 
 export function OrganisationAccessRequestForm() {
@@ -61,7 +63,7 @@ export function OrganisationAccessRequestForm() {
 
   const updateField = (
     field: keyof OrganisationAccessRequestFormState,
-    value: string,
+    value: string
   ) => {
     setFormState((currentState) => ({
       ...currentState,
@@ -92,9 +94,7 @@ export function OrganisationAccessRequestForm() {
     }
 
     if (formState.intendedUse.trim().length < 20) {
-      setErrorMessage(
-        'Explain the intended use in at least 20 characters.',
-      );
+      setErrorMessage('Explain the intended use in at least 20 characters.');
       return;
     }
 
@@ -121,24 +121,24 @@ export function OrganisationAccessRequestForm() {
         }),
       });
 
-const payload = (await response.json().catch(() => ({}))) as Partial<
-  SubmittedRequest & {
-    message: string | string[];
-    error: string;
-  }
->;
+      const payload = (await response.json().catch(() => ({}))) as Partial<
+        SubmittedRequest & {
+          message: string | string[];
+          error: string;
+        }
+      >;
 
-if (!response.ok) {
-  throw new Error(getErrorMessage(payload));
-}
+      if (!response.ok) {
+        throw new Error(getErrorMessage(payload));
+      }
 
-setSubmittedRequest(payload as SubmittedRequest);
+      setSubmittedRequest(payload as SubmittedRequest);
       setFormState(initialFormState);
     } catch (error) {
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : 'The request could not be submitted.',
+          : 'The request could not be submitted.'
       );
     } finally {
       setIsSubmitting(false);

@@ -1,7 +1,4 @@
-import {
-  getAbsolutePublicUrl,
-  publicSitemapRoutes,
-} from '@/lib/public-seo';
+import { getAbsolutePublicUrl, publicSitemapRoutes } from '@/lib/public-seo';
 import type { MetadataRoute } from 'next';
 
 export default function sitemap(): MetadataRoute.Sitemap {

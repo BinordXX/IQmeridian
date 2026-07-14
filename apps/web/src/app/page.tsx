@@ -476,7 +476,6 @@ function FaqAccordion() {
 }
 
 export default function HomePage() {
- 
   const [pointer, setPointer] = useState({ x: 0, y: 0 });
 
   const handleHeroPointerMove = (event: MouseEvent<HTMLElement>) => {
@@ -515,37 +514,37 @@ export default function HomePage() {
       </div>
 
       <div className="relative z-10">
-       <section
-  className="relative isolate min-h-screen overflow-hidden bg-[#080d28]"
-  onMouseMove={handleHeroPointerMove}
->
-<div className="absolute inset-0 -z-10 bg-[linear-gradient(135deg,_#05091f_0%,_#0b1231_42%,_#111b46_72%,_#17245c_100%)]" />
-<div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_16%_20%,rgba(45,212,255,0.10),transparent_24%),radial-gradient(circle_at_86%_44%,rgba(59,130,246,0.13),transparent_24%)]" />
-<div className="iqm-neural-grid absolute inset-0 -z-10 opacity-35" />
-<div className="pointer-events-none absolute left-[51.8%] top-[18%] z-0 hidden h-[30rem] w-44 -translate-x-1/2 lg:block">
-  <div className="absolute inset-y-0 left-1/2 w-20 -translate-x-1/2 bg-[radial-gradient(ellipse_at_center,rgba(34,211,238,0.14),rgba(34,211,238,0.04)_36%,transparent_74%)]" />
+        <section
+          className="relative isolate min-h-screen overflow-hidden bg-[#080d28]"
+          onMouseMove={handleHeroPointerMove}
+        >
+          <div className="absolute inset-0 -z-10 bg-[linear-gradient(135deg,_#05091f_0%,_#0b1231_42%,_#111b46_72%,_#17245c_100%)]" />
+          <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_16%_20%,rgba(45,212,255,0.10),transparent_24%),radial-gradient(circle_at_86%_44%,rgba(59,130,246,0.13),transparent_24%)]" />
+          <div className="iqm-neural-grid absolute inset-0 -z-10 opacity-35" />
+          <div className="pointer-events-none absolute left-[51.8%] top-[18%] z-0 hidden h-[30rem] w-44 -translate-x-1/2 lg:block">
+            <div className="absolute inset-y-0 left-1/2 w-20 -translate-x-1/2 bg-[radial-gradient(ellipse_at_center,rgba(34,211,238,0.14),rgba(34,211,238,0.04)_36%,transparent_74%)]" />
 
-  <div className="absolute left-1/2 top-8 h-[23rem] w-[3px] -translate-x-1/2 rounded-full bg-gradient-to-b from-transparent via-cyan-300/70 to-transparent shadow-[0_0_24px_rgba(34,211,238,0.22)]" />
+            <div className="absolute left-1/2 top-8 h-[23rem] w-[3px] -translate-x-1/2 rounded-full bg-gradient-to-b from-transparent via-cyan-300/70 to-transparent shadow-[0_0_24px_rgba(34,211,238,0.22)]" />
 
-  <div className="iqm-data-node absolute left-1/2 top-20 h-3 w-3 -translate-x-1/2 rounded-full bg-cyan-300 shadow-[0_0_18px_rgba(34,211,238,0.9)]" />
-  <div className="iqm-data-branch absolute left-[50%] top-[5rem] h-px w-14 -translate-y-1/2 -translate-x-full bg-gradient-to-l from-cyan-300/60 to-transparent" />
-  <div className="iqm-data-branch absolute left-[50%] top-[5rem] h-px w-20 -translate-y-1/2 bg-gradient-to-r from-cyan-300/60 to-transparent" />
+            <div className="iqm-data-node absolute left-1/2 top-20 h-3 w-3 -translate-x-1/2 rounded-full bg-cyan-300 shadow-[0_0_18px_rgba(34,211,238,0.9)]" />
+            <div className="iqm-data-branch absolute left-[50%] top-[5rem] h-px w-14 -translate-y-1/2 -translate-x-full bg-gradient-to-l from-cyan-300/60 to-transparent" />
+            <div className="iqm-data-branch absolute left-[50%] top-[5rem] h-px w-20 -translate-y-1/2 bg-gradient-to-r from-cyan-300/60 to-transparent" />
 
-  <div className="iqm-data-node absolute left-1/2 top-44 h-4 w-4 -translate-x-1/2 rounded-[0.35rem] border border-cyan-300/50 bg-[#102a58]/90 shadow-[0_0_16px_rgba(34,211,238,0.45)]" />
-  <div className="iqm-data-branch absolute left-[50%] top-44 h-px w-10 -translate-y-1/2 -translate-x-full bg-gradient-to-l from-cyan-300/50 to-transparent" />
-  <div className="iqm-data-branch absolute left-[50%] top-44 h-px w-24 -translate-y-1/2 bg-gradient-to-r from-cyan-300/65 to-transparent" />
+            <div className="iqm-data-node absolute left-1/2 top-44 h-4 w-4 -translate-x-1/2 rounded-[0.35rem] border border-cyan-300/50 bg-[#102a58]/90 shadow-[0_0_16px_rgba(34,211,238,0.45)]" />
+            <div className="iqm-data-branch absolute left-[50%] top-44 h-px w-10 -translate-y-1/2 -translate-x-full bg-gradient-to-l from-cyan-300/50 to-transparent" />
+            <div className="iqm-data-branch absolute left-[50%] top-44 h-px w-24 -translate-y-1/2 bg-gradient-to-r from-cyan-300/65 to-transparent" />
 
-  <div className="iqm-data-node absolute left-1/2 top-[15.8rem] h-3 w-3 -translate-x-1/2 rounded-full bg-emerald-300 shadow-[0_0_18px_rgba(110,231,183,0.7)]" />
-  <div className="iqm-data-branch absolute left-[50%] top-[15.8rem] h-px w-16 -translate-y-1/2 -translate-x-full bg-gradient-to-l from-emerald-300/45 to-transparent" />
-  <div className="iqm-data-branch absolute left-[50%] top-[15.8rem] h-px w-12 -translate-y-1/2 bg-gradient-to-r from-emerald-300/45 to-transparent" />
+            <div className="iqm-data-node absolute left-1/2 top-[15.8rem] h-3 w-3 -translate-x-1/2 rounded-full bg-emerald-300 shadow-[0_0_18px_rgba(110,231,183,0.7)]" />
+            <div className="iqm-data-branch absolute left-[50%] top-[15.8rem] h-px w-16 -translate-y-1/2 -translate-x-full bg-gradient-to-l from-emerald-300/45 to-transparent" />
+            <div className="iqm-data-branch absolute left-[50%] top-[15.8rem] h-px w-12 -translate-y-1/2 bg-gradient-to-r from-emerald-300/45 to-transparent" />
 
-  <div className="iqm-data-node absolute left-1/2 top-[21rem] h-3.5 w-3.5 -translate-x-1/2 rounded-full bg-sky-300 shadow-[0_0_18px_rgba(125,211,252,0.75)]" />
-  <div className="iqm-data-branch absolute left-[50%] top-[21rem] h-px w-12 -translate-y-1/2 -translate-x-full bg-gradient-to-l from-sky-300/45 to-transparent" />
-  <div className="iqm-data-branch absolute left-[50%] top-[21rem] h-px w-18 -translate-y-1/2 bg-gradient-to-r from-sky-300/55 to-transparent" />
+            <div className="iqm-data-node absolute left-1/2 top-[21rem] h-3.5 w-3.5 -translate-x-1/2 rounded-full bg-sky-300 shadow-[0_0_18px_rgba(125,211,252,0.75)]" />
+            <div className="iqm-data-branch absolute left-[50%] top-[21rem] h-px w-12 -translate-y-1/2 -translate-x-full bg-gradient-to-l from-sky-300/45 to-transparent" />
+            <div className="iqm-data-branch absolute left-[50%] top-[21rem] h-px w-18 -translate-y-1/2 bg-gradient-to-r from-sky-300/55 to-transparent" />
 
-  <div className="iqm-data-pulse absolute left-1/2 top-10 h-12 w-12 -translate-x-1/2 rounded-full border border-cyan-300/35 bg-cyan-300/10 shadow-[0_0_30px_rgba(34,211,238,0.22)]" />
-</div>
-<div className="absolute bottom-[-8rem] right-[-8rem] -z-10 h-[26rem] w-[26rem] rounded-full bg-blue-500/10 blur-[120px]" />
+            <div className="iqm-data-pulse absolute left-1/2 top-10 h-12 w-12 -translate-x-1/2 rounded-full border border-cyan-300/35 bg-cyan-300/10 shadow-[0_0_30px_rgba(34,211,238,0.22)]" />
+          </div>
+          <div className="absolute bottom-[-8rem] right-[-8rem] -z-10 h-[26rem] w-[26rem] rounded-full bg-blue-500/10 blur-[120px]" />
 
           {heroShapes.map((shape, index) => (
             <span
@@ -562,7 +561,7 @@ export default function HomePage() {
           ))}
           <HeroSignalParticles />
 
-         <PublicSiteNav />
+          <PublicSiteNav />
 
           <div className="relative z-10 mx-auto grid max-w-7xl items-center gap-12 px-6 pb-24 pt-14 lg:grid-cols-[1.05fr_0.95fr] lg:pb-32 lg:pt-20">
             <div>
@@ -580,21 +579,30 @@ export default function HomePage() {
               </p>
 
               <div className="mt-9 flex flex-col gap-4 sm:flex-row sm:flex-wrap">
-  <MagneticLink className={primaryButtonClassName} href="/register">
-    Create account
-    <ArrowRight size={17} strokeWidth={2.4} />
-  </MagneticLink>
+                <MagneticLink
+                  className={primaryButtonClassName}
+                  href="/register"
+                >
+                  Create account
+                  <ArrowRight size={17} strokeWidth={2.4} />
+                </MagneticLink>
 
-  <MagneticLink className={secondaryButtonClassName} href="/employers/apply">
-    Request employer access
-    <ChevronRight size={17} strokeWidth={2.4} />
-  </MagneticLink>
+                <MagneticLink
+                  className={secondaryButtonClassName}
+                  href="/employers/apply"
+                >
+                  Request employer access
+                  <ChevronRight size={17} strokeWidth={2.4} />
+                </MagneticLink>
 
-  <MagneticLink className={secondaryButtonClassName} href="#platform">
-    Explore platform
-    <ChevronRight size={17} strokeWidth={2.4} />
-  </MagneticLink>
-</div>
+                <MagneticLink
+                  className={secondaryButtonClassName}
+                  href="#platform"
+                >
+                  Explore platform
+                  <ChevronRight size={17} strokeWidth={2.4} />
+                </MagneticLink>
+              </div>
 
               <div className="mt-10 grid max-w-3xl gap-3 sm:grid-cols-3">
                 {[
@@ -619,10 +627,10 @@ export default function HomePage() {
             </div>
 
             <div className="relative">
-             <div className="absolute -inset-4 -z-10 rounded-[2.5rem] bg-cyan-400/8 blur-2xl" />
+              <div className="absolute -inset-4 -z-10 rounded-[2.5rem] bg-cyan-400/8 blur-2xl" />
 
               <div
-               className="iqm-glass-card iqm-scan-card rounded-[2rem] border border-cyan-300/15 bg-[#0a102c]/85 p-4 shadow-[0_28px_90px_rgba(0,0,0,0.42)] backdrop-blur-xl"
+                className="iqm-glass-card iqm-scan-card rounded-[2rem] border border-cyan-300/15 bg-[#0a102c]/85 p-4 shadow-[0_28px_90px_rgba(0,0,0,0.42)] backdrop-blur-xl"
                 onMouseMove={handleCardPointerMove}
               >
                 <div className="rounded-[1.5rem] border border-cyan-300/10 bg-[#060b22]/95 p-5">
@@ -737,12 +745,12 @@ export default function HomePage() {
         </section>
 
         <section
-  className={`${sectionPanelClassName} relative overflow-hidden`}
-  id="platform"
->
-  <AmbientSignalConduit className="right-8 top-8 rotate-6 opacity-60" />
+          className={`${sectionPanelClassName} relative overflow-hidden`}
+          id="platform"
+        >
+          <AmbientSignalConduit className="right-8 top-8 rotate-6 opacity-60" />
 
-  <div className="relative z-10 mx-auto max-w-7xl px-6 py-24">
+          <div className="relative z-10 mx-auto max-w-7xl px-6 py-24">
             <Reveal>
               <SectionHeading
                 eyebrow="Platform"
@@ -830,7 +838,7 @@ export default function HomePage() {
 
         <section className={sectionPanelClassName} id="scrollytelling">
           <AmbientSignalConduit className="right-10 top-10 -rotate-6 opacity-65" />
-<AmbientSignalConduit className="bottom-16 left-10 rotate-3 opacity-45" />
+          <AmbientSignalConduit className="bottom-16 left-10 rotate-3 opacity-45" />
           <div className="relative mx-auto grid max-w-7xl gap-12 px-6 py-24 lg:grid-cols-[0.95fr_1.05fr]">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(45,212,255,0.14),_transparent_42%)]" />
             <div className="relative lg:sticky lg:top-24 lg:h-fit">
@@ -842,10 +850,10 @@ export default function HomePage() {
                   The page builds like the product: signal by signal.
                 </h2>
                 <p className="mt-5 text-base leading-8 text-slate-300">
-                  As visitors scroll, the assessment system unfolds from
-                  session capture to scoring, interpretation, and governance.
-                  This gives the homepage a GitHub-style progressive build feel
-                  without sacrificing performance.
+                  As visitors scroll, the assessment system unfolds from session
+                  capture to scoring, interpretation, and governance. This gives
+                  the homepage a GitHub-style progressive build feel without
+                  sacrificing performance.
                 </p>
               </Reveal>
 
@@ -896,12 +904,12 @@ export default function HomePage() {
         </section>
 
         <section
-  className={`${sectionPanelClassName} relative overflow-hidden`}
-  id="governance"
->
-  <AmbientSignalConduit className="right-16 top-12 rotate-2 opacity-55" />
+          className={`${sectionPanelClassName} relative overflow-hidden`}
+          id="governance"
+        >
+          <AmbientSignalConduit className="right-16 top-12 rotate-2 opacity-55" />
 
-  <div className="relative z-10 mx-auto grid max-w-7xl gap-12 px-6 py-24 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+          <div className="relative z-10 mx-auto grid max-w-7xl gap-12 px-6 py-24 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
             <Reveal>
               <div>
                 <p className="text-sm font-bold uppercase tracking-[0.28em] text-cyan-300">
@@ -1032,31 +1040,31 @@ export default function HomePage() {
                 </div>
               </div>
               <p className="mt-5 max-w-xl text-sm leading-7 text-blue-50/50">
-                Provisional scoring outputs are not final clinical,
-                educational, or employment decisions. Formal norming and
-                validation are required before high-stakes interpretation.
+                Provisional scoring outputs are not final clinical, educational,
+                or employment decisions. Formal norming and validation are
+                required before high-stakes interpretation.
               </p>
             </div>
 
-<div className="flex flex-wrap gap-3">
-  <Link
-    className="rounded-full border border-white/10 px-5 py-3 text-sm font-bold text-blue-50/75 transition hover:bg-white/10 hover:text-white"
-    href="/login"
-  >
-    Sign in
-  </Link>
+            <div className="flex flex-wrap gap-3">
+              <Link
+                className="rounded-full border border-white/10 px-5 py-3 text-sm font-bold text-blue-50/75 transition hover:bg-white/10 hover:text-white"
+                href="/login"
+              >
+                Sign in
+              </Link>
 
-  <Link
-    className="rounded-full border border-white/10 px-5 py-3 text-sm font-bold text-blue-50/75 transition hover:bg-white/10 hover:text-white"
-    href="/employers/apply"
-  >
-    Request employer access
-  </Link>
+              <Link
+                className="rounded-full border border-white/10 px-5 py-3 text-sm font-bold text-blue-50/75 transition hover:bg-white/10 hover:text-white"
+                href="/employers/apply"
+              >
+                Request employer access
+              </Link>
 
-  <Link className={primaryButtonClassName} href="/register">
-    Create account
-  </Link>
-</div>
+              <Link className={primaryButtonClassName} href="/register">
+                Create account
+              </Link>
+            </div>
           </div>
         </footer>
       </div>

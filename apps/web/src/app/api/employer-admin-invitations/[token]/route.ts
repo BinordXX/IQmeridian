@@ -13,12 +13,12 @@ export async function GET(_request: Request, context: RouteContext) {
 
   const response = await fetch(
     `${getApiBaseUrl()}/auth/organisation-admin-invitations/${encodeURIComponent(
-      token,
+      token
     )}`,
     {
       method: 'GET',
       cache: 'no-store',
-    },
+    }
   );
 
   const data = (await response.json().catch(() => ({}))) as unknown;

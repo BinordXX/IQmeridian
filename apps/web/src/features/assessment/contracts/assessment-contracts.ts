@@ -81,6 +81,8 @@ export type InvitationValidationResult = {
 
 export type CreateAssessmentSessionInput = {
   invitationToken: string;
+  applicantName?: string;
+  consentAccepted?: boolean;
 };
 
 export type CreateAssessmentSessionResult = {
@@ -88,6 +90,7 @@ export type CreateAssessmentSessionResult = {
   assessmentId: string;
   status: AssessmentSessionStatus;
   expiresAt?: string;
+  sessionAccessToken?: string | null;
 };
 
 export type AssessmentSessionTiming = {

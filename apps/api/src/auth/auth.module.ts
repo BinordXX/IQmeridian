@@ -9,7 +9,6 @@ import { TokenService } from './token.service';
 import { AuthThrottleService } from './auth-throttle.service';
 import { EmailModule } from '../email/email.module';
 
-
 @Global()
 @Module({
   imports: [PrismaModule, VerificationTokensModule, EmailModule],
@@ -21,7 +20,6 @@ import { EmailModule } from '../email/email.module';
     TokenService,
     JwtAuthGuard,
     VerificationTokensModule,
-
   ],
   exports: [
     AuthService,

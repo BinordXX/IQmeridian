@@ -68,5 +68,7 @@ export const listEmployerParticipants = async (): Promise<
     throw new Error(message);
   }
 
-  return Array.isArray(payload) ? (payload as EmployerParticipantSummary[]) : [];
+  return Array.isArray(payload)
+    ? (payload as EmployerParticipantSummary[])
+    : [];
 };

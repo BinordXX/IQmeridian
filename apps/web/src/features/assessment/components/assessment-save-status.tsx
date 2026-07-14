@@ -12,12 +12,12 @@ export const AssessmentSaveStatus = ({
   lastSavedAt,
 }: AssessmentSaveStatusProps) => {
   if (status === 'saving') {
-    return <p className="text-sm font-medium text-slate-500">Saving...</p>;
+    return <p className="text-sm font-bold text-cyan-100">Saving...</p>;
   }
 
   if (status === 'saved' && lastSavedAt) {
     return (
-      <p className="text-sm font-medium text-slate-500">
+      <p className="text-sm font-bold text-emerald-100">
         Saved at {new Date(lastSavedAt).toLocaleTimeString()}
       </p>
     );
@@ -25,11 +25,11 @@ export const AssessmentSaveStatus = ({
 
   if (status === 'error') {
     return (
-      <p className="text-sm font-medium text-red-700">
+      <p className="text-sm font-bold text-red-100">
         Save failed. Check your connection.
       </p>
     );
   }
 
-  return <p className="text-sm font-medium text-slate-500">Ready</p>;
+  return <p className="text-sm font-bold text-slate-400">Ready</p>;
 };

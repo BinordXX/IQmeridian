@@ -21,7 +21,8 @@ import { PsychometricsModule } from './psychometrics/psychometrics.module';
 import { AuthModule } from './auth/auth.module';
 import { ConsumerAssessmentsModule } from './consumer-assessments/consumer-assessments.module';
 import { ContactModule } from './contact/contact.module';
-import { AccountModule } from './account/account.module';import { OrganisationAccessRequestsModule } from './organisation-access-requests/organisation-access-requests.module';
+import { AccountModule } from './account/account.module';
+import { OrganisationAccessRequestsModule } from './organisation-access-requests/organisation-access-requests.module';
 import { EmailModule } from './email/email.module';
 import { VerificationTokensModule } from './verification-tokens/verification-tokens.module';
 @Module({
@@ -48,9 +49,8 @@ import { VerificationTokensModule } from './verification-tokens/verification-tok
     AccountModule,
     OrganisationParticipantsModule,
     OrganisationAccessRequestsModule,
-    EmailModule,  
+    EmailModule,
     VerificationTokensModule,
-
   ],
   controllers: [AppController],
   providers: [AppService],

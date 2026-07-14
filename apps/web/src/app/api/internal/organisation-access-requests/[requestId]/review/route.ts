@@ -19,13 +19,13 @@ export async function PATCH(request: Request, context: RouteContext) {
       {
         message: 'Invalid organisation access request review payload.',
       },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
   const response = await fetch(
     `${getApiBaseUrl()}/organisation-access-requests/${encodeURIComponent(
-      requestId,
+      requestId
     )}/review`,
     {
       method: 'PATCH',
@@ -35,7 +35,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       },
       body: JSON.stringify(payload),
       cache: 'no-store',
-    },
+    }
   );
 
   const data = (await response.json().catch(() => ({}))) as unknown;

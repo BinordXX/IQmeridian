@@ -80,8 +80,8 @@ export default async function CandidateReportPage({
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 px-6 py-12">
-      <div className="mx-auto max-w-4xl">
+    <main className="min-h-screen bg-[#020817] px-4 py-6 text-white sm:px-6 sm:py-12">
+      <div className="mx-auto w-full max-w-4xl">
         <CandidateResultSummary
           overallBand={summary.overallBand ?? 'Not available'}
           abstractReasoningBand={

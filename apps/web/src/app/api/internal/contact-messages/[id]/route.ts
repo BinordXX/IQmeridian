@@ -37,7 +37,7 @@ export async function GET(_request: Request, context: RouteContext) {
       },
       {
         status: 403,
-      },
+      }
     );
   }
 
@@ -51,7 +51,7 @@ export async function GET(_request: Request, context: RouteContext) {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
-      },
+      }
     );
 
     const payload = await parseApiResponse(response);
@@ -66,7 +66,7 @@ export async function GET(_request: Request, context: RouteContext) {
       },
       {
         status: 502,
-      },
+      }
     );
   }
 }

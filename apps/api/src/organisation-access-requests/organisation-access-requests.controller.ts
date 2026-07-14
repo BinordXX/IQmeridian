@@ -68,7 +68,7 @@ export class OrganisationAccessRequestsController {
       request.user,
     );
   }
-    @Post(':id/convert')
+  @Post(':id/convert')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.PLATFORM_ADMIN)
   convert(
@@ -80,7 +80,7 @@ export class OrganisationAccessRequestsController {
       request.user,
     );
   }
-    @Post(':id/resend-admin-invitation')
+  @Post(':id/resend-admin-invitation')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.PLATFORM_ADMIN)
   resendAdminInvitationEmail(
@@ -93,4 +93,3 @@ export class OrganisationAccessRequestsController {
     );
   }
 }
-

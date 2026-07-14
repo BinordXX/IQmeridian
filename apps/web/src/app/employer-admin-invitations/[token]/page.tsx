@@ -44,11 +44,11 @@ const formatDateTime = (value: string) => {
 const getInvitation = async (token: string) => {
   const response = await fetch(
     `${getApiBaseUrl()}/auth/organisation-admin-invitations/${encodeURIComponent(
-      token,
+      token
     )}`,
     {
       cache: 'no-store',
-    },
+    }
   );
 
   const payload = (await response.json().catch(() => ({}))) as
@@ -64,8 +64,8 @@ const getInvitation = async (token: string) => {
         payload as {
           message?: string | string[];
           error?: string;
-        },
-      ),
+        }
+      )
     );
   }
 

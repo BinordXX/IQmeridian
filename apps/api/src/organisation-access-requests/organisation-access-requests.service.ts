@@ -189,42 +189,41 @@ export class OrganisationAccessRequestsService {
       );
     }
 
-    const updatedRequest =
-      await this.prisma.organisationAccessRequest.update({
-        where: {
-          id,
-        },
-        data: {
-          status: dto.status,
-          reviewedAt: new Date(),
-          reviewedById: user.id,
-          reviewNotes: this.toOptionalString(dto.reviewNotes),
-        },
-        include: {
-          reviewedBy: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              role: true,
-            },
-          },
-          adminInvitation: {
-            select: {
-              id: true,
-              email: true,
-              role: true,
-              status: true,
-              emailDeliveryStatus: true,
-              lastEmailSentAt: true,
-              lastEmailFailure: true,
-              expiresAt: true,
-              usedAt: true,
-              createdAt: true,
-            },
+    const updatedRequest = await this.prisma.organisationAccessRequest.update({
+      where: {
+        id,
+      },
+      data: {
+        status: dto.status,
+        reviewedAt: new Date(),
+        reviewedById: user.id,
+        reviewNotes: this.toOptionalString(dto.reviewNotes),
+      },
+      include: {
+        reviewedBy: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
           },
         },
-      });
+        adminInvitation: {
+          select: {
+            id: true,
+            email: true,
+            role: true,
+            status: true,
+            emailDeliveryStatus: true,
+            lastEmailSentAt: true,
+            lastEmailFailure: true,
+            expiresAt: true,
+            usedAt: true,
+            createdAt: true,
+          },
+        },
+      },
+    });
 
     await this.auditService.record({
       action: 'ORGANISATION_ACCESS_REQUEST_REVIEWED',
@@ -464,7 +463,8 @@ export class OrganisationAccessRequestsService {
     }
 
     if (
-      request.adminInvitation.status !== OrganisationAdminInvitationStatus.PENDING
+      request.adminInvitation.status !==
+      OrganisationAdminInvitationStatus.PENDING
     ) {
       throw new BadRequestException(
         'Only pending employer-admin invitations can be resent.',

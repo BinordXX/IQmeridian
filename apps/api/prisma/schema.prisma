@@ -631,7 +631,9 @@ model Invitation {
   createdAt       DateTime                 @default(now())
   expiresAt       DateTime?
   usedAt          DateTime?
-
+  emailDeliveryStatus EmailDeliveryStatus @default(NOT_SENT)
+  lastEmailSentAt     DateTime?
+  lastEmailFailure    String?
   sessions Session[]
 verificationTokens VerificationToken[]
   @@index([participantId])
@@ -639,14 +641,18 @@ verificationTokens VerificationToken[]
 
 model Session {
   id                         String                   @id @default(cuid())
-  userId                     String
-  user                       User                     @relation(fields: [userId], references: [id])
+  userId                     String?
+  user                       User?                    @relation(fields: [userId], references: [id])
   campaignId                 String?
   campaign                   Campaign?                @relation(fields: [campaignId], references: [id])
   invitationId               String?
   invitation                 Invitation?              @relation(fields: [invitationId], references: [id])
   participantId              String?
   participant                OrganisationParticipant? @relation(fields: [participantId], references: [id], onDelete: SetNull)
+  applicantEmail             String?
+  applicantName              String?
+  consentAcceptedAt          DateTime?
+  sessionAccessTokenHash     String?                  @unique
   assessmentFormId           String
   assessmentForm             AssessmentForm           @relation(fields: [assessmentFormId], references: [id])
   assessmentFormVersion      Int                      @default(1)
@@ -671,6 +677,7 @@ model Session {
   report                  Report[]
 
   @@index([participantId])
+  @@index([applicantEmail])
 }
 
 model Response {

@@ -142,12 +142,16 @@ export class AccountService {
       },
     });
 
-    await this.recordAudit('account.notification_preferences_updated', user.id, {
-      securityAlerts: preferences.securityAlerts,
-      assessmentReminders: preferences.assessmentReminders,
-      productUpdates: preferences.productUpdates,
-      researchGovernanceUpdates: preferences.researchGovernanceUpdates,
-    });
+    await this.recordAudit(
+      'account.notification_preferences_updated',
+      user.id,
+      {
+        securityAlerts: preferences.securityAlerts,
+        assessmentReminders: preferences.assessmentReminders,
+        productUpdates: preferences.productUpdates,
+        researchGovernanceUpdates: preferences.researchGovernanceUpdates,
+      },
+    );
 
     return {
       preferences,
@@ -423,11 +427,7 @@ export class AccountService {
     };
   }
 
-  private async recordAudit(
-    action: string,
-    userId: string,
-    metadata: unknown,
-  ) {
+  private async recordAudit(action: string, userId: string, metadata: unknown) {
     await this.prisma.auditLog.create({
       data: {
         action,

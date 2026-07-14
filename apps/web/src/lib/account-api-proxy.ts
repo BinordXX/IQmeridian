@@ -57,7 +57,7 @@ export async function parseRequestJson(request: Request) {
         },
         {
           status: 400,
-        },
+        }
       ),
     };
   }
@@ -74,7 +74,7 @@ export async function proxyAccountApi(input: ProxyAccountApiInput) {
       },
       {
         status: 401,
-      },
+      }
     );
   }
 
@@ -105,7 +105,7 @@ export async function proxyAccountApi(input: ProxyAccountApiInput) {
       },
       {
         status: 502,
-      },
+      }
     );
   }
 }

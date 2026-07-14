@@ -82,8 +82,9 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
         }),
       });
 
-      const payload = (await response.json().catch(() => ({}))) as
-        ResetPasswordResponse;
+      const payload = (await response
+        .json()
+        .catch(() => ({}))) as ResetPasswordResponse;
 
       if (!response.ok) {
         throw new Error(getErrorMessage(payload));
@@ -94,7 +95,7 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
       setConfirmPassword('');
     } catch (error) {
       setErrorMessage(
-        error instanceof Error ? error.message : 'Password reset failed.',
+        error instanceof Error ? error.message : 'Password reset failed.'
       );
     } finally {
       setIsSubmitting(false);

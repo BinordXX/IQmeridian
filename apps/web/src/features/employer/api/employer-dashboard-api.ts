@@ -19,6 +19,9 @@ export type EmployerInvitationSummary = {
   createdAt?: string;
   expiresAt?: string | null;
   usedAt?: string | null;
+  emailDeliveryStatus?: 'NOT_SENT' | 'SENT' | 'FAILED' | string;
+  lastEmailSentAt?: string | null;
+  lastEmailFailure?: string | null;
 };
 
 export type EmployerCampaignSummary = {
@@ -287,7 +290,7 @@ export const createEmployerCampaign = async (
     throw new Error(
       message ??
         payload.error ??
-        `Campaign creation failed with status ${response.status}`,
+        `Campaign creation failed with status ${response.status}`
     );
   }
 

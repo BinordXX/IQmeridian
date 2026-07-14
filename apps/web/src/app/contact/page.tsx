@@ -7,7 +7,8 @@ import { ContactForm } from './_components/contact-form';
 
 export const metadata = {
   title: 'Contact IQMeridian',
-  description: 'Contact IQMeridian for product, employer, or research enquiries.',
+  description:
+    'Contact IQMeridian for product, employer, or research enquiries.',
 };
 
 const contactRoutes = [

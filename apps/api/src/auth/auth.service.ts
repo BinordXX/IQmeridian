@@ -19,8 +19,6 @@ import {
   UserStatus,
   OrganisationAdminInvitationStatus,
   VerificationTokenPurpose,
-  
-  
 } from '@prisma/client';
 
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
@@ -29,7 +27,6 @@ import { EmailService } from '../email/email.service';
 import { VerificationTokensService } from '../verification-tokens/verification-tokens.service';
 import { ResendEmailVerificationDto } from './dto/resend-email-verification.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
-
 
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthThrottleService } from './auth-throttle.service';
@@ -43,7 +40,6 @@ import { RegisterDto } from './dto/register.dto';
 import { PasswordService } from './password.service';
 import { RequestUser } from './request-user.type';
 import { TokenService } from './token.service';
-
 
 type RequestMetadata = {
   ipAddress?: string;
@@ -101,7 +97,7 @@ export class AuthService {
     private readonly emailService: EmailService,
   ) {}
 
-      async getOrganisationAdminInvitationByToken(token: string) {
+  async getOrganisationAdminInvitationByToken(token: string) {
     const tokenHash = this.verificationTokensService.hashRawToken(token);
 
     const verificationToken = await this.prisma.verificationToken.findUnique({
@@ -128,7 +124,9 @@ export class AuthService {
         VerificationTokenPurpose.ORGANISATION_ADMIN_INVITATION ||
       !verificationToken.organisationAdminInvitation
     ) {
-      throw new BadRequestException('Employer admin invitation token is invalid.');
+      throw new BadRequestException(
+        'Employer admin invitation token is invalid.',
+      );
     }
 
     const invitation = verificationToken.organisationAdminInvitation;
@@ -155,11 +153,15 @@ export class AuthService {
           },
         });
 
-      await this.recordAudit('auth.organisation_admin_invitation_expired', null, {
-        invitationId: expiredInvitation.id,
-        organisationId: expiredInvitation.organisationId,
-        email: expiredInvitation.email,
-      });
+      await this.recordAudit(
+        'auth.organisation_admin_invitation_expired',
+        null,
+        {
+          invitationId: expiredInvitation.id,
+          organisationId: expiredInvitation.organisationId,
+          email: expiredInvitation.email,
+        },
+      );
 
       return {
         id: expiredInvitation.id,
@@ -172,7 +174,9 @@ export class AuthService {
     }
 
     if (verificationToken.revokedAt) {
-      throw new BadRequestException('Employer admin invitation has been revoked.');
+      throw new BadRequestException(
+        'Employer admin invitation has been revoked.',
+      );
     }
 
     if (verificationToken.usedAt) {
@@ -191,7 +195,7 @@ export class AuthService {
     };
   }
 
-     async acceptOrganisationAdminInvitation(
+  async acceptOrganisationAdminInvitation(
     token: string,
     dto: AcceptOrganisationAdminInvitationDto,
     metadata: RequestMetadata,
@@ -209,7 +213,9 @@ export class AuthService {
     const invitation = verificationToken.organisationAdminInvitation;
 
     if (!invitation) {
-      throw new BadRequestException('Employer admin invitation token is invalid.');
+      throw new BadRequestException(
+        'Employer admin invitation token is invalid.',
+      );
     }
 
     const email = this.normaliseEmail(invitation.email);
@@ -318,8 +324,8 @@ export class AuthService {
           },
         });
 
-        const invitationClaim =
-          await tx.organisationAdminInvitation.updateMany({
+        const invitationClaim = await tx.organisationAdminInvitation.updateMany(
+          {
             where: {
               id: invitation.id,
               status: OrganisationAdminInvitationStatus.PENDING,
@@ -330,7 +336,8 @@ export class AuthService {
               acceptedById: user.id,
               usedAt: new Date(),
             },
-          });
+          },
+        );
 
         if (invitationClaim.count !== 1) {
           throw new ConflictException(
@@ -375,8 +382,7 @@ export class AuthService {
     }
   }
 
-
-    async register(
+  async register(
     dto: RegisterDto,
     metadata: RequestMetadata,
   ): Promise<RegistrationVerificationResponse> {
@@ -491,7 +497,7 @@ export class AuthService {
     }
   }
 
-    async verifyEmail(dto: VerifyEmailDto): Promise<EmailVerificationResponse> {
+  async verifyEmail(dto: VerifyEmailDto): Promise<EmailVerificationResponse> {
     const verificationToken =
       await this.verificationTokensService.findUsableToken({
         rawToken: dto.token,
@@ -914,7 +920,7 @@ export class AuthService {
       throw error;
     }
   }
-  
+
   async registerCandidate(
     dto: RegisterCandidateDto,
     metadata: RequestMetadata,
@@ -1143,17 +1149,17 @@ export class AuthService {
         identifier: throttleIdentifier,
       });
 
-          if (user.status === UserStatus.PENDING_EMAIL_VERIFICATION) {
-      await this.recordAudit('auth.login_failed', user.id, {
-        provider: AuthProvider.LOCAL,
-        reason: 'EMAIL_NOT_VERIFIED',
-        status: user.status,
-      });
+      if (user.status === UserStatus.PENDING_EMAIL_VERIFICATION) {
+        await this.recordAudit('auth.login_failed', user.id, {
+          provider: AuthProvider.LOCAL,
+          reason: 'EMAIL_NOT_VERIFIED',
+          status: user.status,
+        });
 
-      throw new ForbiddenException(
-        'Email verification is required before sign in.',
-      );
-    }
+        throw new ForbiddenException(
+          'Email verification is required before sign in.',
+        );
+      }
 
       await this.recordAudit('auth.login_failed', user.id, {
         provider: AuthProvider.LOCAL,
@@ -1437,9 +1443,11 @@ export class AuthService {
     };
   }
 
-    async changePassword(user: RequestUser, dto: ChangePasswordDto) {
+  async changePassword(user: RequestUser, dto: ChangePasswordDto) {
     if (dto.newPassword !== dto.confirmNewPassword) {
-      throw new BadRequestException('New password confirmation does not match.');
+      throw new BadRequestException(
+        'New password confirmation does not match.',
+      );
     }
 
     if (dto.currentPassword === dto.newPassword) {
@@ -1473,11 +1481,10 @@ export class AuthService {
       );
     }
 
-    const currentPasswordIsValid =
-      await this.passwordService.verifyPassword(
-        dto.currentPassword,
-        freshUser.passwordHash,
-      );
+    const currentPasswordIsValid = await this.passwordService.verifyPassword(
+      dto.currentPassword,
+      freshUser.passwordHash,
+    );
 
     if (!currentPasswordIsValid) {
       throw new UnauthorizedException('Current password is incorrect.');
@@ -1539,9 +1546,9 @@ export class AuthService {
       throw new ForbiddenException('This account is not active.');
     }
 
-return {
-  user: await this.toSafeUser(freshUser),
-};
+    return {
+      user: await this.toSafeUser(freshUser),
+    };
   }
 
   private async createAuthenticatedSession(input: {
@@ -1585,41 +1592,41 @@ return {
     });
 
     return {
-  user: await this.toSafeUser(input.user),
-  accessToken,
-  refreshToken: input.refreshToken,
-  accessTokenExpiresAt: this.tokenService.getAccessTokenExpiresAt(),
-  refreshTokenExpiresAt: input.refreshTokenExpiresAt,
-};
+      user: await this.toSafeUser(input.user),
+      accessToken,
+      refreshToken: input.refreshToken,
+      accessTokenExpiresAt: this.tokenService.getAccessTokenExpiresAt(),
+      refreshTokenExpiresAt: input.refreshTokenExpiresAt,
+    };
   }
 
-private async toSafeUser(user: User): Promise<SafeUser> {
-  const organisation = user.organisationId
-    ? await this.prisma.organisation.findUnique({
-        where: {
-          id: user.organisationId,
-        },
-        select: {
-          id: true,
-          name: true,
-        },
-      })
-    : null;
+  private async toSafeUser(user: User): Promise<SafeUser> {
+    const organisation = user.organisationId
+      ? await this.prisma.organisation.findUnique({
+          where: {
+            id: user.organisationId,
+          },
+          select: {
+            id: true,
+            name: true,
+          },
+        })
+      : null;
 
-  return {
-    id: user.id,
-    email: user.email,
-    name: user.name,
-    role: user.role,
-    status: user.status,
-    organisationId: user.organisationId,
-    organisationName: organisation?.name ?? null,
-    emailVerifiedAt: user.emailVerifiedAt,
-    lastLoginAt: user.lastLoginAt,
-    createdAt: user.createdAt,
-    updatedAt: user.updatedAt,
-  };
-}
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      status: user.status,
+      organisationId: user.organisationId,
+      organisationName: organisation?.name ?? null,
+      emailVerifiedAt: user.emailVerifiedAt,
+      lastLoginAt: user.lastLoginAt,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    };
+  }
 
   private async sendEmailVerification(input: {
     email: string;

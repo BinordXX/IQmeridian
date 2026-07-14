@@ -19,7 +19,9 @@ const getErrorMessage = (payload: {
     return payload.message.join(' ');
   }
 
-  return payload.message ?? payload.error ?? 'The request could not be completed.';
+  return (
+    payload.message ?? payload.error ?? 'The request could not be completed.'
+  );
 };
 
 export function EmailVerificationPanel({
@@ -27,12 +29,13 @@ export function EmailVerificationPanel({
   token,
 }: EmailVerificationPanelProps) {
   const [email, setEmail] = useState(initialEmail);
-  const [verificationState, setVerificationState] =
-    useState<VerificationState>(token ? 'verifying' : 'idle');
+  const [verificationState, setVerificationState] = useState<VerificationState>(
+    token ? 'verifying' : 'idle'
+  );
   const [message, setMessage] = useState<string | null>(
     token
       ? 'Verifying your email address...'
-      : 'Check your inbox for the verification email. You can request a new link below if needed.',
+      : 'Check your inbox for the verification email. You can request a new link below if needed.'
   );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isResending, setIsResending] = useState(false);
@@ -72,9 +75,7 @@ export function EmailVerificationPanel({
       } catch (error) {
         setVerificationState('failed');
         setErrorMessage(
-          error instanceof Error
-            ? error.message
-            : 'Email verification failed.',
+          error instanceof Error ? error.message : 'Email verification failed.'
         );
         setMessage(null);
       }
@@ -118,14 +119,14 @@ export function EmailVerificationPanel({
       }
 
       setMessage(
-        'If this email still needs verification, a new verification email has been sent.',
+        'If this email still needs verification, a new verification email has been sent.'
       );
       setVerificationState('idle');
     } catch (error) {
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : 'Verification email could not be resent.',
+          : 'Verification email could not be resent.'
       );
     } finally {
       setIsResending(false);

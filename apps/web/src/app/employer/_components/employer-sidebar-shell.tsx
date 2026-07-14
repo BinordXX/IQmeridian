@@ -113,9 +113,9 @@ export function EmployerSidebarShell({
   const displayName = user.name || user.email || 'Employer admin';
   const role = user.role ?? 'EMPLOYER_ADMIN';
   const roleLabel = role.replace('_', ' ');
-const organisationName =
-  user.organisationName?.trim() || 'Organisation name unavailable';
-const organisationId = user.organisationId?.trim() || 'No organisation ID';
+  const organisationName =
+    user.organisationName?.trim() || 'Organisation name unavailable';
+  const organisationId = user.organisationId?.trim() || 'No organisation ID';
 
   return (
     <div className="relative min-h-screen overflow-x-hidden bg-[#020817] text-white selection:bg-cyan-400/30 selection:text-white">
@@ -173,11 +173,11 @@ const organisationId = user.organisationId?.trim() || 'No organisation ID';
                 Associated organisation
               </p>
               <p className="mt-1 truncate text-sm font-bold text-slate-200">
-  {organisationName}
-</p>
-<p className="mt-1 truncate font-mono text-[0.68rem] text-slate-500">
-  {organisationId}
-</p>
+                {organisationName}
+              </p>
+              <p className="mt-1 truncate font-mono text-[0.68rem] text-slate-500">
+                {organisationId}
+              </p>
             </div>
           </div>
 
@@ -239,12 +239,15 @@ const organisationId = user.organisationId?.trim() || 'No organisation ID';
                 Employer campaign and reporting workspace
               </p>
               <p className="mt-1 text-sm text-slate-400">
-                Manage campaigns, organisation participants, reports, and exports.
+                Manage campaigns, organisation participants, reports, and
+                exports.
               </p>
               <p className="mt-1 text-xs font-bold text-slate-500">
                 Organisation:{' '}
-<span className="text-slate-300">{organisationName}</span>
-<span className="ml-2 font-mono text-slate-600">{organisationId}</span>
+                <span className="text-slate-300">{organisationName}</span>
+                <span className="ml-2 font-mono text-slate-600">
+                  {organisationId}
+                </span>
               </p>
             </div>
 

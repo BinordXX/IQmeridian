@@ -44,7 +44,7 @@ const createEmployerCampaignFromClient = async (input: {
     throw new Error(
       message ??
         payload.error ??
-        `Campaign creation failed with status ${response.status}`,
+        `Campaign creation failed with status ${response.status}`
     );
   }
 
@@ -60,7 +60,7 @@ export const EmployerCampaignCreateForm = ({
   const [name, setName] = useState('');
   const [roleContext, setRoleContext] = useState('');
   const [assessmentFormId, setAssessmentFormId] = useState(
-    activeForms[0]?.id ?? '',
+    activeForms[0]?.id ?? ''
   );
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -84,7 +84,7 @@ export const EmployerCampaignCreateForm = ({
 
     if (!assessmentFormId || !hasActiveForms || !selectedFormExists) {
       setErrorMessage(
-        'Select a valid active assessment form before creating this campaign.',
+        'Select a valid active assessment form before creating this campaign.'
       );
       return;
     }
@@ -109,7 +109,7 @@ export const EmployerCampaignCreateForm = ({
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : 'The campaign could not be created.',
+          : 'The campaign could not be created.'
       );
     } finally {
       setIsSaving(false);

@@ -191,16 +191,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const data = (await response.json()) as ApiAuthResponse;
 
         return {
-  id: data.user.id,
-  name: data.user.name,
-  email: data.user.email,
-  role: data.user.role,
-  organisationId: data.user.organisationId,
-  organisationName: data.user.organisationName,
-  accessToken: data.accessToken,
-  refreshToken: data.refreshToken,
-  accessTokenExpiresAt: data.accessTokenExpiresAt,
-};
+          id: data.user.id,
+          name: data.user.name,
+          email: data.user.email,
+          role: data.user.role,
+          organisationId: data.user.organisationId,
+          organisationName: data.user.organisationName,
+          accessToken: data.accessToken,
+          refreshToken: data.refreshToken,
+          accessTokenExpiresAt: data.accessTokenExpiresAt,
+        };
       },
     }),
   ],
@@ -240,17 +240,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
     async session({ session, token }) {
       session.user.id = token.sub ?? '';
-            session.user.name =
+      session.user.name =
         typeof token.name === 'string' ? token.name : session.user.name;
       session.user.email =
         typeof token.email === 'string' ? token.email : session.user.email;
       session.user.role = isAppRole(token.role) ? token.role : undefined;
       session.user.organisationId =
         typeof token.organisationId === 'string' ? token.organisationId : null;
-        session.user.organisationName =
-  typeof token.organisationName === 'string'
-    ? token.organisationName
-    : null;
+      session.user.organisationName =
+        typeof token.organisationName === 'string'
+          ? token.organisationName
+          : null;
 
       session.accessToken =
         typeof token.accessToken === 'string' ? token.accessToken : undefined;

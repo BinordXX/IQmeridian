@@ -19,6 +19,7 @@ type AssessmentRequestOptions = {
   method?: HttpMethod;
   body?: unknown;
   signal?: AbortSignal;
+  sessionAccessToken?: string | null;
 };
 
 type BackendInvitationValidationResult = {
@@ -74,6 +75,7 @@ type BackendCreateAssessmentSessionResult = {
   assessmentFormId?: string;
   assessmentId?: string;
   status?: string;
+  sessionAccessToken?: string | null;
 };
 
 export type AssessmentPsychometricDomainScore = {
@@ -154,36 +156,80 @@ export class AssessmentApiError extends Error {
 
 const assessmentApiBasePath = '/api/assessment';
 
+const sessionTokenStorageKey = (sessionId: string) => {
+  return `iqmeridian.assessment.session.${sessionId}.token`;
+};
+
+const getStoredSessionAccessToken = (sessionId: string): string | null => {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  return window.sessionStorage.getItem(sessionTokenStorageKey(sessionId));
+};
+
+const storeSessionAccessToken = (
+  sessionId: string,
+  sessionAccessToken?: string | null
+) => {
+  if (typeof window === 'undefined' || !sessionAccessToken) {
+    return;
+  }
+
+  window.sessionStorage.setItem(
+    sessionTokenStorageKey(sessionId),
+    sessionAccessToken
+  );
+};
+
 const assessmentEndpoints = {
   validateInvitation: (token: string) =>
     `/invitations/validate/${encodeURIComponent(token)}`,
 
   createSession: '/sessions/invitation',
 
-  startSession: (sessionId: string) =>
-    `/sessions/${encodeURIComponent(sessionId)}/start`,
+  startSession: (sessionId: string, hasSessionAccessToken = false) =>
+    hasSessionAccessToken
+      ? `/sessions/public/${encodeURIComponent(sessionId)}/start`
+      : `/sessions/${encodeURIComponent(sessionId)}/start`,
 
-  resumeSession: (sessionId: string) =>
-    `/sessions/${encodeURIComponent(sessionId)}/resume`,
+  resumeSession: (sessionId: string, hasSessionAccessToken = false) =>
+    hasSessionAccessToken
+      ? `/sessions/public/${encodeURIComponent(sessionId)}/resume`
+      : `/sessions/${encodeURIComponent(sessionId)}/resume`,
 
-  syncSessionState: (sessionId: string) =>
-    `/sessions/${encodeURIComponent(sessionId)}/state`,
+  syncSessionState: (sessionId: string, hasSessionAccessToken = false) =>
+    hasSessionAccessToken
+      ? `/sessions/public/${encodeURIComponent(sessionId)}/resume`
+      : `/sessions/${encodeURIComponent(sessionId)}/state`,
 
-  saveResponse: (sessionId: string, itemId: string) =>
-    `/responses/sessions/${encodeURIComponent(
-      sessionId
-    )}/items/${encodeURIComponent(itemId)}`,
+  saveResponse: (
+    sessionId: string,
+    itemId: string,
+    hasSessionAccessToken = false
+  ) =>
+    hasSessionAccessToken
+      ? `/responses/public/sessions/${encodeURIComponent(
+          sessionId
+        )}/items/${encodeURIComponent(itemId)}`
+      : `/responses/sessions/${encodeURIComponent(
+          sessionId
+        )}/items/${encodeURIComponent(itemId)}`,
 
-  getResponses: (sessionId: string) =>
-    `/responses/sessions/${encodeURIComponent(sessionId)}`,
+  getResponses: (sessionId: string, hasSessionAccessToken = false) =>
+    hasSessionAccessToken
+      ? `/responses/public/sessions/${encodeURIComponent(sessionId)}`
+      : `/responses/sessions/${encodeURIComponent(sessionId)}`,
 
-  finaliseSession: (sessionId: string) =>
-    `/sessions/${encodeURIComponent(sessionId)}/finalise`,
+  finaliseSession: (sessionId: string, hasSessionAccessToken = false) =>
+    hasSessionAccessToken
+      ? `/sessions/public/${encodeURIComponent(sessionId)}/finalise`
+      : `/sessions/${encodeURIComponent(sessionId)}/finalise`,
 
   scoreSession: (sessionId: string) =>
     `/sessions/${encodeURIComponent(sessionId)}/score`,
 
-    getPsychometricScore: (sessionId: string) =>
+  getPsychometricScore: (sessionId: string) =>
     `/sessions/${encodeURIComponent(sessionId)}/psychometric-score`,
 
   generateReport: (sessionId: string) =>
@@ -214,6 +260,11 @@ const assessmentRequest = async <T>(
     method: options.method ?? 'GET',
     headers: {
       'Content-Type': 'application/json',
+      ...(options.sessionAccessToken
+        ? {
+            'X-Assessment-Session-Token': options.sessionAccessToken,
+          }
+        : {}),
     },
     body: options.body === undefined ? undefined : JSON.stringify(options.body),
     credentials: 'include',
@@ -243,7 +294,7 @@ export const validateInvitation = async (
     { signal }
   );
 
-   if (invitation.status === 'PENDING' || invitation.status === 'ACCEPTED') {
+  if (invitation.status === 'PENDING' || invitation.status === 'ACCEPTED') {
     return {
       status: 'valid',
       token: invitation.token,
@@ -317,10 +368,11 @@ export const createAssessmentSession = async (
       session
     );
   }
-
+  storeSessionAccessToken(sessionId, session.sessionAccessToken);
   return {
     sessionId,
     assessmentId: session.assessmentId ?? session.assessmentFormId ?? '',
+    sessionAccessToken: session.sessionAccessToken ?? null,
     status:
       session.status === 'IN_PROGRESS'
         ? 'active'
@@ -334,11 +386,14 @@ export const startAssessmentSession = async (
   sessionId: string,
   signal?: AbortSignal
 ): Promise<AssessmentSessionPayload> => {
+  const sessionAccessToken = getStoredSessionAccessToken(sessionId);
+
   const payload = await assessmentRequest<AssessmentSessionPayload>(
-    assessmentEndpoints.startSession(sessionId),
+    assessmentEndpoints.startSession(sessionId, Boolean(sessionAccessToken)),
     {
       method: 'POST',
       signal,
+      sessionAccessToken,
     }
   );
 
@@ -351,11 +406,14 @@ export const resumeAssessmentSession = async (
   sessionId: string,
   signal?: AbortSignal
 ): Promise<AssessmentSessionPayload> => {
+  const sessionAccessToken = getStoredSessionAccessToken(sessionId);
+
   const payload = await assessmentRequest<AssessmentSessionPayload>(
-    assessmentEndpoints.resumeSession(sessionId),
+    assessmentEndpoints.resumeSession(sessionId, Boolean(sessionAccessToken)),
     {
       method: 'POST',
       signal,
+      sessionAccessToken,
     }
   );
 
@@ -368,10 +426,17 @@ export const syncAssessmentSessionState = async (
   sessionId: string,
   signal?: AbortSignal
 ): Promise<AssessmentSessionPayload> => {
+  const sessionAccessToken = getStoredSessionAccessToken(sessionId);
+
   const payload = await assessmentRequest<AssessmentSessionPayload>(
-    assessmentEndpoints.syncSessionState(sessionId),
+    assessmentEndpoints.syncSessionState(
+      sessionId,
+      Boolean(sessionAccessToken)
+    ),
     {
       signal,
+      sessionAccessToken,
+      method: Boolean(sessionAccessToken) ? 'POST' : 'GET',
     }
   );
 
@@ -385,14 +450,21 @@ export const saveAssessmentResponse = async (
   input: SaveAssessmentResponseInput,
   signal?: AbortSignal
 ): Promise<SaveAssessmentResponseResult> => {
+  const sessionAccessToken = getStoredSessionAccessToken(sessionId);
+
   const saved = await assessmentRequest<BackendSavedAssessmentResponse>(
-    assessmentEndpoints.saveResponse(sessionId, input.itemId),
+    assessmentEndpoints.saveResponse(
+      sessionId,
+      input.itemId,
+      Boolean(sessionAccessToken)
+    ),
     {
       method: 'POST',
       body: {
         answer: input.responseValue,
       },
       signal,
+      sessionAccessToken,
     }
   );
 
@@ -413,9 +485,14 @@ export const getAssessmentResponses = async (
   sessionId: string,
   signal?: AbortSignal
 ): Promise<AssessmentResponsesResult> => {
+  const sessionAccessToken = getStoredSessionAccessToken(sessionId);
+
   const responses = await assessmentRequest<BackendSavedAssessmentResponse[]>(
-    assessmentEndpoints.getResponses(sessionId),
-    { signal }
+    assessmentEndpoints.getResponses(sessionId, Boolean(sessionAccessToken)),
+    {
+      signal,
+      sessionAccessToken,
+    }
   );
 
   return {
@@ -434,11 +511,14 @@ export const finaliseAssessmentSession = async (
   sessionId: string,
   signal?: AbortSignal
 ): Promise<FinaliseAssessmentSessionResult> => {
+  const sessionAccessToken = getStoredSessionAccessToken(sessionId);
+
   return assessmentRequest<FinaliseAssessmentSessionResult>(
-    assessmentEndpoints.finaliseSession(sessionId),
+    assessmentEndpoints.finaliseSession(sessionId, Boolean(sessionAccessToken)),
     {
       method: 'POST',
       signal,
+      sessionAccessToken,
     }
   );
 };

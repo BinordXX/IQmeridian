@@ -114,14 +114,16 @@ const MAX_DISPLAYABLE_INTERVAL_WIDTH = 45;
 
 const formatStandardScoreInterval = (
   lowerTheta: number | null | undefined,
-  upperTheta: number | null | undefined,
+  upperTheta: number | null | undefined
 ) => {
   if (typeof lowerTheta !== 'number' || typeof upperTheta !== 'number') {
     return 'Not available';
   }
 
-  const lowerStandardScore = STANDARD_SCORE_MEAN + lowerTheta * STANDARD_SCORE_SD;
-  const upperStandardScore = STANDARD_SCORE_MEAN + upperTheta * STANDARD_SCORE_SD;
+  const lowerStandardScore =
+    STANDARD_SCORE_MEAN + lowerTheta * STANDARD_SCORE_SD;
+  const upperStandardScore =
+    STANDARD_SCORE_MEAN + upperTheta * STANDARD_SCORE_SD;
   const rawIntervalWidth = upperStandardScore - lowerStandardScore;
 
   if (
@@ -134,12 +136,12 @@ const formatStandardScoreInterval = (
 
   const clampedLower = Math.max(
     STANDARD_SCORE_MIN,
-    Math.min(STANDARD_SCORE_MAX, lowerStandardScore),
+    Math.min(STANDARD_SCORE_MAX, lowerStandardScore)
   );
 
   const clampedUpper = Math.max(
     STANDARD_SCORE_MIN,
-    Math.min(STANDARD_SCORE_MAX, upperStandardScore),
+    Math.min(STANDARD_SCORE_MAX, upperStandardScore)
   );
 
   return `${Math.round(clampedLower)}-${Math.round(clampedUpper)}`;
@@ -157,7 +159,7 @@ const getHighestValiditySeverity = (
         severity: string;
       }[]
     | null
-    | undefined,
+    | undefined
 ) => {
   if (!validityFlags?.length) {
     return null;
@@ -181,7 +183,7 @@ const getAttemptQualityLabel = (
         severity: string;
       }[]
     | null
-    | undefined,
+    | undefined
 ) => {
   const highestSeverity = getHighestValiditySeverity(validityFlags);
 
@@ -198,7 +200,7 @@ const getAttemptQualityDescription = (
         severity: string;
       }[]
     | null
-    | undefined,
+    | undefined
 ) => {
   const highestSeverity = getHighestValiditySeverity(validityFlags);
 
@@ -223,7 +225,7 @@ const getAttemptQualityClassName = (
         severity: string;
       }[]
     | null
-    | undefined,
+    | undefined
 ) => {
   const highestSeverity = getHighestValiditySeverity(validityFlags);
 
@@ -259,10 +261,10 @@ const getCurrentProfileSession = (sessions: ConsumerSessionSummary[]) => {
 
       return (
         getTimestampValue(
-          rightScore?.generatedAt ?? right.completedAt ?? right.updatedAt,
+          rightScore?.generatedAt ?? right.completedAt ?? right.updatedAt
         ) -
         getTimestampValue(
-          leftScore?.generatedAt ?? left.completedAt ?? left.updatedAt,
+          leftScore?.generatedAt ?? left.completedAt ?? left.updatedAt
         )
       );
     })[0];
@@ -272,7 +274,7 @@ const getStrongestDomain = (session: ConsumerSessionSummary | undefined) => {
   const domainScores = session?.psychometricScore?.domainScores ?? [];
 
   return [...domainScores].sort(
-    (left, right) => (right.standardScore ?? 0) - (left.standardScore ?? 0),
+    (left, right) => (right.standardScore ?? 0) - (left.standardScore ?? 0)
   )[0];
 };
 
@@ -318,7 +320,7 @@ const getStatusBadgeClassName = (session: ConsumerSessionSummary) => {
     return 'border-emerald-300/20 bg-emerald-400/10 text-emerald-100';
   }
 
-  return 'border-slate-300/20 bg-white/[0.04] text-slate-300';
+  return 'border-white/10 bg-[#020817]/70 text-slate-300';
 };
 
 export default async function DashboardPage({
@@ -387,12 +389,14 @@ export default async function DashboardPage({
   const completedSessions = sessions.filter(isCompletedSession);
   const visibleSessions = isCandidate ? activeSessions : sessions;
   const hasVisibleSessions = visibleSessions.length > 0;
-    const candidateAssessmentRecordCount =
+  const candidateAssessmentRecordCount =
     pendingInvitations.length + activeSessions.length;
   const candidateHasCompletedOnly =
     isCandidate && activeSessions.length === 0 && completedSessions.length > 0;
   const candidateHasNoAssignments =
-    isCandidate && activeSessions.length === 0 && completedSessions.length === 0;
+    isCandidate &&
+    activeSessions.length === 0 &&
+    completedSessions.length === 0;
 
   const currentProfileSession = canShowScoreProfile
     ? getCurrentProfileSession(sessions)
@@ -426,17 +430,17 @@ export default async function DashboardPage({
           : 'You do not currently have an active assessment assignment.';
 
   const startAssessmentDescription =
-  role === 'CONSUMER'
-    ? consumerAssessment
-      ? 'Create a new consumer-owned assessment session. Your completed attempt will update your IQMeridian profile.'
-      : 'No consumer assessment is currently available. A platform administrator must select an active default assessment first.'
-    : pendingInvitations.length > 0
-      ? 'Open your pending invitation to claim it and create your assessment session.'
-      : candidateHasCompletedOnly
-        ? 'Your assigned assessment has been completed. One-off candidate access is now limited to completion status unless a new invitation is issued.'
-        : candidateHasNoAssignments
-          ? 'Candidate assessments are assigned through invitations or organisation campaigns. When a new assignment is issued, it will appear here.'
-          : 'Open or resume your currently assigned assessment. Completed one-off assessments cannot be restarted.';
+    role === 'CONSUMER'
+      ? consumerAssessment
+        ? 'Create a new consumer-owned assessment session. Your completed attempt will update your IQMeridian profile.'
+        : 'No consumer assessment is currently available. A platform administrator must select an active default assessment first.'
+      : pendingInvitations.length > 0
+        ? 'Open your pending invitation to claim it and create your assessment session.'
+        : candidateHasCompletedOnly
+          ? 'Your assigned assessment has been completed. One-off candidate access is now limited to completion status unless a new invitation is issued.'
+          : candidateHasNoAssignments
+            ? 'Candidate assessments are assigned through invitations or organisation campaigns. When a new assignment is issued, it will appear here.'
+            : 'Open or resume your currently assigned assessment. Completed one-off assessments cannot be restarted.';
   return (
     <div className="space-y-6 text-white">
       <section className="relative overflow-hidden rounded-[2rem] border border-cyan-300/15 bg-[#07142f]/88 p-6 shadow-[0_30px_90px_rgba(0,0,0,0.28)]">
@@ -482,7 +486,7 @@ export default async function DashboardPage({
           <span>{dashboardError}</span>
         </div>
       ) : null}
-            {role === 'CANDIDATE' ? (
+      {role === 'CANDIDATE' ? (
         <CandidatePendingInvitationsPanel
           invitations={pendingInvitations}
           errorMessage={pendingInvitationError}
@@ -505,13 +509,13 @@ export default async function DashboardPage({
                   Candidate access
                 </p>
                 <h2 className="mt-2 text-2xl font-black text-white">
-                 {activeSessions.length > 0
-  ? 'You have an active assigned assessment'
-  : pendingInvitations.length > 0
-    ? 'You have a pending invitation'
-    : candidateHasCompletedOnly
-      ? 'Assessment completed'
-      : 'No active assessment'}
+                  {activeSessions.length > 0
+                    ? 'You have an active assigned assessment'
+                    : pendingInvitations.length > 0
+                      ? 'You have a pending invitation'
+                      : candidateHasCompletedOnly
+                        ? 'Assessment completed'
+                        : 'No active assessment'}
                 </h2>
                 <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
                   {startAssessmentDescription}
@@ -602,14 +606,16 @@ export default async function DashboardPage({
           {currentProfileScore ? (
             <div
               className={`mt-5 rounded-2xl border p-4 text-sm leading-6 ${getAttemptQualityClassName(
-                currentProfileScore.validityFlags,
+                currentProfileScore.validityFlags
               )}`}
             >
               <p className="font-black">
                 {getAttemptQualityLabel(currentProfileScore.validityFlags)}
               </p>
               <p className="mt-1">
-                {getAttemptQualityDescription(currentProfileScore.validityFlags)}
+                {getAttemptQualityDescription(
+                  currentProfileScore.validityFlags
+                )}
               </p>
             </div>
           ) : null}
@@ -665,8 +671,8 @@ export default async function DashboardPage({
 
           <p className="mt-2 text-sm leading-6 text-slate-500">
             {isCandidate
-  ? 'Pending invitations and active candidate sessions available to this account.'
-  : 'Saved sessions in your personal account history.'}
+              ? 'Pending invitations and active candidate sessions available to this account.'
+              : 'Saved sessions in your personal account history.'}
           </p>
         </article>
 
@@ -742,7 +748,7 @@ export default async function DashboardPage({
                         <div className="flex flex-col items-start gap-3 md:items-end">
                           <span
                             className={`rounded-full border px-3 py-1 text-xs font-black uppercase tracking-wide ${getStatusBadgeClassName(
-                              assessmentSession,
+                              assessmentSession
                             )}`}
                           >
                             {assessmentSession.status}
@@ -834,7 +840,8 @@ export default async function DashboardPage({
                             {getSessionTitle(assessmentSession)}
                           </h3>
                           <p className="mt-1 text-sm leading-6 text-emerald-100/70">
-                            Completed: {formatDate(assessmentSession.completedAt)}
+                            Completed:{' '}
+                            {formatDate(assessmentSession.completedAt)}
                           </p>
                           <p className="text-sm leading-6 text-emerald-100/70">
                             Your one-off candidate access is now limited to
@@ -881,7 +888,7 @@ export default async function DashboardPage({
                       <div className="flex flex-col items-start gap-3 md:items-end">
                         <span
                           className={`rounded-full border px-3 py-1 text-xs font-black uppercase tracking-wide ${getStatusBadgeClassName(
-                            assessmentSession,
+                            assessmentSession
                           )}`}
                         >
                           {assessmentSession.status}
@@ -906,7 +913,7 @@ export default async function DashboardPage({
                             <h4 className="mt-1 text-lg font-black text-white">
                               {formatScoreBand(
                                 assessmentSession.psychometricScore
-                                  .overallScoreBand,
+                                  .overallScoreBand
                               )}
                             </h4>
                             <p className="mt-1 text-sm leading-6 text-slate-400">
@@ -918,9 +925,7 @@ export default async function DashboardPage({
                           </div>
 
                           <span className="w-fit rounded-full border border-emerald-300/20 bg-emerald-400/10 px-3 py-1 text-xs font-black text-emerald-100">
-                            {
-                              assessmentSession.psychometricScore.scoringStatus
-                            }
+                            {assessmentSession.psychometricScore.scoringStatus}
                           </span>
                         </div>
 
@@ -932,7 +937,7 @@ export default async function DashboardPage({
                             <dd className="mt-1 text-lg font-black text-white">
                               {formatWholeNumber(
                                 assessmentSession.psychometricScore
-                                  .overallStandardScore,
+                                  .overallStandardScore
                               )}
                             </dd>
                           </div>
@@ -944,7 +949,7 @@ export default async function DashboardPage({
                             <dd className="mt-1 text-lg font-black text-white">
                               {formatPercentile(
                                 assessmentSession.psychometricScore
-                                  .overallPercentile,
+                                  .overallPercentile
                               )}
                             </dd>
                           </div>
@@ -956,7 +961,7 @@ export default async function DashboardPage({
                             <dd className="mt-1 text-lg font-black text-white">
                               {formatAccuracy(
                                 assessmentSession.psychometricScore
-                                  .overallAccuracy,
+                                  .overallAccuracy
                               )}
                             </dd>
                           </div>
@@ -970,7 +975,7 @@ export default async function DashboardPage({
                                 assessmentSession.psychometricScore
                                   .overallCi90Lower,
                                 assessmentSession.psychometricScore
-                                  .overallCi90Upper,
+                                  .overallCi90Upper
                               )}
                             </dd>
                           </div>
@@ -978,17 +983,17 @@ export default async function DashboardPage({
 
                         <div
                           className={`mt-4 rounded-xl border p-4 text-sm ${getAttemptQualityClassName(
-                            assessmentSession.psychometricScore.validityFlags,
+                            assessmentSession.psychometricScore.validityFlags
                           )}`}
                         >
                           <p className="font-black">
                             {getAttemptQualityLabel(
-                              assessmentSession.psychometricScore.validityFlags,
+                              assessmentSession.psychometricScore.validityFlags
                             )}
                           </p>
                           <p className="mt-1">
                             {getAttemptQualityDescription(
-                              assessmentSession.psychometricScore.validityFlags,
+                              assessmentSession.psychometricScore.validityFlags
                             )}
                           </p>
                         </div>

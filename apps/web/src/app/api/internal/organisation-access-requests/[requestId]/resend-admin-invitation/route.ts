@@ -16,13 +16,13 @@ export async function POST(_request: Request, context: RouteContext) {
 
     const response = await fetch(
       `${getApiBaseUrl()}/organisation-access-requests/${encodeURIComponent(
-        requestId,
+        requestId
       )}/resend-admin-invitation`,
       {
         method: 'POST',
         headers: authHeaders,
         cache: 'no-store',
-      },
+      }
     );
 
     const data = (await response.json().catch(() => ({}))) as unknown;
@@ -40,7 +40,7 @@ export async function POST(_request: Request, context: RouteContext) {
       },
       {
         status: 401,
-      },
+      }
     );
   }
 }

@@ -46,11 +46,14 @@ export const listCandidatePendingInvitations = async (): Promise<
 > => {
   const authHeaders = await getRequiredServerApiAuthHeaders();
 
-  const response = await fetch(`${getApiBaseUrl()}/invitations/candidate/pending`, {
-    method: 'GET',
-    headers: authHeaders,
-    cache: 'no-store',
-  });
+  const response = await fetch(
+    `${getApiBaseUrl()}/invitations/candidate/pending`,
+    {
+      method: 'GET',
+      headers: authHeaders,
+      cache: 'no-store',
+    }
+  );
 
   const payload = await readResponsePayload(response);
 

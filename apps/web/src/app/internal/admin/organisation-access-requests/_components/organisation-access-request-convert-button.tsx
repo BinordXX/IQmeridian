@@ -17,7 +17,9 @@ const getErrorMessage = (payload: {
     return payload.message.join(' ');
   }
 
-  return payload.message ?? payload.error ?? 'The request could not be converted.';
+  return (
+    payload.message ?? payload.error ?? 'The request could not be converted.'
+  );
 };
 
 export function OrganisationAccessRequestConvertButton({
@@ -37,7 +39,7 @@ export function OrganisationAccessRequestConvertButton({
     }
 
     const confirmed = window.confirm(
-      'Convert this approved request into an organisation and create an employer-admin invitation?',
+      'Convert this approved request into an organisation and create an employer-admin invitation?'
     );
 
     if (!confirmed) {
@@ -50,11 +52,11 @@ export function OrganisationAccessRequestConvertButton({
     try {
       const response = await fetch(
         `/api/internal/organisation-access-requests/${encodeURIComponent(
-          requestId,
+          requestId
         )}/convert`,
         {
           method: 'POST',
-        },
+        }
       );
 
       const payload = (await response.json().catch(() => ({}))) as {
@@ -71,7 +73,7 @@ export function OrganisationAccessRequestConvertButton({
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : 'The request could not be converted.',
+          : 'The request could not be converted.'
       );
     } finally {
       setIsConverting(false);

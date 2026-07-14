@@ -10,7 +10,7 @@ export async function POST(request: Request) {
       {
         message: 'Invalid password reset payload.',
       },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
         message:
           'The IQMeridian API is currently unavailable. Try again shortly.',
       },
-      { status: 503 },
+      { status: 503 }
     );
   }
 }

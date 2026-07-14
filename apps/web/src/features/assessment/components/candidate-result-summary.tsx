@@ -43,10 +43,10 @@ const getAudienceCopy = (audience: CandidateAudience): string => {
 
 const BandCard = ({ title, band }: { title: string; band: string }) => {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5">
-      <p className="text-sm font-medium text-slate-500">{title}</p>
+    <div className="rounded-2xl border border-cyan-300/15 bg-[#020817]/75 p-5">
+      <p className="text-sm font-bold text-slate-400">{title}</p>
 
-      <p className="mt-3 text-xl font-bold text-slate-950">
+      <p className="mt-3 text-xl font-black text-cyan-100">
         {normaliseBandLabel(band)}
       </p>
     </div>
@@ -60,16 +60,16 @@ export const CandidateResultSummary = ({
   audience,
 }: CandidateResultSummaryProps) => {
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-      <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+    <section className="rounded-[1.5rem] border border-cyan-300/15 bg-[#07142f]/95 p-5 shadow-[0_24px_90px_rgba(0,0,0,0.36)] sm:rounded-[2rem] sm:p-8">
+      <p className="text-xs font-black uppercase tracking-[0.28em] text-cyan-300">
         Limited result summary
       </p>
 
-      <h1 className="mt-3 text-3xl font-bold text-slate-950">
+      <h1 className="mt-4 text-2xl font-black tracking-tight text-white sm:text-3xl">
         Assessment summary
       </h1>
 
-      <p className="mt-4 text-base leading-7 text-slate-600">
+      <p className="mt-4 text-sm leading-7 text-slate-300 sm:text-base">
         {getAudienceCopy(audience)}
       </p>
 
@@ -85,12 +85,12 @@ export const CandidateResultSummary = ({
         />
       </div>
 
-      <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-5">
-        <h2 className="text-lg font-semibold text-slate-950">
+      <div className="mt-8 rounded-2xl border border-white/10 bg-[#020817]/75 p-5">
+        <h2 className="text-lg font-black text-white">
           How to read this summary
         </h2>
 
-        <p className="mt-3 text-sm leading-6 text-slate-600">
+        <p className="mt-3 text-sm leading-6 text-slate-400">
           These bands are restrained indicators of performance within this
           assessment attempt. They should not be read as a complete measure of
           intelligence, employability, learning capacity, or future performance.

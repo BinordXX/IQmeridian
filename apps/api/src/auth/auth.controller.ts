@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Post, Req,Param, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Req,
+  Param,
+  UseGuards,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { CurrentUser } from './current-user.decorator';
 import { LoginDto } from './dto/login.dto';
@@ -28,7 +36,7 @@ type RequestMetadataSource = {
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-    @Get('organisation-admin-invitations/:token')
+  @Get('organisation-admin-invitations/:token')
   getOrganisationAdminInvitation(@Param('token') token: string) {
     return this.authService.getOrganisationAdminInvitationByToken(token);
   }
@@ -46,7 +54,7 @@ export class AuthController {
     );
   }
 
-    @Post('verify-email')
+  @Post('verify-email')
   verifyEmail(@Body() dto: VerifyEmailDto) {
     return this.authService.verifyEmail(dto);
   }
@@ -61,8 +69,8 @@ export class AuthController {
       this.getRequestMetadata(request),
     );
   }
-  
-    @Post('forgot-password')
+
+  @Post('forgot-password')
   forgotPassword(@Body() dto: ForgotPasswordDto, @Req() request: Request) {
     return this.authService.forgotPassword(
       dto,
@@ -119,7 +127,7 @@ export class AuthController {
   ) {
     return this.authService.changePassword(user, body);
   }
-  
+
   @UseGuards(JwtAuthGuard)
   @Get('me')
   me(@CurrentUser() user: RequestUser) {

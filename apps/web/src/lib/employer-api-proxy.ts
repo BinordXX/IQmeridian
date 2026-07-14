@@ -35,7 +35,7 @@ export const parseEmployerRequestJson = async (request: Request) => {
       ok: false as const,
       response: NextResponse.json(
         { message: 'Invalid request body.' },
-        { status: 400 },
+        { status: 400 }
       ),
     };
   }
@@ -48,7 +48,9 @@ export const proxyEmployerApi = async (input: ProxyEmployerApiInput) => {
     const response = await fetch(`${getApiBaseUrl()}${input.path}`, {
       method: input.method,
       headers: {
-        ...(input.body === undefined ? {} : { 'Content-Type': 'application/json' }),
+        ...(input.body === undefined
+          ? {}
+          : { 'Content-Type': 'application/json' }),
         ...authHeaders,
       },
       body: input.body === undefined ? undefined : JSON.stringify(input.body),
@@ -61,7 +63,7 @@ export const proxyEmployerApi = async (input: ProxyEmployerApiInput) => {
   } catch {
     return NextResponse.json(
       { message: 'Unable to reach the IQMeridian API service.' },
-      { status: 502 },
+      { status: 502 }
     );
   }
 };

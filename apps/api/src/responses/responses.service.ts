@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { createHash } from 'crypto';
 import { FormItemMappingStatus, Prisma, SessionStatus } from '@prisma/client';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -17,7 +18,8 @@ type RequestUser = {
 type SaveItemResponseInput = {
   sessionId: string;
   itemId: string;
-  user: RequestUser;
+  user?: RequestUser;
+  sessionAccessToken?: string;
   answer: unknown;
 };
 
@@ -31,7 +33,7 @@ export class ResponsesService {
   async saveItemResponse(input: SaveItemResponseInput) {
     const session = await this.getSessionOrThrow(input.sessionId);
 
-    this.assertUserCanWriteSession(session, input.user);
+    this.assertCanWriteSession(session, input);
     this.assertSessionOpenForResponseWrite(session.status);
 
     const mapping = await this.prisma.formItemMapping.findFirst({
@@ -83,12 +85,49 @@ export class ResponsesService {
     });
   }
 
+  async getSessionResponsesWithAccessToken(
+    sessionId: string,
+    sessionAccessToken?: string,
+  ) {
+    const session = await this.getSessionOrThrow(sessionId);
+
+    this.assertSessionAccessToken(session, sessionAccessToken);
+
+    return this.prisma.response.findMany({
+      where: {
+        sessionId,
+      },
+      orderBy: {
+        createdAt: 'asc',
+      },
+    });
+  }
+
+  async finaliseResponseSetWithAccessToken(
+    sessionId: string,
+    sessionAccessToken?: string,
+  ) {
+    const session = await this.getSessionOrThrow(sessionId);
+
+    this.assertSessionAccessToken(session, sessionAccessToken);
+    this.assertSessionOpenForResponseWrite(session.status);
+
+    return this.finaliseResponseSetInternal(sessionId, null);
+  }
+
   async finaliseResponseSet(sessionId: string, user: RequestUser) {
     const session = await this.getSessionOrThrow(sessionId);
 
     this.assertUserCanWriteSession(session, user);
     this.assertSessionOpenForResponseWrite(session.status);
 
+    return this.finaliseResponseSetInternal(sessionId, user.id);
+  }
+
+  private async finaliseResponseSetInternal(
+    sessionId: string,
+    actorUserId: string | null,
+  ) {
     const now = new Date();
 
     const finalisedSession = await this.prisma.$transaction(async (tx) => {
@@ -118,12 +157,14 @@ export class ResponsesService {
 
     await this.auditService.record({
       action: 'SESSION_RESPONSES_SUBMITTED',
-      userId: finalisedSession.userId,
+      userId: actorUserId ?? finalisedSession.userId,
       entityType: 'Session',
       entityId: finalisedSession.id,
       metadata: {
         campaignId: finalisedSession.campaignId,
         invitationId: finalisedSession.invitationId,
+        applicantEmail: finalisedSession.applicantEmail,
+        applicantName: finalisedSession.applicantName,
         assessmentFormId: finalisedSession.assessmentFormId,
         responseCount: finalisedSession.responses.length,
         completedAt: finalisedSession.completedAt,
@@ -151,9 +192,27 @@ export class ResponsesService {
     return session;
   }
 
+  private assertCanWriteSession(
+    session: {
+      userId: string | null;
+      sessionAccessTokenHash: string | null;
+    },
+    input: {
+      user?: RequestUser;
+      sessionAccessToken?: string;
+    },
+  ) {
+    if (input.user) {
+      this.assertUserCanWriteSession(session, input.user);
+      return;
+    }
+
+    this.assertSessionAccessToken(session, input.sessionAccessToken);
+  }
+
   private assertUserCanWriteSession(
     session: {
-      userId: string;
+      userId: string | null;
     },
     user: RequestUser,
   ) {
@@ -170,7 +229,7 @@ export class ResponsesService {
 
   private assertUserCanReadSession(
     session: {
-      userId: string;
+      userId: string | null;
       campaign?: { organisationId: string } | null;
     },
     user: RequestUser,
@@ -210,6 +269,40 @@ export class ResponsesService {
         'Responses cannot be changed after session closure',
       );
     }
+  }
+
+  private assertSessionAccessToken(
+    session: {
+      sessionAccessTokenHash: string | null;
+    },
+    rawToken?: string,
+  ) {
+    const sessionAccessToken = rawToken?.trim();
+
+    if (!sessionAccessToken) {
+      throw new ForbiddenException(
+        'Assessment session access token is required',
+      );
+    }
+
+    if (!session.sessionAccessTokenHash) {
+      throw new ForbiddenException(
+        'This session does not support token access',
+      );
+    }
+
+    if (
+      this.hashSessionAccessToken(sessionAccessToken) !==
+      session.sessionAccessTokenHash
+    ) {
+      throw new ForbiddenException(
+        'Assessment session access token is invalid',
+      );
+    }
+  }
+
+  private hashSessionAccessToken(rawToken: string) {
+    return createHash('sha256').update(rawToken).digest('hex');
   }
 
   private normaliseAnswer(answer: unknown): Prisma.InputJsonValue {

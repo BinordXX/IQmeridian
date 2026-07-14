@@ -12,7 +12,12 @@ type AssessmentProxyContext = {
       }>;
 };
 
-const PUBLIC_BACKEND_PATH_PREFIXES = ['/invitations/validate/'];
+const PUBLIC_BACKEND_PATH_PREFIXES = [
+  '/invitations/validate/',
+  '/sessions/invitation',
+  '/sessions/public/',
+  '/responses/public/',
+];
 
 function normaliseBaseUrl(baseUrl: string) {
   return baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
@@ -56,6 +61,12 @@ async function proxyAssessmentRequest(
       method: request.method,
       headers: {
         ...(requestBody ? { 'Content-Type': 'application/json' } : {}),
+        ...(isPublicPath && request.headers.get('x-assessment-session-token')
+          ? {
+              'X-Assessment-Session-Token':
+                request.headers.get('x-assessment-session-token') ?? '',
+            }
+          : {}),
         ...(authHeaders ?? {}),
       },
       body: requestBody,

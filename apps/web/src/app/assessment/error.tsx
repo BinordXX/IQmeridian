@@ -12,7 +12,7 @@ export default function AssessmentErrorPage({
   reset,
 }: AssessmentErrorPageProps) {
   return (
-    <main className="min-h-screen bg-slate-50 px-6 py-12">
+    <main className="min-h-screen bg-[#020817] px-4 py-6 text-white sm:px-6 sm:py-12">
       <AssessmentStatePanel
         eyebrow="Assessment error"
         title="The assessment state could not be loaded"
@@ -25,7 +25,7 @@ export default function AssessmentErrorPage({
           <button
             type="button"
             onClick={reset}
-            className="rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800"
+            className="rounded-2xl border border-cyan-300/25 bg-cyan-400/15 px-5 py-3 text-sm font-black text-cyan-50 transition hover:bg-cyan-400/20"
           >
             Try loading again
           </button>

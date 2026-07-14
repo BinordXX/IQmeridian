@@ -13,7 +13,7 @@ import {
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 
 type DashboardRole = 'CONSUMER' | 'CANDIDATE';
 
@@ -43,28 +43,28 @@ const navItems: NavItem[] = [
     href: '/dashboard',
     exact: true,
     icon: Home,
-    tone: 'border-blue-100 bg-blue-50 text-blue-700',
+    tone: 'border-cyan-300/20 bg-cyan-400/10 text-cyan-100',
   },
   {
     label: 'Assessment',
     description: 'Start or resume',
     href: '/dashboard#assessment',
     icon: ClipboardCheck,
-    tone: 'border-emerald-100 bg-emerald-50 text-emerald-700',
+    tone: 'border-emerald-300/20 bg-emerald-400/10 text-emerald-100',
   },
   {
     label: 'Results',
     description: 'Completed assessments',
     href: '/dashboard#history',
     icon: FileText,
-    tone: 'border-violet-100 bg-violet-50 text-violet-700',
+    tone: 'border-violet-300/20 bg-violet-400/10 text-violet-100',
   },
-    {
+  {
     label: 'Settings',
     description: 'Account security',
     href: '/dashboard/settings',
     icon: Settings,
-    tone: 'border-slate-200 bg-slate-50 text-slate-700',
+    tone: 'border-blue-300/20 bg-blue-400/10 text-blue-100',
   },
 ];
 
@@ -82,13 +82,24 @@ const getInitials = (name?: string | null, email?: string | null) => {
   return `${first}${second}`.toUpperCase();
 };
 
-const isActivePath = (pathname: string, item: NavItem) => {
-  if (item.href.includes('#')) {
-    return pathname === item.href.split('#')[0];
+const getBaseHref = (href: string) => href.split('#')[0] ?? href;
+
+const getHrefHash = (href: string) => {
+  const hash = href.split('#')[1];
+
+  return hash ? `#${hash}` : '';
+};
+
+const isActivePath = (pathname: string, hash: string, item: NavItem) => {
+  const baseHref = getBaseHref(item.href);
+  const itemHash = getHrefHash(item.href);
+
+  if (itemHash) {
+    return pathname === baseHref && hash === itemHash;
   }
 
   if (item.exact) {
-    return pathname === item.href;
+    return pathname === item.href && hash === '';
   }
 
   return pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -100,28 +111,43 @@ export function DashboardSidebarShell({
   user,
 }: DashboardSidebarShellProps) {
   const pathname = usePathname();
+  const [hash, setHash] = useState('');
   const initials = getInitials(user.name, user.email);
   const displayName = user.name || user.email || 'Dashboard user';
 
+  useEffect(() => {
+    const syncHash = () => {
+      setHash(window.location.hash);
+    };
+
+    syncHash();
+
+    window.addEventListener('hashchange', syncHash);
+
+    return () => {
+      window.removeEventListener('hashchange', syncHash);
+    };
+  }, []);
+
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-950">
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-72 border-r border-slate-200 bg-white lg:block">
+    <div className="min-h-screen bg-[#020817] text-white">
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-72 border-r border-cyan-300/10 bg-[#07142f]/95 lg:block">
         <div className="flex h-full flex-col">
-          <div className="border-b border-slate-200 px-6 py-6">
+          <div className="border-b border-white/10 px-6 py-6">
             <Link href="/dashboard" className="block">
-              <p className="text-xs font-bold uppercase tracking-[0.28em] text-slate-500">
+              <p className="text-xs font-black uppercase tracking-[0.3em] text-cyan-300">
                 IQMeridian
               </p>
-              <h1 className="mt-2 text-xl font-bold tracking-tight text-slate-950">
+              <h1 className="mt-2 text-xl font-black tracking-tight text-white">
                 Assessment workspace
               </h1>
             </Link>
           </div>
 
-          <div className="border-b border-slate-200 px-6 py-5">
+          <div className="border-b border-white/10 px-6 py-5">
             <div className="flex items-center gap-3">
               <div
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 bg-cover bg-center text-sm font-bold text-slate-800"
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-cyan-300/20 bg-cyan-400/10 bg-cover bg-center text-sm font-black text-cyan-100"
                 style={
                   user.image
                     ? {
@@ -134,13 +160,13 @@ export function DashboardSidebarShell({
               </div>
 
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-slate-950">
+                <p className="truncate text-sm font-black text-white">
                   {displayName}
                 </p>
                 <p className="mt-0.5 truncate text-xs text-slate-500">
                   {user.email}
                 </p>
-                <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <p className="mt-1 text-xs font-black uppercase tracking-wide text-cyan-300">
                   {role}
                 </p>
               </div>
@@ -151,22 +177,22 @@ export function DashboardSidebarShell({
             <div className="space-y-1">
               {navItems.map((item) => {
                 const Icon = item.icon;
-                const isActive = isActivePath(pathname, item);
+                const isActive = isActivePath(pathname, hash, item);
 
                 return (
                   <Link
                     className={[
-                      'flex items-center gap-3 rounded-xl px-4 py-3 text-sm transition',
+                      'flex items-center gap-3 rounded-2xl px-4 py-3 text-sm transition',
                       isActive
-                        ? 'bg-slate-100 text-slate-950'
-                        : 'text-slate-700 hover:bg-slate-50 hover:text-slate-950',
+                        ? 'border border-cyan-300/20 bg-cyan-400/10 text-cyan-50'
+                        : 'border border-transparent text-slate-300 hover:border-cyan-300/15 hover:bg-cyan-400/10 hover:text-cyan-50',
                     ].join(' ')}
                     href={item.href}
                     key={item.href}
                   >
                     <span
                       className={[
-                        'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border',
+                        'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border',
                         item.tone,
                       ].join(' ')}
                     >
@@ -174,7 +200,7 @@ export function DashboardSidebarShell({
                     </span>
 
                     <span className="min-w-0">
-                      <span className="block font-semibold">{item.label}</span>
+                      <span className="block font-black">{item.label}</span>
                       <span className="mt-0.5 block truncate text-xs text-slate-500">
                         {item.description}
                       </span>
@@ -185,9 +211,9 @@ export function DashboardSidebarShell({
             </div>
           </nav>
 
-          <div className="border-t border-slate-200 p-4">
+          <div className="border-t border-white/10 p-4">
             <Link
-              className="flex items-center gap-3 rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-950 hover:text-slate-950"
+              className="flex min-h-12 items-center gap-3 rounded-2xl border border-cyan-300/20 bg-cyan-400/10 px-4 py-3 text-sm font-black text-cyan-100 transition hover:bg-cyan-400/15"
               href="/logout"
             >
               <LogOut size={17} strokeWidth={2} />
@@ -198,29 +224,60 @@ export function DashboardSidebarShell({
       </aside>
 
       <div className="lg:pl-72">
-        <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 px-6 py-4 backdrop-blur">
-          <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
-            <div>
-<p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-  Assessment workspace
-</p>
-              <p className="mt-1 text-sm text-slate-600">
-                Manage your IQMeridian assessment activity and results.
-              </p>
+        <header className="sticky top-0 z-20 border-b border-cyan-300/10 bg-[#020817]/95 px-4 py-4 backdrop-blur sm:px-6">
+          <div className="mx-auto flex max-w-7xl flex-col gap-4">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">
+                  Assessment workspace
+                </p>
+                <p className="mt-1 text-sm text-slate-500">
+                  Manage your IQMeridian assessment activity and results.
+                </p>
+              </div>
+
+              <div className="hidden items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-400/10 px-4 py-2 text-xs font-black uppercase tracking-wide text-cyan-100 md:flex">
+                <UserRound size={14} strokeWidth={2} />
+                <span>{role}</span>
+              </div>
             </div>
 
-            <div className="hidden items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600 md:flex">
-              <UserRound size={14} strokeWidth={2} />
-              <span>{role}</span>
-            </div>
+            <nav className="grid grid-cols-4 gap-2 lg:hidden">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = isActivePath(pathname, hash, item);
+
+                return (
+                  <Link
+                    className={[
+                      'flex min-h-12 flex-col items-center justify-center gap-1 rounded-2xl border px-2 py-2 text-[0.65rem] font-black transition',
+                      isActive
+                        ? 'border-cyan-300/25 bg-cyan-400/15 text-cyan-50'
+                        : 'border-white/10 bg-[#07142f]/75 text-slate-400 hover:border-cyan-300/20 hover:text-cyan-100',
+                    ].join(' ')}
+                    href={item.href}
+                    key={item.href}
+                  >
+                    <Icon size={16} strokeWidth={2} />
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+            </nav>
           </div>
         </header>
 
-        <main className="mx-auto max-w-7xl px-6 py-8">{children}</main>
+        <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
+          {children}
+        </main>
 
-        <footer className="mx-auto max-w-7xl px-6 pb-8">
-          <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white p-4 text-xs text-slate-500">
-            <ShieldCheck size={16} strokeWidth={2} />
+        <footer className="mx-auto max-w-7xl px-4 pb-8 sm:px-6">
+          <div className="flex items-center gap-2 rounded-2xl border border-cyan-300/10 bg-[#07142f]/80 p-4 text-xs text-slate-500">
+            <ShieldCheck
+              className="shrink-0 text-cyan-300"
+              size={16}
+              strokeWidth={2}
+            />
             <span>
               Your assessment workspace is protected by IQMeridian access
               controls.

@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
       },
       {
         status: 400,
-      },
+      }
     );
   }
 
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
       },
       {
         status: 502,
-      },
+      }
     );
   }
 }

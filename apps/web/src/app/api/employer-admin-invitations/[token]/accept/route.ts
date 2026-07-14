@@ -17,13 +17,13 @@ export async function POST(request: Request, context: RouteContext) {
       {
         message: 'Invalid employer-admin invitation acceptance payload.',
       },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
   const response = await fetch(
     `${getApiBaseUrl()}/auth/organisation-admin-invitations/${encodeURIComponent(
-      token,
+      token
     )}/accept`,
     {
       method: 'POST',
@@ -32,7 +32,7 @@ export async function POST(request: Request, context: RouteContext) {
       },
       body: JSON.stringify(payload),
       cache: 'no-store',
-    },
+    }
   );
 
   const data = (await response.json().catch(() => ({}))) as unknown;

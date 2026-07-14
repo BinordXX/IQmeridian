@@ -165,10 +165,10 @@ const buildNavGroups = (role: InternalRole): NavGroup[] => {
                 icon: Mail,
               },
               {
-  label: 'Access requests',
-  href: '/internal/admin/organisation-access-requests',
-  icon: Building2,
-},
+                label: 'Access requests',
+                href: '/internal/admin/organisation-access-requests',
+                icon: Building2,
+              },
               {
                 label: 'Consumer assessment',
                 href: '/internal/admin/consumer-assessment',
@@ -325,7 +325,7 @@ export function InternalSidebarShell({
               {navGroups.map((group) => {
                 const GroupIcon = group.icon;
                 const hasActiveItem = group.items.some((item) =>
-                  isActivePath(pathname, item),
+                  isActivePath(pathname, item)
                 );
 
                 return (
@@ -410,7 +410,9 @@ export function InternalSidebarShell({
                             >
                               <ItemIcon
                                 className={
-                                  isActive ? 'text-cyan-200' : group.tone.iconText
+                                  isActive
+                                    ? 'text-cyan-200'
+                                    : group.tone.iconText
                                 }
                                 size={17}
                                 strokeWidth={2}

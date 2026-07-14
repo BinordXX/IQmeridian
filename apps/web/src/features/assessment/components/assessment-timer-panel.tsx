@@ -89,14 +89,14 @@ const getTimerTextClassName = (urgency: TimerUrgency): string => {
   switch (urgency) {
     case 'expired':
     case 'critical':
-      return 'text-red-700';
+      return 'text-red-100';
     case 'low':
-      return 'text-amber-700';
+      return 'text-amber-100';
     case 'unknown':
-      return 'text-slate-500';
+      return 'text-slate-400';
     case 'normal':
     default:
-      return 'text-slate-950';
+      return 'text-white';
   }
 };
 
@@ -105,19 +105,19 @@ const getTimerContainerClassName = (
   syncStatus: BackendTimerSyncStatus
 ): string => {
   if (syncStatus === 'failed' && urgency !== 'expired') {
-    return 'border-amber-200 bg-amber-50';
+    return 'border-amber-300/20 bg-amber-400/10';
   }
 
   switch (urgency) {
     case 'expired':
     case 'critical':
-      return 'border-red-200 bg-red-50';
+      return 'border-red-300/20 bg-red-400/10';
     case 'low':
-      return 'border-amber-200 bg-amber-50';
+      return 'border-amber-300/20 bg-amber-400/10';
     case 'unknown':
     case 'normal':
     default:
-      return 'border-slate-200 bg-white';
+      return 'border-cyan-300/15 bg-[#020817]/75';
   }
 };
 
@@ -152,7 +152,7 @@ export const AssessmentTimerPanel = ({
 
   return (
     <section
-      className={`rounded-2xl border px-5 py-4 shadow-sm ${getTimerContainerClassName(
+      className={`rounded-2xl border px-5 py-4 shadow-[0_14px_44px_rgba(0,0,0,0.22)] ${getTimerContainerClassName(
         urgency,
         syncStatus
       )}`}
@@ -160,12 +160,12 @@ export const AssessmentTimerPanel = ({
     >
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300">
             Time remaining
           </p>
 
           <p
-            className={`mt-1 text-3xl font-bold tabular-nums ${getTimerTextClassName(
+            className={`mt-1 text-3xl font-black tabular-nums ${getTimerTextClassName(
               urgency
             )}`}
             aria-live="polite"
@@ -179,23 +179,21 @@ export const AssessmentTimerPanel = ({
         <span
           className={`mt-1 h-3 w-3 rounded-full ${
             urgency === 'expired' || urgency === 'critical'
-              ? 'bg-red-700'
+              ? 'bg-red-300'
               : urgency === 'low' || syncStatus === 'failed'
-                ? 'bg-amber-600'
-                : 'bg-slate-400'
+                ? 'bg-amber-300'
+                : 'bg-cyan-300'
           }`}
           aria-hidden="true"
         />
       </div>
 
-      <p
-        className={`mt-2 text-xs font-medium ${getTimerTextClassName(urgency)}`}
-      >
+      <p className={`mt-2 text-xs font-bold ${getTimerTextClassName(urgency)}`}>
         {statusText}
       </p>
 
       {syncedAtText ? (
-        <p className="mt-1 text-[11px] font-medium text-slate-500">
+        <p className="mt-1 text-[11px] font-bold text-slate-500">
           Last checked {syncedAtText}
         </p>
       ) : null}

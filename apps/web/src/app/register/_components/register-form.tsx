@@ -94,7 +94,9 @@ export function RegisterForm() {
     }
 
     if (!acceptedTerms) {
-      setError('You must accept the platform terms before creating an account.');
+      setError(
+        'You must accept the platform terms before creating an account.'
+      );
       return;
     }
 
@@ -131,8 +133,8 @@ export function RegisterForm() {
         setStatus('verification-required');
         router.push(
           `/verify-email?email=${encodeURIComponent(
-            payload.email ?? normalisedEmail,
-          )}`,
+            payload.email ?? normalisedEmail
+          )}`
         );
         router.refresh();
         return;
@@ -214,9 +216,7 @@ export function RegisterForm() {
         </label>
 
         <label className="block">
-          <span className="text-sm font-semibold text-slate-300">
-            Password
-          </span>
+          <span className="text-sm font-semibold text-slate-300">Password</span>
           <span className="mt-2 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 transition focus-within:border-cyan-300/50">
             <LockKeyhole
               className="text-slate-500"

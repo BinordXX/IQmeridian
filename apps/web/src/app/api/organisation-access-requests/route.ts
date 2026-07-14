@@ -10,7 +10,7 @@ export async function POST(request: Request) {
       {
         message: 'Invalid organisation access request payload.',
       },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
       },
       body: JSON.stringify(payload),
       cache: 'no-store',
-    },
+    }
   );
 
   const data = (await response.json().catch(() => ({}))) as unknown;

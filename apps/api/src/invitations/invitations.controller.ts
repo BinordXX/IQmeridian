@@ -13,11 +13,11 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { CreateInvitationDto } from './dto/create-invitation.dto';
+import { ExtendInvitationDto } from './dto/extend-invitation.dto';
 import {
   InvitationIdParamDto,
   InvitationTokenParamDto,
 } from './dto/invitation-route-params.dto';
-import { ExtendInvitationDto } from './dto/extend-invitation.dto';
 import { InvitationsService } from './invitations.service';
 
 type RequestUser = {
@@ -27,11 +27,11 @@ type RequestUser = {
 };
 
 @Controller('invitations')
-@UseGuards(JwtAuthGuard, RolesGuard)
 export class InvitationsController {
   constructor(private readonly invitationsService: InvitationsService) {}
 
   @Roles('PLATFORM_ADMIN', 'EMPLOYER_ADMIN')
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Post()
   createInvitation(
     @Req() req: { user: RequestUser },
@@ -43,7 +43,8 @@ export class InvitationsController {
     });
   }
 
-    @Roles('PLATFORM_ADMIN', 'EMPLOYER_ADMIN')
+  @Roles('PLATFORM_ADMIN', 'EMPLOYER_ADMIN')
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Post(':id/resend')
   resendInvitation(
     @Param() params: InvitationIdParamDto,
@@ -53,6 +54,7 @@ export class InvitationsController {
   }
 
   @Roles('PLATFORM_ADMIN', 'EMPLOYER_ADMIN')
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Patch(':id/cancel')
   cancelInvitation(
     @Param() params: InvitationIdParamDto,
@@ -62,6 +64,7 @@ export class InvitationsController {
   }
 
   @Roles('PLATFORM_ADMIN', 'EMPLOYER_ADMIN')
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Patch(':id/extend')
   extendInvitation(
     @Param() params: InvitationIdParamDto,
@@ -70,14 +73,14 @@ export class InvitationsController {
   ) {
     return this.invitationsService.extendInvitation(params.id, body, req.user);
   }
-  
-    @Roles('CANDIDATE')
+
+  @Roles('CANDIDATE')
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Get('candidate/pending')
   listPendingCandidateInvitations(@Req() req: { user: RequestUser }) {
     return this.invitationsService.listPendingCandidateInvitations(req.user);
   }
 
-  @Roles('PLATFORM_ADMIN', 'EMPLOYER_ADMIN', 'CANDIDATE')
   @Get('validate/:token')
   validateInvitation(@Param() params: InvitationTokenParamDto) {
     return this.invitationsService.validateInvitation(params.token);

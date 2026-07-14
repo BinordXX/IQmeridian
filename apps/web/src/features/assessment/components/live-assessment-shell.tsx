@@ -117,49 +117,49 @@ export const LiveAssessmentShell = ({ session }: LiveAssessmentShellProps) => {
     null
   );
 
-const handleTimerExpired = useCallback((): void => {
-  setSectionEndMessage(
-    'Time has elapsed. IQMeridian is automatically submitting your assessment.'
-  );
+  const handleTimerExpired = useCallback((): void => {
+    setSectionEndMessage(
+      'Time has elapsed. IQMeridian is automatically submitting your assessment.'
+    );
 
-  dispatch({ type: 'SUBMIT_STARTED' });
+    dispatch({ type: 'SUBMIT_STARTED' });
 
-  void trackAssessmentEvent('submission_initiated', {
-    sessionId: session.sessionId,
-    assessmentId: session.assessmentId,
-    trigger: 'timeout',
-  });
-
-  void finaliseAssessmentSession(session.sessionId)
-    .then((finaliseResult) => {
-      void trackAssessmentEvent('submission_completed', {
-        sessionId: session.sessionId,
-        assessmentId: session.assessmentId,
-        trigger: 'timeout',
-      });
-
-      const resultVisibility =
-        resolveCandidateResultVisibility(finaliseResult);
-
-      dispatch({ type: 'COMPLETED' });
-
-      const statusParams = new URLSearchParams({
-        reason: 'completed',
-        sessionId: session.sessionId,
-        resultVisibility,
-      });
-
-      router.replace(`/assessment/status?${statusParams.toString()}`);
-    })
-    .catch(() => {
-      dispatch({
-        type: 'FAILED',
-        message:
-          'Time has elapsed, but the assessment could not be automatically submitted. Please refresh the dashboard or contact support if this continues.',
-        code: 'TIMEOUT_AUTO_SUBMIT_FAILED',
-      });
+    void trackAssessmentEvent('submission_initiated', {
+      sessionId: session.sessionId,
+      assessmentId: session.assessmentId,
+      trigger: 'timeout',
     });
-}, [router, session.assessmentId, session.sessionId]);
+
+    void finaliseAssessmentSession(session.sessionId)
+      .then((finaliseResult) => {
+        void trackAssessmentEvent('submission_completed', {
+          sessionId: session.sessionId,
+          assessmentId: session.assessmentId,
+          trigger: 'timeout',
+        });
+
+        const resultVisibility =
+          resolveCandidateResultVisibility(finaliseResult);
+
+        dispatch({ type: 'COMPLETED' });
+
+        const statusParams = new URLSearchParams({
+          reason: 'completed',
+          sessionId: session.sessionId,
+          resultVisibility,
+        });
+
+        router.replace(`/assessment/status?${statusParams.toString()}`);
+      })
+      .catch(() => {
+        dispatch({
+          type: 'FAILED',
+          message:
+            'Time has elapsed, but the assessment could not be automatically submitted. Please refresh the dashboard or contact support if this continues.',
+          code: 'TIMEOUT_AUTO_SUBMIT_FAILED',
+        });
+      });
+  }, [router, session.assessmentId, session.sessionId]);
 
   const timer = useBackendSyncedTimer({
     sessionId: session.sessionId,
@@ -626,7 +626,7 @@ const handleTimerExpired = useCallback((): void => {
 
   if (!currentItem) {
     return (
-      <main className="min-h-screen bg-slate-50 px-6 py-12">
+      <main className="min-h-screen bg-[#020817] px-4 py-6 text-white sm:px-6 sm:py-12">
         <AssessmentStatePanel
           eyebrow="Missing session state"
           title="No assessment items are available"
@@ -636,7 +636,7 @@ const handleTimerExpired = useCallback((): void => {
             <button
               type="button"
               onClick={() => router.refresh()}
-              className="rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800"
+              className="rounded-2xl border border-cyan-300/25 bg-cyan-400/15 px-5 py-3 text-sm font-black text-cyan-50 transition hover:bg-cyan-400/20"
             >
               Restore session state
             </button>
@@ -647,29 +647,29 @@ const handleTimerExpired = useCallback((): void => {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 px-6 py-8">
-      <div className="mx-auto max-w-7xl">
-        <header className="mb-6 flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:flex-row md:items-center md:justify-between">
+    <main className="min-h-screen bg-[#020817] px-4 py-5 text-white sm:px-6 sm:py-8">
+      <div className="mx-auto w-full max-w-7xl">
+        <header className="mb-5 flex flex-col gap-5 rounded-[1.5rem] border border-cyan-300/15 bg-[#07142f]/95 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.28)] sm:mb-6 sm:rounded-[2rem] sm:p-6 md:flex-row md:items-center md:justify-between">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+            <p className="text-xs font-black uppercase tracking-[0.24em] text-cyan-300">
               IQMeridian Assessment
             </p>
 
-            <h1 className="mt-2 text-2xl font-bold text-slate-950">
+            <h1 className="mt-2 text-2xl font-black text-white">
               {session.assessmentTitle}
             </h1>
 
             {session.candidateName ? (
-              <p className="mt-2 text-sm text-slate-600">
+              <p className="mt-2 text-sm text-slate-400">
                 Candidate:{' '}
-                <span className="font-medium text-slate-900">
+                <span className="font-black text-cyan-100">
                   {session.candidateName}
                 </span>
               </p>
             ) : null}
           </div>
 
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center md:w-auto">
             <AssessmentTimerPanel
               remainingSeconds={timer.remainingSeconds}
               syncStatus={timer.syncStatus}
@@ -694,7 +694,7 @@ const handleTimerExpired = useCallback((): void => {
         ) : null}
 
         {isSubmitting ? (
-          <section className="mx-auto max-w-3xl rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+          <section className="mx-auto max-w-3xl rounded-[1.5rem] border border-cyan-300/15 bg-[#07142f]/95 p-5 text-center shadow-[0_24px_90px_rgba(0,0,0,0.36)] sm:rounded-[2rem] sm:p-8">
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-slate-950 text-white">
               <span className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
             </div>
@@ -703,18 +703,18 @@ const handleTimerExpired = useCallback((): void => {
               Submission processing
             </p>
 
-            <h2 className="mt-3 text-2xl font-bold text-slate-950">
+            <h2 className="mt-3 text-2xl font-bold text-white">
               Finalising your assessment
             </h2>
 
-            <p className="mt-4 text-slate-600">
+            <p className="mt-4 text-slate-300">
               Your attempt has been received. The system is finalising the
               session, saving the final response state, and preparing the result
               status.
             </p>
 
-            <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4 text-left text-sm text-slate-600">
-              <p className="font-medium text-slate-900">
+            <div className="mt-6 rounded-xl border border-white/10 bg-[#020817]/75 p-4 text-left text-sm text-slate-300">
+              <p className="font-medium text-cyan-100">
                 Please keep this page open.
               </p>
               <p className="mt-2">
@@ -724,46 +724,46 @@ const handleTimerExpired = useCallback((): void => {
             </div>
           </section>
         ) : sectionEndMessage ? (
-          <section className="mx-auto max-w-3xl rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+          <section className="mx-auto max-w-3xl rounded-[1.5rem] border border-cyan-300/15 bg-[#07142f]/95 p-5 text-center shadow-[0_24px_90px_rgba(0,0,0,0.36)] sm:rounded-[2rem] sm:p-8">
             <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
               Section ended
             </p>
 
-            <h2 className="mt-3 text-2xl font-bold text-slate-950">
+            <h2 className="mt-3 text-2xl font-bold text-white">
               Restoring valid session state
             </h2>
 
-            <p className="mt-4 text-slate-600">{sectionEndMessage}</p>
+            <p className="mt-4 text-slate-300">{sectionEndMessage}</p>
 
             <button
               type="button"
               onClick={() => router.refresh()}
-              className="mt-6 rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800"
+              className="mt-6 rounded-2xl border border-cyan-300/25 bg-cyan-400/15 px-5 py-3 text-sm font-black text-cyan-50 transition hover:bg-cyan-400/20"
             >
               Refresh session state
             </button>
           </section>
         ) : pendingSectionTransition ? (
-          <section className="mx-auto max-w-3xl rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+          <section className="mx-auto max-w-3xl rounded-[1.5rem] border border-cyan-300/15 bg-[#07142f]/95 p-5 text-center shadow-[0_24px_90px_rgba(0,0,0,0.36)] sm:rounded-[2rem] sm:p-8">
             <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
               Section transition
             </p>
 
-            <h2 className="mt-3 text-2xl font-bold text-slate-950">
+            <h2 className="mt-3 text-2xl font-bold text-white">
               {pendingSectionTransition.fromSectionTitle} complete
             </h2>
 
-            <p className="mt-4 text-slate-600">
+            <p className="mt-4 text-slate-300">
               You are about to move into{' '}
-              <span className="font-semibold text-slate-900">
+              <span className="font-semibold text-cyan-100">
                 {pendingSectionTransition.toSectionTitle}
               </span>
               . This transition is deliberate so that sections do not blur into
               one another.
             </p>
 
-            <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4 text-left text-sm text-slate-600">
-              <p className="font-medium text-slate-900">Before continuing:</p>
+            <div className="mt-6 rounded-xl border border-white/10 bg-[#020817]/75 p-4 text-left text-sm text-slate-300">
+              <p className="font-medium text-cyan-100">Before continuing:</p>
               <p className="mt-2">
                 Make sure you are ready to begin the next section. Once you
                 continue, the active section context will change.
@@ -773,40 +773,40 @@ const handleTimerExpired = useCallback((): void => {
             <button
               type="button"
               onClick={continueToNextSection}
-              className="mt-6 rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800"
+              className="mt-6 rounded-2xl border border-cyan-300/25 bg-cyan-400/15 px-5 py-3 text-sm font-black text-cyan-50 transition hover:bg-cyan-400/20"
             >
               Continue to {pendingSectionTransition.toSectionTitle}
             </button>
           </section>
         ) : pendingSubmissionConfirmation ? (
-          <section className="mx-auto max-w-3xl rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+          <section className="mx-auto max-w-3xl rounded-[1.5rem] border border-cyan-300/15 bg-[#07142f]/95 p-5 shadow-[0_24px_90px_rgba(0,0,0,0.36)] sm:rounded-[2rem] sm:p-8">
             <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
               Final submission
             </p>
 
-            <h2 className="mt-3 text-2xl font-bold text-slate-950">
+            <h2 className="mt-3 text-2xl font-bold text-white">
               Ready to submit?
             </h2>
 
-            <p className="mt-4 text-slate-600">
+            <p className="mt-4 text-slate-300">
               You have reached the end of{' '}
-              <span className="font-semibold text-slate-900">
+              <span className="font-semibold text-cyan-100">
                 {pendingSubmissionConfirmation.reachedFromSectionTitle}
               </span>
               . Final review across sections is not enabled in this candidate
               flow, so submission must be confirmed deliberately.
             </p>
 
-            <div className="mt-6 grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 sm:grid-cols-2">
+            <div className="mt-6 grid gap-3 rounded-xl border border-white/10 bg-[#020817]/75 p-4 text-sm text-slate-300 sm:grid-cols-2">
               <div>
-                <p className="font-medium text-slate-900">Answered items</p>
+                <p className="font-medium text-cyan-100">Answered items</p>
                 <p className="mt-1">
                   {totalAnsweredItemsCount} of {items.length}
                 </p>
               </div>
 
               <div>
-                <p className="font-medium text-slate-900">Submission effect</p>
+                <p className="font-medium text-cyan-100">Submission effect</p>
                 <p className="mt-1">
                   The session will be finalised and scoring/report generation
                   will be triggered by the backend.
@@ -825,7 +825,7 @@ const handleTimerExpired = useCallback((): void => {
                 type="button"
                 onClick={returnToFinalItem}
                 disabled={isSubmitting}
-                className="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-black text-slate-200 transition hover:bg-white/[0.07] disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Return to final item
               </button>
@@ -836,14 +836,14 @@ const handleTimerExpired = useCallback((): void => {
                   void submitAssessment();
                 }}
                 disabled={isSubmitting}
-                className="rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-2xl border border-cyan-300/25 bg-cyan-400/15 px-5 py-3 text-sm font-black text-cyan-50 transition hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {isSubmitting ? 'Submitting...' : 'Confirm and submit'}
               </button>
             </div>
           </section>
         ) : (
-          <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+          <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-6">
             <div className="space-y-4">
               <AssessmentProgressIndicator
                 sectionTitle={currentSection?.title}

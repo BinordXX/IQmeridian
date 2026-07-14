@@ -133,7 +133,9 @@ export class VerificationTokensService {
     }
 
     if (token.usedAt) {
-      throw new BadRequestException('Verification token has already been used.');
+      throw new BadRequestException(
+        'Verification token has already been used.',
+      );
     }
 
     if (token.expiresAt < new Date()) {

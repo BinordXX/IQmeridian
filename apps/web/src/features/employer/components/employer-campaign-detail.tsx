@@ -19,7 +19,7 @@ type EmployerCampaignDetailProps = {
 };
 
 const getInvitationDisplayStatus = (
-  invitation: EmployerInvitationSummary,
+  invitation: EmployerInvitationSummary
 ): string => {
   if (invitation.status !== 'PENDING') {
     return invitation.status;
@@ -34,6 +34,28 @@ const getInvitationDisplayStatus = (
   }
 
   return invitation.status;
+};
+
+const getInvitationDeliveryStatus = (
+  invitation: EmployerInvitationSummary
+): string => {
+  return invitation.emailDeliveryStatus ?? 'NOT_SENT';
+};
+
+const getInvitationDeliveryClassName = (
+  invitation: EmployerInvitationSummary
+): string => {
+  const status = getInvitationDeliveryStatus(invitation);
+
+  if (status === 'SENT') {
+    return 'border-emerald-300/20 bg-emerald-400/10 text-emerald-100';
+  }
+
+  if (status === 'FAILED') {
+    return 'border-red-300/20 bg-red-400/10 text-red-100';
+  }
+
+  return 'border-slate-300/15 bg-white/[0.04] text-slate-300';
 };
 
 export const EmployerCampaignDetail = ({
@@ -122,9 +144,7 @@ export const EmployerCampaignDetail = ({
       <section className="grid gap-6 xl:grid-cols-[1fr_380px]">
         <div className="space-y-6">
           <section className="rounded-[2rem] border border-white/10 bg-[#07142f]/88 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.22)]">
-            <h3 className="text-lg font-black text-white">
-              Campaign metadata
-            </h3>
+            <h3 className="text-lg font-black text-white">Campaign metadata</h3>
 
             <dl className="mt-5 grid gap-4 md:grid-cols-2">
               <div>
@@ -188,7 +208,8 @@ export const EmployerCampaignDetail = ({
                 <thead>
                   <tr className="border-b border-white/10 text-xs font-black uppercase tracking-[0.16em] text-slate-500">
                     <th className="px-4 py-3">Candidate</th>
-                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3">Invitation</th>
+                    <th className="px-4 py-3">Email delivery</th>
                     <th className="px-4 py-3">Expires</th>
                     <th className="px-4 py-3">Controls</th>
                   </tr>
@@ -218,6 +239,31 @@ export const EmployerCampaignDetail = ({
                           </span>
                         </td>
 
+                        <td className="px-4 py-4">
+                          <span
+                            className={`inline-flex rounded-full border px-3 py-1 text-xs font-black ${getInvitationDeliveryClassName(
+                              invitation
+                            )}`}
+                          >
+                            {getInvitationDeliveryStatus(invitation)}
+                          </span>
+
+                          {invitation.lastEmailSentAt ? (
+                            <p className="mt-2 text-xs leading-5 text-slate-500">
+                              Last sent:{' '}
+                              {new Date(
+                                invitation.lastEmailSentAt
+                              ).toLocaleString()}
+                            </p>
+                          ) : null}
+
+                          {invitation.lastEmailFailure ? (
+                            <p className="mt-2 max-w-xs text-xs leading-5 text-red-200/80">
+                              {invitation.lastEmailFailure}
+                            </p>
+                          ) : null}
+                        </td>
+
                         <td className="px-4 py-4 text-sm text-slate-400">
                           {invitation.expiresAt
                             ? new Date(invitation.expiresAt).toLocaleString()
@@ -239,7 +285,7 @@ export const EmployerCampaignDetail = ({
                   ) : (
                     <tr>
                       <td
-                        colSpan={4}
+                        colSpan={5}
                         className="px-4 py-10 text-center text-sm text-slate-500"
                       >
                         No invitations have been created for this campaign.

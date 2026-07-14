@@ -4,7 +4,11 @@ import {
   OnModuleDestroy,
   OnModuleInit,
 } from '@nestjs/common';
-import { createTransport, type SendMailOptions, type Transporter } from 'nodemailer';
+import {
+  createTransport,
+  type SendMailOptions,
+  type Transporter,
+} from 'nodemailer';
 
 type EmailDeliveryMode = 'console' | 'smtp';
 
@@ -57,6 +61,20 @@ type CandidateInvitationEmailInput = {
   expiresAt?: Date | null;
 };
 
+type CandidateInvitationExtendedEmailInput = {
+  to: EmailAddress;
+  organisationName?: string | null;
+  campaignName?: string | null;
+  invitationUrl: string;
+  expiresAt: Date;
+};
+
+type CandidateInvitationCancelledEmailInput = {
+  to: EmailAddress;
+  organisationName?: string | null;
+  campaignName?: string | null;
+};
+
 @Injectable()
 export class EmailService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(EmailService.name);
@@ -68,7 +86,7 @@ export class EmailService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-    async onModuleInit() {
+  async onModuleInit() {
     const mode = this.getDeliveryMode();
 
     if (mode === 'smtp') {
@@ -142,7 +160,9 @@ export class EmailService implements OnModuleInit, OnModuleDestroy {
   ): Promise<EmailDeliveryResult> {
     const expiresInMinutes = input.expiresInMinutes ?? 15;
 
-    const safeResetUrl = input.resetUrl ? this.escapeHtml(input.resetUrl) : null;
+    const safeResetUrl = input.resetUrl
+      ? this.escapeHtml(input.resetUrl)
+      : null;
     const safeResetCode = input.resetCode
       ? this.escapeHtml(input.resetCode)
       : null;
@@ -273,6 +293,87 @@ export class EmailService implements OnModuleInit, OnModuleDestroy {
     });
   }
 
+  async sendCandidateInvitationExtendedEmail(
+    input: CandidateInvitationExtendedEmailInput,
+  ): Promise<EmailDeliveryResult> {
+    const organisationName = input.organisationName ?? 'an organisation';
+    const campaignName = input.campaignName ?? 'an assessment campaign';
+
+    const safeOrganisationName = this.escapeHtml(organisationName);
+    const safeCampaignName = this.escapeHtml(campaignName);
+    const safeInvitationUrl = this.escapeHtml(input.invitationUrl);
+    const safeExpiresAt = this.escapeHtml(this.formatDate(input.expiresAt));
+
+    const html = this.buildHtmlDocument({
+      title: 'Your IQMeridian assessment invitation was extended',
+      preview: `Your invitation for ${campaignName} has been extended.`,
+      body: `
+        <p>Hello${this.getNameSuffix(input.to.name)},</p>
+        <p>Your invitation from <strong>${safeOrganisationName}</strong> to complete <strong>${safeCampaignName}</strong> on IQMeridian has been extended.</p>
+        <p><a href="${safeInvitationUrl}" style="${this.buttonStyle()}">Open assessment invitation</a></p>
+        <p>The invitation now expires on ${safeExpiresAt}.</p>
+        <p>If you were not expecting this invitation, contact the organisation before proceeding.</p>
+      `,
+    });
+
+    const text = [
+      `Hello${this.getNameSuffix(input.to.name)},`,
+      '',
+      `Your invitation from ${organisationName} to complete ${campaignName} on IQMeridian has been extended.`,
+      '',
+      `Open invitation: ${input.invitationUrl}`,
+      '',
+      `The invitation now expires on ${this.formatDate(input.expiresAt)}.`,
+      '',
+      'If you were not expecting this invitation, contact the organisation before proceeding.',
+    ].join('\n');
+
+    return this.sendTransactionalEmail({
+      to: input.to,
+      subject: `IQMeridian assessment invitation extended: ${campaignName}`,
+      text,
+      html,
+    });
+  }
+
+  async sendCandidateInvitationCancelledEmail(
+    input: CandidateInvitationCancelledEmailInput,
+  ): Promise<EmailDeliveryResult> {
+    const organisationName = input.organisationName ?? 'an organisation';
+    const campaignName = input.campaignName ?? 'an assessment campaign';
+
+    const safeOrganisationName = this.escapeHtml(organisationName);
+    const safeCampaignName = this.escapeHtml(campaignName);
+
+    const html = this.buildHtmlDocument({
+      title: 'Your IQMeridian assessment invitation was cancelled',
+      preview: `Your invitation for ${campaignName} has been cancelled.`,
+      body: `
+        <p>Hello${this.getNameSuffix(input.to.name)},</p>
+        <p>Your invitation from <strong>${safeOrganisationName}</strong> to complete <strong>${safeCampaignName}</strong> on IQMeridian has been cancelled.</p>
+        <p>The previous invitation link will no longer allow you to claim or begin this assessment.</p>
+        <p>If you believe this was a mistake, contact the organisation that invited you.</p>
+      `,
+    });
+
+    const text = [
+      `Hello${this.getNameSuffix(input.to.name)},`,
+      '',
+      `Your invitation from ${organisationName} to complete ${campaignName} on IQMeridian has been cancelled.`,
+      '',
+      'The previous invitation link will no longer allow you to claim or begin this assessment.',
+      '',
+      'If you believe this was a mistake, contact the organisation that invited you.',
+    ].join('\n');
+
+    return this.sendTransactionalEmail({
+      to: input.to,
+      subject: `IQMeridian assessment invitation cancelled: ${campaignName}`,
+      text,
+      html,
+    });
+  }
+
   async sendTransactionalEmail(
     input: SendTransactionalEmailInput,
   ): Promise<EmailDeliveryResult> {
@@ -312,7 +413,8 @@ export class EmailService implements OnModuleInit, OnModuleDestroy {
   }
 
   private getDeliveryMode(): EmailDeliveryMode {
-    const configuredMode = process.env.EMAIL_DELIVERY_MODE?.trim().toLowerCase();
+    const configuredMode =
+      process.env.EMAIL_DELIVERY_MODE?.trim().toLowerCase();
     const isProduction = process.env.NODE_ENV === 'production';
 
     if (configuredMode === 'smtp') {
@@ -332,7 +434,7 @@ export class EmailService implements OnModuleInit, OnModuleDestroy {
     );
   }
 
-   private getSmtpTransporter() {
+  private getSmtpTransporter() {
     if (this.transporter) {
       return this.transporter;
     }
@@ -375,7 +477,6 @@ export class EmailService implements OnModuleInit, OnModuleDestroy {
     return this.transporter;
   }
 
-  
   private getFromAddress() {
     const email =
       process.env.SMTP_FROM_EMAIL ??

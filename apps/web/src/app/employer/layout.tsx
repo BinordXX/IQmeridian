@@ -16,20 +16,20 @@ export default async function EmployerLayout({
 
   return (
     <EmployerSidebarShell
-user={{
-  email: session.user.email,
-  image: session.user.image,
-  name: session.user.name,
-  role: session.user.role,
-  organisationId:
-    'organisationId' in session.user
-      ? String(session.user.organisationId ?? '')
-      : null,
-  organisationName:
-    'organisationName' in session.user
-      ? String(session.user.organisationName ?? '')
-      : null,
-}}
+      user={{
+        email: session.user.email,
+        image: session.user.image,
+        name: session.user.name,
+        role: session.user.role,
+        organisationId:
+          'organisationId' in session.user
+            ? String(session.user.organisationId ?? '')
+            : null,
+        organisationName:
+          'organisationName' in session.user
+            ? String(session.user.organisationName ?? '')
+            : null,
+      }}
     >
       {children}
     </EmployerSidebarShell>

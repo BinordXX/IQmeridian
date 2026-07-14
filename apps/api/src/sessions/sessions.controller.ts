@@ -2,12 +2,14 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
   Param,
   Post,
   Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
+
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
@@ -24,11 +26,11 @@ type RequestUser = {
 };
 
 @Controller('sessions')
-@UseGuards(JwtAuthGuard, RolesGuard)
 export class SessionsController {
   constructor(private readonly sessionsService: SessionsService) {}
 
   @Roles('CANDIDATE', 'CONSUMER', 'EMPLOYER_ADMIN', 'PLATFORM_ADMIN')
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Get()
   listSessions(
     @Req() req: { user: RequestUser },
@@ -38,6 +40,7 @@ export class SessionsController {
   }
 
   @Roles('CONSUMER', 'PLATFORM_ADMIN')
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Post('consumer')
   createConsumerSession(
     @Req() req: { user: RequestUser },
@@ -49,19 +52,50 @@ export class SessionsController {
     });
   }
 
-  @Roles('CANDIDATE', 'PLATFORM_ADMIN')
   @Post('invitation')
-  createSessionFromInvitation(
-    @Req() req: { user: RequestUser },
-    @Body() body: CreateSessionFromInvitationDto,
-  ) {
+  createSessionFromInvitation(@Body() body: CreateSessionFromInvitationDto) {
     return this.sessionsService.createSessionFromInvitation({
-      userId: req.user.id,
       invitationToken: body.invitationToken,
+      applicantName: body.applicantName,
+      consentAccepted: body.consentAccepted,
     });
   }
 
+  @Post('public/:id/start')
+  startPublicSession(
+    @Param() params: SessionIdParamDto,
+    @Headers('x-assessment-session-token') sessionAccessToken?: string,
+  ) {
+    return this.sessionsService.startSessionWithAccessToken(
+      params.id,
+      sessionAccessToken,
+    );
+  }
+
+  @Post('public/:id/resume')
+  resumePublicSession(
+    @Param() params: SessionIdParamDto,
+    @Headers('x-assessment-session-token') sessionAccessToken?: string,
+  ) {
+    return this.sessionsService.resumeSessionWithAccessToken(
+      params.id,
+      sessionAccessToken,
+    );
+  }
+
+  @Post('public/:id/finalise')
+  finalisePublicSession(
+    @Param() params: SessionIdParamDto,
+    @Headers('x-assessment-session-token') sessionAccessToken?: string,
+  ) {
+    return this.sessionsService.finaliseSessionWithAccessToken(
+      params.id,
+      sessionAccessToken,
+    );
+  }
+
   @Roles('CANDIDATE', 'CONSUMER', 'PLATFORM_ADMIN')
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Post(':id/start')
   startSession(
     @Param() params: SessionIdParamDto,
@@ -71,6 +105,7 @@ export class SessionsController {
   }
 
   @Roles('CANDIDATE', 'CONSUMER', 'PLATFORM_ADMIN')
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Post(':id/resume')
   resumeSession(
     @Param() params: SessionIdParamDto,
@@ -80,6 +115,7 @@ export class SessionsController {
   }
 
   @Roles('CANDIDATE', 'CONSUMER', 'PLATFORM_ADMIN')
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Post(':id/finalise')
   finaliseSession(
     @Param() params: SessionIdParamDto,
@@ -89,6 +125,7 @@ export class SessionsController {
   }
 
   @Roles('CANDIDATE', 'CONSUMER', 'PLATFORM_ADMIN', 'RESEARCHER')
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Get(':id/psychometric-score')
   getSessionPsychometricScore(
     @Param() params: SessionIdParamDto,

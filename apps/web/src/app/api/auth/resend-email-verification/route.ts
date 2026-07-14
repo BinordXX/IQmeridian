@@ -10,7 +10,7 @@ export async function POST(request: Request) {
       {
         message: 'Invalid resend verification payload.',
       },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
@@ -24,7 +24,7 @@ export async function POST(request: Request) {
         },
         body: JSON.stringify(payload),
         cache: 'no-store',
-      },
+      }
     );
 
     const data = (await response.json().catch(() => ({}))) as unknown;
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
         message:
           'The IQMeridian API is currently unavailable. Try again shortly.',
       },
-      { status: 503 },
+      { status: 503 }
     );
   }
 }

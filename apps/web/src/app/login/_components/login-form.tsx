@@ -39,7 +39,10 @@ function getReadableLoginError(errorCode?: string) {
   return 'Sign-in failed. Confirm your details and try again.';
 }
 
-function getSafeResultUrl(resultUrl: string | null | undefined, fallback: string) {
+function getSafeResultUrl(
+  resultUrl: string | null | undefined,
+  fallback: string
+) {
   if (!resultUrl) {
     return fallback;
   }
@@ -142,9 +145,7 @@ export function LoginForm({ callbackUrl }: LoginFormProps) {
         </label>
 
         <label className="block">
-          <span className="text-sm font-semibold text-slate-300">
-            Password
-          </span>
+          <span className="text-sm font-semibold text-slate-300">Password</span>
           <span className="mt-2 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 transition focus-within:border-cyan-300/50">
             <LockKeyhole
               className="text-slate-500"
@@ -208,11 +209,11 @@ export function LoginForm({ callbackUrl }: LoginFormProps) {
           )}
         </button>
         <Link
-  className="text-sm font-black text-cyan-300 transition hover:text-cyan-200"
-  href="/forgot-password"
->
-  Forgot password?
-</Link>
+          className="text-sm font-black text-cyan-300 transition hover:text-cyan-200"
+          href="/forgot-password"
+        >
+          Forgot password?
+        </Link>
       </form>
 
       <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.035] p-4">

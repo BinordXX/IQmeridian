@@ -52,15 +52,6 @@ const statusPath = (
   return `/assessment/status?${params.toString()}`;
 };
 
-const loginPathForInvitation = (token: string) => {
-  const callbackUrl = `/assessment/invitation/${encodeURIComponent(
-    token,
-  )}/instructions`;
-
-  return `/login?callbackUrl=${encodeURIComponent(callbackUrl)}`;
-};
-
-
 const readResponsePayload = async (response: Response): Promise<unknown> => {
   const text = await response.text();
 
@@ -91,6 +82,28 @@ const serverAssessmentRequest = async <T>(
       Authorization: `Bearer ${accessToken}`,
     },
     body: options.body ? JSON.stringify(options.body) : undefined,
+    cache: 'no-store',
+  });
+
+  const payload = await readResponsePayload(response);
+
+  if (!response.ok) {
+    throw new AssessmentApiError(
+      `Assessment API request failed with status ${response.status}.`,
+      response.status,
+      payload
+    );
+  }
+
+  return payload as T;
+};
+
+const publicAssessmentRequest = async <T>(path: string): Promise<T> => {
+  const response = await fetch(`${normaliseBaseUrl(getApiBaseUrl())}${path}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
     cache: 'no-store',
   });
 
@@ -173,7 +186,7 @@ const apiErrorToGuardDecision = <T>(
 };
 
 const mapBackendInvitationValidation = (
-  invitation: BackendInvitationValidationResult,
+  invitation: BackendInvitationValidationResult
 ): InvitationValidationResult => {
   if (invitation.status === 'PENDING' || invitation.status === 'ACCEPTED') {
     return {
@@ -202,7 +215,7 @@ const mapBackendInvitationValidation = (
               section.items?.length ??
               0,
             timeLimitSec: section.timeLimitSec ?? undefined,
-          }),
+          })
         ) ?? [],
     } as InvitationValidationResult;
   }
@@ -263,52 +276,42 @@ type BackendInvitationValidationResult = {
 };
 
 export const guardInvitationInstructionsRoute = async (
-  token: string,
+  token: string
 ): Promise<AssessmentGuardDecision<InvitationValidationResult>> => {
   const session = await auth();
   const role = session?.user?.role;
   const userEmail = session?.user?.email?.trim().toLowerCase() ?? null;
 
-  if (!session?.user) {
-    return {
-      allowed: false,
-      reason: 'unauthorised',
-      redirectTo: loginPathForInvitation(token),
-    };
-  }
-
-  if (role !== 'CANDIDATE') {
+  if (session?.user && role !== 'CANDIDATE') {
     return {
       allowed: false,
       reason: 'unauthorised',
       redirectTo: statusPath(
         'unauthorised',
-        'Sign out and open this invitation with the candidate account assigned to the invitation.',
+        'Sign out or use a private browser window to open this applicant invitation.'
       ),
     };
   }
 
   try {
     const invitation =
-      await serverAssessmentRequest<BackendInvitationValidationResult>(
-        `/invitations/validate/${encodeURIComponent(token)}`,
+      await publicAssessmentRequest<BackendInvitationValidationResult>(
+        `/invitations/validate/${encodeURIComponent(token)}`
       );
 
-    if (
-      userEmail &&
-      invitation.email.trim().toLowerCase() !== userEmail
-    ) {
+    if (userEmail && invitation.email.trim().toLowerCase() !== userEmail) {
       return {
         allowed: false,
         reason: 'unauthorised',
         redirectTo: statusPath(
           'unauthorised',
-          'This invitation belongs to a different candidate email address.',
+          'This invitation belongs to a different candidate email address.'
         ),
       };
     }
 
     if (
+      session?.user?.id &&
       invitation.candidateUserId &&
       invitation.candidateUserId !== session.user.id
     ) {
@@ -317,7 +320,7 @@ export const guardInvitationInstructionsRoute = async (
         reason: 'unauthorised',
         redirectTo: statusPath(
           'unauthorised',
-          'This invitation has already been claimed by another candidate account.',
+          'This invitation has already been claimed by another candidate account.'
         ),
       };
     }

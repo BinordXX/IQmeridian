@@ -16,7 +16,11 @@ const getErrorMessage = (payload: {
     return payload.message.join(' ');
   }
 
-  return payload.message ?? payload.error ?? 'The invitation email could not be resent.';
+  return (
+    payload.message ??
+    payload.error ??
+    'The invitation email could not be resent.'
+  );
 };
 
 export function OrganisationAccessRequestResendInvitationButton({
@@ -40,11 +44,11 @@ export function OrganisationAccessRequestResendInvitationButton({
     try {
       const response = await fetch(
         `/api/internal/organisation-access-requests/${encodeURIComponent(
-          requestId,
+          requestId
         )}/resend-admin-invitation`,
         {
           method: 'POST',
-        },
+        }
       );
 
       const payload = (await response.json().catch(() => ({}))) as {
@@ -61,7 +65,7 @@ export function OrganisationAccessRequestResendInvitationButton({
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : 'The invitation email could not be resent.',
+          : 'The invitation email could not be resent.'
       );
     } finally {
       setIsSending(false);

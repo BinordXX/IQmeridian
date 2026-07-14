@@ -80,7 +80,7 @@ export const EmployerInvitationCreateForm = ({
       });
 
       const invitationUrl = `${window.location.origin}/assessment/invitation/${encodeURIComponent(
-        invitation.token,
+        invitation.token
       )}/instructions`;
 
       setCreatedLink(invitationUrl);
@@ -90,7 +90,7 @@ export const EmployerInvitationCreateForm = ({
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : 'The invitation could not be created.',
+          : 'The invitation could not be created.'
       );
     } finally {
       setIsCreating(false);
@@ -104,9 +104,7 @@ export const EmployerInvitationCreateForm = ({
           Candidate invitation
         </p>
 
-        <h3 className="mt-2 text-xl font-black text-white">
-          Invite candidate
-        </h3>
+        <h3 className="mt-2 text-xl font-black text-white">Invite candidate</h3>
 
         <p className="mt-2 text-sm leading-6 text-slate-400">
           Enter the candidate&apos;s email address. The candidate account will

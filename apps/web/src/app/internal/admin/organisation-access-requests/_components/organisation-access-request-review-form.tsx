@@ -46,7 +46,7 @@ export function OrganisationAccessRequestReviewForm({
     try {
       const response = await fetch(
         `/api/internal/organisation-access-requests/${encodeURIComponent(
-          requestId,
+          requestId
         )}/review`,
         {
           method: 'PATCH',
@@ -57,7 +57,7 @@ export function OrganisationAccessRequestReviewForm({
             status,
             reviewNotes: reviewNotes.trim() || undefined,
           }),
-        },
+        }
       );
 
       const payload = (await response.json().catch(() => ({}))) as {
@@ -75,7 +75,7 @@ export function OrganisationAccessRequestReviewForm({
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : 'The review could not be saved.',
+          : 'The review could not be saved.'
       );
     } finally {
       setIsSaving(false);
@@ -107,7 +107,9 @@ export function OrganisationAccessRequestReviewForm({
           <select
             className="mt-2 w-full rounded-2xl border border-white/10 bg-[#020817] px-4 py-3 text-sm font-black text-white outline-none focus:border-cyan-300/40"
             id={`review-status-${requestId}`}
-            onChange={(event) => setStatus(event.currentTarget.value as ReviewStatus)}
+            onChange={(event) =>
+              setStatus(event.currentTarget.value as ReviewStatus)
+            }
             value={status}
           >
             <option value="APPROVED">Approve</option>

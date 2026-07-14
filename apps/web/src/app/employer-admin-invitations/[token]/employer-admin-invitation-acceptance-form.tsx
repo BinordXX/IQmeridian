@@ -29,7 +29,9 @@ const getErrorMessage = (payload: {
     return payload.message.join(' ');
   }
 
-  return payload.message ?? payload.error ?? 'The invitation could not be accepted.';
+  return (
+    payload.message ?? payload.error ?? 'The invitation could not be accepted.'
+  );
 };
 
 export function EmployerAdminInvitationAcceptanceForm({
@@ -43,7 +45,7 @@ export function EmployerAdminInvitationAcceptanceForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [manualLoginMessage, setManualLoginMessage] = useState<string | null>(
-    null,
+    null
   );
 
   const submitAcceptance = async (event: FormEvent<HTMLFormElement>) => {
@@ -80,7 +82,7 @@ export function EmployerAdminInvitationAcceptanceForm({
             password,
             confirmPassword,
           }),
-        },
+        }
       );
 
       const payload = (await response.json().catch(() => ({}))) as {
@@ -100,7 +102,7 @@ export function EmployerAdminInvitationAcceptanceForm({
 
       if (!signInResult?.ok) {
         setManualLoginMessage(
-          'Invitation accepted and employer-admin account created. Sign in manually using the invited email and password.',
+          'Invitation accepted and employer-admin account created. Sign in manually using the invited email and password.'
         );
         return;
       }
@@ -111,7 +113,7 @@ export function EmployerAdminInvitationAcceptanceForm({
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : 'The invitation could not be accepted.',
+          : 'The invitation could not be accepted.'
       );
     } finally {
       setIsSubmitting(false);

@@ -1,7 +1,4 @@
-import {
-  parseRequestJson,
-  proxyAccountApi,
-} from '@/lib/account-api-proxy';
+import { parseRequestJson, proxyAccountApi } from '@/lib/account-api-proxy';
 
 export async function GET() {
   return proxyAccountApi({

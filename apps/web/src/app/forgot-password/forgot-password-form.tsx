@@ -1,6 +1,12 @@
 'use client';
 
-import { AlertCircle, ArrowRight, CheckCircle2, Loader2, Mail } from 'lucide-react';
+import {
+  AlertCircle,
+  ArrowRight,
+  CheckCircle2,
+  Loader2,
+  Mail,
+} from 'lucide-react';
 import Link from 'next/link';
 import { useState, type FormEvent } from 'react';
 
@@ -57,21 +63,22 @@ export function ForgotPasswordForm() {
         }),
       });
 
-      const payload = (await response.json().catch(() => ({}))) as
-        ForgotPasswordResponse;
+      const payload = (await response
+        .json()
+        .catch(() => ({}))) as ForgotPasswordResponse;
 
       if (!response.ok) {
         throw new Error(getErrorMessage(payload));
       }
 
       setSuccessMessage(
-        'If an eligible account exists for this email, a password reset link has been sent.',
+        'If an eligible account exists for this email, a password reset link has been sent.'
       );
     } catch (error) {
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : 'The password reset request could not be completed.',
+          : 'The password reset request could not be completed.'
       );
     } finally {
       setIsSubmitting(false);

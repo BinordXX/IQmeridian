@@ -1427,7 +1427,12 @@ export class InternalToolingService {
       return {
         sessionId: session.id,
         participantIdentifier:
-          session.user.name ?? session.user.email ?? session.user.id,
+          session.applicantName ??
+          session.user?.name ??
+          session.applicantEmail ??
+          session.user?.email ??
+          session.userId ??
+          session.id,
         formId: session.assessmentFormId,
         formLabel: session.assessmentForm.name,
         sessionStatus: session.status,
@@ -2960,9 +2965,12 @@ export class InternalToolingService {
       reportId: report.id,
       sessionId: report.sessionId,
       participantIdentifier:
-        report.session.user.name ??
-        report.session.user.email ??
-        report.session.user.id,
+        report.session.applicantName ??
+        report.session.user?.name ??
+        report.session.applicantEmail ??
+        report.session.user?.email ??
+        report.session.userId ??
+        report.session.id,
       formId: report.session.assessmentFormId,
       formLabel: report.session.assessmentForm.name,
       formVersion:
@@ -3049,7 +3057,12 @@ export class InternalToolingService {
     return {
       sessionId: session.id,
       participantIdentifier:
-        session.user.name ?? session.user.email ?? session.user.id,
+        session.applicantName ??
+        session.user?.name ??
+        session.applicantEmail ??
+        session.user?.email ??
+        session.userId ??
+        session.id,
       sessionType: session.campaignId ? 'EMPLOYER_LINKED' : 'CONSUMER',
       formId: session.assessmentFormId,
       formLabel: session.assessmentForm.name,

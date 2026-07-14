@@ -116,9 +116,7 @@ const formatDateTime = (value: string | null) => {
 const getOrganisationAccessRequests = async (status?: string) => {
   const authHeaders = await getRequiredServerApiAuthHeaders();
 
-  const requestUrl = new URL(
-    `${getApiBaseUrl()}/organisation-access-requests`,
-  );
+  const requestUrl = new URL(`${getApiBaseUrl()}/organisation-access-requests`);
 
   if (status) {
     requestUrl.searchParams.set('status', status);
@@ -137,9 +135,9 @@ const getOrganisationAccessRequests = async (status?: string) => {
 
     const message = Array.isArray(payload.message)
       ? payload.message.join(' ')
-      : payload.message ??
+      : (payload.message ??
         payload.error ??
-        'Unable to load organisation access requests.';
+        'Unable to load organisation access requests.');
 
     throw new Error(message);
   }
@@ -186,8 +184,8 @@ export default async function OrganisationAccessRequestsPage({
 
           <p className="mt-4 max-w-3xl text-sm leading-6 text-slate-400">
             Review public employer onboarding requests before an organisation is
-            provisioned. Approval does not yet create an organisation; conversion
-            is handled in the next provisioning step.
+            provisioned. Approval does not yet create an organisation;
+            conversion is handled in the next provisioning step.
           </p>
         </div>
       </section>
@@ -372,56 +370,59 @@ export default async function OrganisationAccessRequestsPage({
                     ) : null}
 
                     {request.adminInvitation ? (
-  <div className="mt-4 rounded-2xl border border-cyan-300/15 bg-cyan-400/10 p-4">
-    <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300">
-      Employer-admin invitation
-    </p>
+                      <div className="mt-4 rounded-2xl border border-cyan-300/15 bg-cyan-400/10 p-4">
+                        <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300">
+                          Employer-admin invitation
+                        </p>
 
-    <p className="mt-2 break-all text-sm leading-6 text-cyan-100">
-      Email:{' '}
-      <span className="font-bold">{request.adminInvitation.email}</span>
-    </p>
+                        <p className="mt-2 break-all text-sm leading-6 text-cyan-100">
+                          Email:{' '}
+                          <span className="font-bold">
+                            {request.adminInvitation.email}
+                          </span>
+                        </p>
 
-    <p className="mt-1 text-sm leading-6 text-cyan-100">
-      Status:{' '}
-      <span className="font-bold">{request.adminInvitation.status}</span>
-    </p>
+                        <p className="mt-1 text-sm leading-6 text-cyan-100">
+                          Status:{' '}
+                          <span className="font-bold">
+                            {request.adminInvitation.status}
+                          </span>
+                        </p>
 
-    <p className="mt-1 text-sm leading-6 text-cyan-100">
-      Expires:{' '}
-      <span className="font-bold">
-        {formatDateTime(request.adminInvitation.expiresAt)}
-      </span>
-    </p>
+                        <p className="mt-1 text-sm leading-6 text-cyan-100">
+                          Expires:{' '}
+                          <span className="font-bold">
+                            {formatDateTime(request.adminInvitation.expiresAt)}
+                          </span>
+                        </p>
 
-  <p className="mt-1 text-sm leading-6 text-cyan-100">
-  Email delivery:{' '}
-  <span className="font-bold">
-    {request.adminInvitation.emailDeliveryStatus}
-  </span>
-</p>
+                        <p className="mt-1 text-sm leading-6 text-cyan-100">
+                          Email delivery:{' '}
+                          <span className="font-bold">
+                            {request.adminInvitation.emailDeliveryStatus}
+                          </span>
+                        </p>
 
-<p className="mt-1 text-sm leading-6 text-cyan-100">
-  Last sent:{' '}
-  <span className="font-bold">
-    {formatDateTime(request.adminInvitation.lastEmailSentAt)}
-  </span>
-</p>
+                        <p className="mt-1 text-sm leading-6 text-cyan-100">
+                          Last sent:{' '}
+                          <span className="font-bold">
+                            {formatDateTime(
+                              request.adminInvitation.lastEmailSentAt
+                            )}
+                          </span>
+                        </p>
 
-{request.adminInvitation.lastEmailFailure ? (
-  <p className="mt-3 rounded-2xl border border-red-300/20 bg-red-400/10 p-3 text-xs font-bold leading-6 text-red-100">
-    {request.adminInvitation.lastEmailFailure}
-  </p>
-
-  
-) : null}
-<OrganisationAccessRequestResendInvitationButton
-  invitationStatus={request.adminInvitation.status}
-  requestId={request.id}
-/>
-  </div>
-) : null}
-
+                        {request.adminInvitation.lastEmailFailure ? (
+                          <p className="mt-3 rounded-2xl border border-red-300/20 bg-red-400/10 p-3 text-xs font-bold leading-6 text-red-100">
+                            {request.adminInvitation.lastEmailFailure}
+                          </p>
+                        ) : null}
+                        <OrganisationAccessRequestResendInvitationButton
+                          invitationStatus={request.adminInvitation.status}
+                          requestId={request.id}
+                        />
+                      </div>
+                    ) : null}
                   </div>
 
                   <OrganisationAccessRequestReviewForm
@@ -429,10 +430,10 @@ export default async function OrganisationAccessRequestsPage({
                     requestId={request.id}
                   />
                   <OrganisationAccessRequestConvertButton
-  convertedOrganisationId={request.convertedOrganisationId}
-  requestId={request.id}
-  status={request.status}
-/>
+                    convertedOrganisationId={request.convertedOrganisationId}
+                    requestId={request.id}
+                    status={request.status}
+                  />
                 </aside>
               </div>
             </article>

@@ -12,6 +12,14 @@ type CandidateItemCardProps = {
   disabled?: boolean;
 };
 
+const shouldShowOptionText = (label: string, text?: string): boolean => {
+  if (!text) {
+    return false;
+  }
+
+  return text.trim().toLowerCase() !== label.trim().toLowerCase();
+};
+
 export const CandidateItemCard = ({
   item,
   responseValue,
@@ -22,34 +30,34 @@ export const CandidateItemCard = ({
     typeof responseValue === 'string' ? responseValue : undefined;
 
   return (
-    <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <article className="rounded-[1.5rem] border border-cyan-300/15 bg-[#07142f]/95 p-4 shadow-[0_18px_60px_rgba(0,0,0,0.24)] sm:rounded-[2rem] sm:p-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-            Question {item.position}
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-300">
+            {item.itemType.replaceAll('_', ' ')} · Question {item.position}
           </p>
 
-          <h2 className="mt-3 text-xl font-semibold leading-8 text-slate-950">
+          <h2 className="mt-3 text-lg font-black leading-7 text-white sm:text-xl sm:leading-8">
             {item.stem}
           </h2>
 
-          {item.prompt ? (
-            <p className="mt-3 text-sm leading-6 text-slate-600">
+          {item.prompt && item.prompt.trim() !== item.stem.trim() ? (
+            <p className="mt-3 text-sm leading-6 text-slate-400">
               {item.prompt}
             </p>
           ) : null}
         </div>
 
         {item.timeLimitSeconds ? (
-          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+          <span className="rounded-full border border-cyan-300/15 bg-cyan-400/10 px-3 py-1 text-xs font-black text-cyan-100">
             {Math.round(item.timeLimitSeconds / 60)} min
           </span>
         ) : null}
       </div>
 
       {item.stimulus ? (
-        <section className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <section className="mt-6 rounded-2xl border border-white/10 bg-[#020817]/70 p-4">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300">
             Stimulus
           </p>
 
@@ -60,7 +68,7 @@ export const CandidateItemCard = ({
               className="mt-3 max-h-80 rounded-lg object-contain"
             />
           ) : (
-            <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-700">
+            <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-300">
               {item.stimulus.content}
             </p>
           )}
@@ -76,10 +84,10 @@ export const CandidateItemCard = ({
           return (
             <label
               key={option.optionId}
-              className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition ${
+              className={`flex min-h-14 cursor-pointer items-start gap-3 rounded-2xl border p-4 transition ${
                 isSelected
-                  ? 'border-slate-950 bg-slate-50'
-                  : 'border-slate-200 bg-white hover:bg-slate-50'
+                  ? 'border-cyan-300 bg-cyan-400/15 text-cyan-50'
+                  : 'border-white/10 bg-[#020817]/70 text-slate-300 hover:border-cyan-300/35 hover:bg-cyan-400/10'
               } ${disabled ? 'cursor-not-allowed opacity-70' : ''}`}
             >
               <input
@@ -88,16 +96,14 @@ export const CandidateItemCard = ({
                 value={option.optionId}
                 checked={isSelected}
                 onChange={() => onResponseChange(option.optionId)}
-                className="mt-1 h-4 w-4"
+                className="mt-1 h-4 w-4 accent-cyan-300"
               />
 
               <span className="flex-1">
-                <span className="font-medium text-slate-950">
-                  {option.label}
-                </span>
+                <span className="font-black text-white">{option.label}</span>
 
-                {option.text ? (
-                  <span className="ml-2 text-sm leading-6 text-slate-700">
+                {shouldShowOptionText(option.label, option.text) ? (
+                  <span className="ml-2 text-sm leading-6 text-slate-400">
                     {option.text}
                   </span>
                 ) : null}

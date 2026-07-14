@@ -14,7 +14,7 @@ const updateEmployerCampaignStatusFromClient = async (
   campaignId: string,
   input: {
     status: 'DRAFT' | 'ACTIVE' | 'CLOSED' | 'ARCHIVED';
-  },
+  }
 ) => {
   const response = await fetch(
     `/api/employer/campaigns/${encodeURIComponent(campaignId)}/status`,
@@ -24,7 +24,7 @@ const updateEmployerCampaignStatusFromClient = async (
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(input),
-    },
+    }
   );
 
   const payload = (await response.json().catch(() => ({}))) as {
@@ -43,7 +43,7 @@ const updateEmployerCampaignStatusFromClient = async (
     throw new Error(
       message ??
         payload.error ??
-        `Campaign status update failed with status ${response.status}`,
+        `Campaign status update failed with status ${response.status}`
     );
   }
 
@@ -79,7 +79,7 @@ export const EmployerCampaignStatusForm = ({
   const allowedStatuses = getAllowedNextStatuses(campaign.status);
 
   const [status, setStatus] = useState<CampaignStatus | ''>(
-    allowedStatuses[0] ?? '',
+    allowedStatuses[0] ?? ''
   );
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -102,7 +102,7 @@ export const EmployerCampaignStatusForm = ({
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : 'The campaign status could not be updated.',
+          : 'The campaign status could not be updated.'
       );
     } finally {
       setIsSaving(false);
