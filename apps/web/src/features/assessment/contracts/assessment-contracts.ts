@@ -195,6 +195,17 @@ export type AssessmentReportResult = {
   recommendations?: string[];
 };
 
+export type CandidateResultSummaryAudience = 'employer-invited' | 'consumer';
+
+export type CandidateResultSummaryResult = {
+  visibility: 'summary' | 'hidden';
+  audience?: CandidateResultSummaryAudience;
+  reason?: 'not_completed' | 'policy_hidden' | 'not_scored';
+  overallBand?: string | null;
+  abstractReasoningBand?: string | null;
+  numericalReasoningBand?: string | null;
+};
+
 const forbiddenCandidateItemFields = new Set([
   'correctAnswer',
   'correctOptionId',

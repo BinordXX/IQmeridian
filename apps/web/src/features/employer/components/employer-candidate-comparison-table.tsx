@@ -16,10 +16,14 @@ const BAND_RANK: Record<string, number> = {
 
 const getCandidateIdentifier = (session: EmployerSessionSummary): string => {
   return (
-    session.user?.name ??
-    session.user?.email ??
+    session.applicantName ??
+    session.applicantEmail ??
     session.invitation?.email ??
-    session.userId
+    session.user?.email ??
+    session.user?.name ??
+    session.userId ??
+    session.id ??
+    'Applicant'
   );
 };
 

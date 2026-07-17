@@ -48,8 +48,10 @@ services:
       PSYCHOMETRICS_DATA_ACCESS_MODE: nestjs_orchestrated
       PSYCHOMETRICS_INTERNAL_API_URL: http://api:3001
       PSYCHOMETRICS_OUTPUT_MODE: return_to_nestjs
-    expose:
-      - '8001'
+    ports:
+      - '8001:8001'
+    volumes:
+      - ../apps/psychometrics/app:/app/app
     healthcheck:
       test:
         [

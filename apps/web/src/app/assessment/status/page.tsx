@@ -1,5 +1,5 @@
 import Link from 'next/link';
-
+import { CompletedResultAccess } from '@/features/assessment/components/completed-result-access';
 type AssessmentStatusReason =
   | 'completed'
   | 'expired'
@@ -15,7 +15,7 @@ type AssessmentStatusReason =
   | 'submit-failed'
   | 'error';
 
-type CandidateResultVisibility = 'summary' | 'hidden';
+
 type CandidateAudience = 'employer-invited' | 'consumer';
 
 type AssessmentStatusPageProps = {
@@ -48,11 +48,7 @@ const normaliseReason = (reason?: string): AssessmentStatusReason => {
   }
 };
 
-const normaliseResultVisibility = (
-  visibility?: string
-): CandidateResultVisibility => {
-  return visibility === 'summary' ? 'summary' : 'hidden';
-};
+
 
 const normaliseAudience = (audience?: string): CandidateAudience => {
   return audience === 'consumer' ? 'consumer' : 'employer-invited';
@@ -195,17 +191,11 @@ export default async function AssessmentStatusPage({
 }: AssessmentStatusPageProps) {
   const params = searchParams ? await searchParams : {};
   const reason = normaliseReason(params.reason);
-  const resultVisibility = normaliseResultVisibility(params.resultVisibility);
+
   const audience = normaliseAudience(params.audience);
   const copy = getStatusCopy(reason);
 
-  const canShowResultSummary =
-    reason === 'completed' &&
-    resultVisibility === 'summary' &&
-    Boolean(params.sessionId);
 
-  const shouldHideResults =
-    reason === 'completed' && resultVisibility !== 'summary';
 
   return (
     <main className="min-h-screen bg-[#020817] px-4 py-6 text-white sm:px-6 sm:py-12">
@@ -236,39 +226,11 @@ export default async function AssessmentStatusPage({
           </div>
         ) : null}
 
-        {canShowResultSummary ? (
-          <div className="mt-6 rounded-2xl border border-cyan-300/15 bg-white/[0.035] p-5">
-            <h2 className="text-lg font-black text-white">
-              Result summary available
-            </h2>
-
-            <p className="mt-2 text-sm leading-6 text-slate-300">
-              A limited candidate result summary is available for this
-              assessment. This view is restricted to the result information that
-              candidates are permitted to see.
-            </p>
-
-            <Link
-              href={`/assessment/session/${encodeURIComponent(
-                params.sessionId ?? ''
-              )}/report`}
-              className="mt-4 inline-flex rounded-2xl border border-cyan-300/25 bg-cyan-400/15 px-5 py-3 text-sm font-black text-cyan-50 transition hover:bg-cyan-400/20"
-            >
-              View result summary
-            </Link>
-          </div>
-        ) : null}
-
-        {shouldHideResults ? (
-          <div className="mt-6 rounded-2xl border border-cyan-300/15 bg-white/[0.035] p-5">
-            <h2 className="text-lg font-black text-white">Result visibility</h2>
-
-            <p className="mt-2 text-sm leading-6 text-slate-300">
-              {audience === 'consumer'
-                ? 'Immediate result release is not enabled for this assessment attempt. If a summary becomes available, it will be shown through the candidate result page.'
-                : 'Immediate candidate results are not enabled for this employer-invited assessment. If results or feedback are released, they will be communicated through the process defined by the assessment administrator.'}
-            </p>
-          </div>
+               {reason === 'completed' ? (
+          <CompletedResultAccess
+            sessionId={params.sessionId}
+            audience={audience}
+          />
         ) : null}
 
         {reason !== 'completed' ? (

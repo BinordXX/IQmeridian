@@ -13,7 +13,11 @@
     "format": "prettier --write .",
     "docker:dev:up": "docker compose -f docker/docker-compose.dev.yml up -d",
     "docker:dev:down": "docker compose -f docker/docker-compose.dev.yml down",
-    "docker:dev:logs": "docker compose -f docker/docker-compose.dev.yml logs -f"
+    "docker:dev:logs": "docker compose -f docker/docker-compose.dev.yml logs -f",
+    "dev:infra": "docker compose -f docker/docker-compose.dev.yml up -d postgres redis minio psychometrics",
+"dev:api": "pnpm --filter api dev",
+"dev:web": "pnpm --filter web dev",
+"dev:all": "pnpm dev:infra && concurrently -n API,WEB -c blue,cyan \"pnpm dev:api\" \"pnpm dev:web\""
   },
   "repository": {
     "type": "git",
@@ -29,6 +33,7 @@
   "devDependencies": {
     "@eslint/js": "^9.39.4",
     "@typescript-eslint/eslint-plugin": "^8.62.0",
+    "concurrently": "^10.0.3",
     "eslint": "^10.3.0",
     "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.8.3",

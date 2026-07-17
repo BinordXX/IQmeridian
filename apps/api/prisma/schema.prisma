@@ -72,7 +72,9 @@ enum VerificationTokenPurpose {
   PASSWORD_RESET
   ORGANISATION_ADMIN_INVITATION
   CANDIDATE_INVITATION_NOTIFICATION
+  CANDIDATE_RESULT_ACCESS
 }
+
 
 enum AuthProvider {
   LOCAL
@@ -235,8 +237,8 @@ model User {
   organisation        Organisation? @relation(fields: [organisationId], references: [id])
   reviewedOrganisationAccessRequests OrganisationAccessRequest[] @relation("OrganisationAccessRequestReviewer")
   sentOrganisationAdminInvitations OrganisationAdminInvitation[] @relation("OrganisationAdminInvitationInviter")
-acceptedOrganisationAdminInvitations OrganisationAdminInvitation[] @relation("OrganisationAdminInvitationAcceptedBy")
-verificationTokens VerificationToken[] @relation("VerificationTokenSubjectUser")
+  acceptedOrganisationAdminInvitations OrganisationAdminInvitation[] @relation("OrganisationAdminInvitationAcceptedBy")
+  verificationTokens VerificationToken[] @relation("VerificationTokenSubjectUser")
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
   deletionRequestedAt DateTime?
@@ -497,9 +499,11 @@ model Campaign {
   organisation     Organisation    @relation(fields: [organisationId], references: [id])
   ownerId          String?
   owner            User?           @relation("CampaignOwner", fields: [ownerId], references: [id])
-  assessmentFormId String?
-  assessmentForm   AssessmentForm? @relation(fields: [assessmentFormId], references: [id])
-  createdAt        DateTime        @default(now())
+  assessmentFormId           String?
+  assessmentForm             AssessmentForm?            @relation(fields: [assessmentFormId], references: [id])
+  candidateResultVisibility  CandidateResultVisibility  @default(SUMMARY_ONLY)
+  candidateResultThresholdConfig Json?
+  createdAt                  DateTime                   @default(now())
   updatedAt        DateTime        @updatedAt
 
   invitations Invitation[]
@@ -635,7 +639,7 @@ model Invitation {
   lastEmailSentAt     DateTime?
   lastEmailFailure    String?
   sessions Session[]
-verificationTokens VerificationToken[]
+  verificationTokens VerificationToken[]
   @@index([participantId])
 }
 

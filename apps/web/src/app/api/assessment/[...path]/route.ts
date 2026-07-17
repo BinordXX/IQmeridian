@@ -15,6 +15,7 @@ type AssessmentProxyContext = {
 const PUBLIC_BACKEND_PATH_PREFIXES = [
   '/invitations/validate/',
   '/sessions/invitation',
+  '/sessions/result-access',
   '/sessions/public/',
   '/responses/public/',
 ];

@@ -75,6 +75,21 @@ type CandidateInvitationCancelledEmailInput = {
   campaignName?: string | null;
 };
 
+type CandidateResultAvailableEmailInput = {
+  to: EmailAddress;
+  organisationName?: string | null;
+  campaignName?: string | null;
+  resultUrl: string;
+  expiresAt: Date;
+};
+
+type CandidateResultHiddenEmailInput = {
+  to: EmailAddress;
+  organisationName?: string | null;
+  campaignName?: string | null;
+};
+
+
 @Injectable()
 export class EmailService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(EmailService.name);
@@ -369,6 +384,93 @@ export class EmailService implements OnModuleInit, OnModuleDestroy {
     return this.sendTransactionalEmail({
       to: input.to,
       subject: `IQMeridian assessment invitation cancelled: ${campaignName}`,
+      text,
+      html,
+    });
+  }
+
+    async sendCandidateResultAvailableEmail(
+    input: CandidateResultAvailableEmailInput,
+  ): Promise<EmailDeliveryResult> {
+    const organisationName = input.organisationName ?? 'the inviting organisation';
+    const campaignName = input.campaignName ?? 'your assessment';
+
+    const safeOrganisationName = this.escapeHtml(organisationName);
+    const safeCampaignName = this.escapeHtml(campaignName);
+    const safeResultUrl = this.escapeHtml(input.resultUrl);
+    const safeExpiresAt = this.escapeHtml(this.formatDate(input.expiresAt));
+
+    const html = this.buildHtmlDocument({
+      title: 'Your IQMeridian result summary is available',
+      preview: `Your result summary for ${campaignName} is available.`,
+      body: `
+        <p>Hello${this.getNameSuffix(input.to.name)},</p>
+        <p>Your assessment for <strong>${safeCampaignName}</strong>, completed for <strong>${safeOrganisationName}</strong>, has been recorded.</p>
+        <p>The organisation has enabled candidate-facing result summaries for this assessment.</p>
+        <p><a href="${safeResultUrl}" style="${this.buttonStyle()}">View result summary</a></p>
+        <p>This secure result link expires on ${safeExpiresAt}.</p>
+        <p>This summary is limited. It does not include employer reports, item-level answers, answer keys, or internal psychometric evidence.</p>
+      `,
+    });
+
+    const text = [
+      `Hello${this.getNameSuffix(input.to.name)},`,
+      '',
+      `Your assessment for ${campaignName}, completed for ${organisationName}, has been recorded.`,
+      '',
+      'The organisation has enabled candidate-facing result summaries for this assessment.',
+      '',
+      `View result summary: ${input.resultUrl}`,
+      '',
+      `This secure result link expires on ${this.formatDate(input.expiresAt)}.`,
+      '',
+      'This summary is limited. It does not include employer reports, item-level answers, answer keys, or internal psychometric evidence.',
+    ].join('\n');
+
+    return this.sendTransactionalEmail({
+      to: input.to,
+      subject: `IQMeridian result summary available: ${campaignName}`,
+      text,
+      html,
+    });
+  }
+
+  async sendCandidateResultHiddenEmail(
+    input: CandidateResultHiddenEmailInput,
+  ): Promise<EmailDeliveryResult> {
+    const organisationName = input.organisationName ?? 'the inviting organisation';
+    const campaignName = input.campaignName ?? 'your assessment';
+
+    const safeOrganisationName = this.escapeHtml(organisationName);
+    const safeCampaignName = this.escapeHtml(campaignName);
+
+    const html = this.buildHtmlDocument({
+      title: 'Your IQMeridian assessment is complete',
+      preview: `Your assessment for ${campaignName} has been completed.`,
+      body: `
+        <p>Hello${this.getNameSuffix(input.to.name)},</p>
+        <p>Your assessment for <strong>${safeCampaignName}</strong>, completed for <strong>${safeOrganisationName}</strong>, has been recorded.</p>
+        <p>Candidate-facing results have not been released for this assessment by the employer or assessment administrator.</p>
+        <p>This means your completion is recorded, but IQMeridian cannot show you a result summary at this time.</p>
+        <p>If feedback or results are later released, they will be communicated through the process defined by the organisation.</p>
+      `,
+    });
+
+    const text = [
+      `Hello${this.getNameSuffix(input.to.name)},`,
+      '',
+      `Your assessment for ${campaignName}, completed for ${organisationName}, has been recorded.`,
+      '',
+      'Candidate-facing results have not been released for this assessment by the employer or assessment administrator.',
+      '',
+      'This means your completion is recorded, but IQMeridian cannot show you a result summary at this time.',
+      '',
+      'If feedback or results are later released, they will be communicated through the process defined by the organisation.',
+    ].join('\n');
+
+    return this.sendTransactionalEmail({
+      to: input.to,
+      subject: `IQMeridian assessment completed: ${campaignName}`,
       text,
       html,
     });

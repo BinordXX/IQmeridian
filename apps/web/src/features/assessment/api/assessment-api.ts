@@ -11,6 +11,7 @@ import {
   type InvitationValidationResult,
   type SaveAssessmentResponseInput,
   type SaveAssessmentResponseResult,
+  type CandidateResultSummaryResult,
 } from '../contracts/assessment-contracts';
 
 type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
@@ -76,6 +77,12 @@ type BackendCreateAssessmentSessionResult = {
   assessmentId?: string;
   status?: string;
   sessionAccessToken?: string | null;
+};
+
+export type CandidateResultAccessExchangeResult = {
+  sessionId: string;
+  sessionAccessToken: string;
+  resultVisibility: 'SUMMARY_ONLY';
 };
 
 export type AssessmentPsychometricDomainScore = {
@@ -168,7 +175,8 @@ const getStoredSessionAccessToken = (sessionId: string): string | null => {
   return window.sessionStorage.getItem(sessionTokenStorageKey(sessionId));
 };
 
-const storeSessionAccessToken = (
+
+export const storeSessionAccessToken = (
   sessionId: string,
   sessionAccessToken?: string | null
 ) => {
@@ -187,6 +195,7 @@ const assessmentEndpoints = {
     `/invitations/validate/${encodeURIComponent(token)}`,
 
   createSession: '/sessions/invitation',
+  resultAccess: '/sessions/result-access',
 
   startSession: (sessionId: string, hasSessionAccessToken = false) =>
     hasSessionAccessToken
@@ -231,6 +240,11 @@ const assessmentEndpoints = {
 
   getPsychometricScore: (sessionId: string) =>
     `/sessions/${encodeURIComponent(sessionId)}/psychometric-score`,
+
+    candidateResultSummary: (sessionId: string, hasSessionAccessToken = false) =>
+    hasSessionAccessToken
+      ? `/sessions/public/${encodeURIComponent(sessionId)}/candidate-summary`
+      : `/sessions/${encodeURIComponent(sessionId)}/candidate-summary`,
 
   generateReport: (sessionId: string) =>
     `/sessions/${encodeURIComponent(sessionId)}/report`,
@@ -380,6 +394,20 @@ export const createAssessmentSession = async (
           ? 'not_started'
           : 'not_started',
   };
+};
+
+export const exchangeCandidateResultAccessToken = async (
+  token: string,
+  signal?: AbortSignal
+): Promise<CandidateResultAccessExchangeResult> => {
+  return assessmentRequest<CandidateResultAccessExchangeResult>(
+    assessmentEndpoints.resultAccess,
+    {
+      method: 'POST',
+      body: { token },
+      signal,
+    }
+  );
 };
 
 export const startAssessmentSession = async (
@@ -532,6 +560,24 @@ export const scoreAssessmentSession = async (
     {
       method: 'POST',
       signal,
+    }
+  );
+};
+
+export const getCandidateResultSummary = async (
+  sessionId: string,
+  signal?: AbortSignal
+): Promise<CandidateResultSummaryResult> => {
+  const sessionAccessToken = getStoredSessionAccessToken(sessionId);
+
+  return assessmentRequest<CandidateResultSummaryResult>(
+    assessmentEndpoints.candidateResultSummary(
+      sessionId,
+      Boolean(sessionAccessToken)
+    ),
+    {
+      signal,
+      sessionAccessToken,
     }
   );
 };

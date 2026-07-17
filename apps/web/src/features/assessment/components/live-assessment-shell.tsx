@@ -14,6 +14,7 @@ import { trackAssessmentEvent } from '../telemetry/assessment-telemetry';
 
 import {
   finaliseAssessmentSession,
+  getCandidateResultSummary,
   saveAssessmentResponse,
 } from '../api/assessment-api';
 import type {
@@ -49,10 +50,7 @@ type SubmissionConfirmationState = {
 
 type CandidateResultVisibility = 'summary' | 'hidden';
 
-type FinaliseResultPayload = {
-  candidateResultVisibility?: CandidateResultVisibility;
-  resultVisibility?: CandidateResultVisibility;
-};
+
 
 const flattenItems = (
   session: AssessmentSessionPayload
@@ -84,20 +82,16 @@ const isLiveSessionStatus = (status: string): boolean => {
   return status !== 'completed' && status !== 'expired';
 };
 
-const resolveCandidateResultVisibility = (
-  finalisePayload: unknown
-): CandidateResultVisibility => {
-  const payload = finalisePayload as FinaliseResultPayload | undefined;
+const resolveCandidateResultVisibility = async (
+  sessionId: string
+): Promise<CandidateResultVisibility> => {
+  try {
+    const summary = await getCandidateResultSummary(sessionId);
 
-  if (payload?.candidateResultVisibility === 'summary') {
-    return 'summary';
+    return summary.visibility === 'summary' ? 'summary' : 'hidden';
+  } catch {
+    return 'hidden';
   }
-
-  if (payload?.resultVisibility === 'summary') {
-    return 'summary';
-  }
-
-  return 'hidden';
 };
 
 export const LiveAssessmentShell = ({ session }: LiveAssessmentShellProps) => {
@@ -130,27 +124,28 @@ export const LiveAssessmentShell = ({ session }: LiveAssessmentShellProps) => {
       trigger: 'timeout',
     });
 
-    void finaliseAssessmentSession(session.sessionId)
-      .then((finaliseResult) => {
-        void trackAssessmentEvent('submission_completed', {
-          sessionId: session.sessionId,
-          assessmentId: session.assessmentId,
-          trigger: 'timeout',
-        });
+   void finaliseAssessmentSession(session.sessionId)
+  .then(async () => {
+    void trackAssessmentEvent('submission_completed', {
+      sessionId: session.sessionId,
+      assessmentId: session.assessmentId,
+      trigger: 'timeout',
+    });
 
-        const resultVisibility =
-          resolveCandidateResultVisibility(finaliseResult);
+    const resultVisibility = await resolveCandidateResultVisibility(
+      session.sessionId
+    );
 
-        dispatch({ type: 'COMPLETED' });
+    dispatch({ type: 'COMPLETED' });
 
-        const statusParams = new URLSearchParams({
-          reason: 'completed',
-          sessionId: session.sessionId,
-          resultVisibility,
-        });
+    const statusParams = new URLSearchParams({
+      reason: 'completed',
+      sessionId: session.sessionId,
+      resultVisibility,
+    });
 
-        router.replace(`/assessment/status?${statusParams.toString()}`);
-      })
+    router.replace(`/assessment/status?${statusParams.toString()}`);
+  })
       .catch(() => {
         dispatch({
           type: 'FAILED',
@@ -510,13 +505,15 @@ export const LiveAssessmentShell = ({ session }: LiveAssessmentShellProps) => {
     dispatch({ type: 'SUBMIT_STARTED' });
 
     try {
-      const finaliseResult = await finaliseAssessmentSession(session.sessionId);
-      void trackAssessmentEvent('submission_completed', {
-        sessionId: session.sessionId,
-        assessmentId: session.assessmentId,
-      });
+      await finaliseAssessmentSession(session.sessionId);
+void trackAssessmentEvent('submission_completed', {
+  sessionId: session.sessionId,
+  assessmentId: session.assessmentId,
+});
 
-      const resultVisibility = resolveCandidateResultVisibility(finaliseResult);
+const resultVisibility = await resolveCandidateResultVisibility(
+  session.sessionId
+);
 
       dispatch({ type: 'COMPLETED' });
 

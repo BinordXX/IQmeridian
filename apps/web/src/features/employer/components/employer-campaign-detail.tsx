@@ -4,6 +4,8 @@ import type {
   EmployerCampaignDetail as EmployerCampaignDetailData,
   EmployerInvitationSummary,
 } from '../api/employer-dashboard-api';
+import { EmployerResultThresholdControl } from './employer-result-threshold-control';
+import { EmployerCandidateThresholdSummary } from './employer-candidate-threshold-summary';
 import { EmployerInvitationControls } from './employer-invitation-controls';
 import { EmployerResultVisibilityControl } from './employer-result-visibility-control';
 import { EmployerCampaignCsvExport } from './employer-campaign-csv-export';
@@ -139,7 +141,17 @@ export const EmployerCampaignDetail = ({
         </div>
       </section>
 
-      <EmployerResultVisibilityControl campaignStatus={campaign.status} />
+      <EmployerResultVisibilityControl
+        campaignId={campaign.id}
+        campaignStatus={campaign.status}
+        candidateResultVisibility={campaign.candidateResultVisibility}
+      />
+
+      <EmployerResultThresholdControl
+        campaignId={campaign.id}
+        campaignStatus={campaign.status}
+        thresholdConfig={campaign.candidateResultThresholdConfig}
+      />
 
       <section className="grid gap-6 xl:grid-cols-[1fr_380px]">
         <div className="space-y-6">
@@ -186,6 +198,11 @@ export const EmployerCampaignDetail = ({
           </section>
 
           <EmployerCampaignResultOverview sessions={sessions} />
+
+          <EmployerCandidateThresholdSummary
+            sessions={sessions}
+            thresholdConfig={campaign.candidateResultThresholdConfig}
+          />
 
           <EmployerCandidateComparisonTable
             campaignId={campaign.id}
