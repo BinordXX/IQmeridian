@@ -3,10 +3,12 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import {
   CandidateAccessMode,
   CampaignStatus,
+  EmailDeliveryStatus,
   InvitationStatus,
   OrganisationParticipantStatus,
   OrganisationParticipantType,
@@ -14,7 +16,9 @@ import {
   UserStatus,
 } from '@prisma/client';
 import { randomUUID } from 'crypto';
+
 import { AuditService } from '../audit/audit.service';
+import { EmailService } from '../email/email.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 type RequestUser = {
@@ -28,6 +32,7 @@ export class InvitationsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
+    private readonly emailService: EmailService,
   ) {}
 
   async createInvitation(input: {
@@ -43,18 +48,19 @@ export class InvitationsService {
       throw new BadRequestException('Candidate email is required');
     }
 
-const campaign = await this.prisma.campaign.findUnique({
-  where: { id: input.campaignId },
-  include: {
-    assessmentForm: true,
-    organisation: {
-      select: {
-        id: true,
-        candidateAccessMode: true,
+    const campaign = await this.prisma.campaign.findUnique({
+      where: { id: input.campaignId },
+      include: {
+        assessmentForm: true,
+        organisation: {
+          select: {
+            id: true,
+            name: true,
+            candidateAccessMode: true,
+          },
+        },
       },
-    },
-  },
-});
+    });
 
     if (!campaign) {
       throw new NotFoundException('Campaign not found');
@@ -90,20 +96,20 @@ const campaign = await this.prisma.campaign.findUnique({
       throw new BadRequestException('Invitation expiry date must be in future');
     }
 
-const candidateUserId = await this.resolveCandidateUserId({
-  candidateUserId: input.candidateUserId,
-  email,
-});
+    const candidateUserId = await this.resolveCandidateUserId({
+      candidateUserId: input.candidateUserId,
+      email,
+    });
 
-const participant = candidateUserId
-  ? await this.ensureOrganisationParticipant({
-      organisationId: campaign.organisationId,
-      userId: candidateUserId,
-      accessMode:
-        campaign.organisation?.candidateAccessMode ??
-        CandidateAccessMode.ONE_OFF,
-    })
-  : null;
+    const participant = candidateUserId
+      ? await this.ensureOrganisationParticipant({
+          organisationId: campaign.organisationId,
+          userId: candidateUserId,
+          accessMode:
+            campaign.organisation?.candidateAccessMode ??
+            CandidateAccessMode.ONE_OFF,
+        })
+      : null;
 
     const existingInvitation = await this.prisma.invitation.findFirst({
       where: {
@@ -126,14 +132,15 @@ const participant = candidateUserId
     }
 
     const invitation = await this.prisma.invitation.create({
-     data: {
-  campaignId: input.campaignId,
-  email,
-  token: randomUUID(),
-  candidateUserId,
-  participantId: participant?.id,
-  expiresAt,
-},
+      data: {
+        campaignId: input.campaignId,
+        email,
+        token: randomUUID(),
+        candidateUserId,
+        participantId: participant?.id,
+        expiresAt,
+        emailDeliveryStatus: EmailDeliveryStatus.NOT_SENT,
+      },
     });
 
     await this.auditService.record({
@@ -148,10 +155,24 @@ const participant = candidateUserId
         candidateUserId: invitation.candidateUserId,
         expiresAt: invitation.expiresAt,
         participantId: invitation.participantId,
+        emailDeliveryStatus: invitation.emailDeliveryStatus,
       },
     });
 
-    return invitation;
+    const delivery = await this.deliverCandidateInvitationEmail({
+      invitationId: invitation.id,
+      token: invitation.token,
+      email: invitation.email,
+      campaignId: invitation.campaignId,
+      campaignName: campaign.name,
+      organisationName: campaign.organisation?.name ?? null,
+      expiresAt: invitation.expiresAt,
+      userId: input.requestingUser.id,
+      failureAuditAction: 'INVITATION_EMAIL_DELIVERY_FAILED',
+      successAuditAction: 'INVITATION_EMAIL_SENT',
+    });
+
+    return delivery.invitation;
   }
 
   async validateInvitation(token: string) {
@@ -203,7 +224,7 @@ const participant = candidateUserId
     return invitation;
   }
 
-    async listPendingCandidateInvitations(user: RequestUser) {
+  async listPendingCandidateInvitations(user: RequestUser) {
     const candidate = await this.prisma.user.findUnique({
       where: {
         id: user.id,
@@ -220,7 +241,9 @@ const participant = candidateUserId
     }
 
     if (candidate.role !== UserRole.CANDIDATE) {
-      throw new ForbiddenException('Only candidate accounts can view invitations');
+      throw new ForbiddenException(
+        'Only candidate accounts can view invitations',
+      );
     }
 
     const email = candidate.email.trim().toLowerCase();
@@ -302,7 +325,7 @@ const participant = candidateUserId
     return invitation;
   }
 
-    async resendInvitation(id: string, user: RequestUser) {
+  async resendInvitation(id: string, user: RequestUser) {
     const invitation = await this.getManageableInvitation(id, user);
 
     this.assertInvitationHasNoSession(invitation.sessions.length);
@@ -332,10 +355,31 @@ const participant = candidateUserId
         email: invitation.email,
         status: invitation.status,
         expiresAt: invitation.expiresAt,
+        previousEmailDeliveryStatus: invitation.emailDeliveryStatus,
+        previousLastEmailSentAt: invitation.lastEmailSentAt,
       },
     });
 
-    return invitation;
+    const delivery = await this.deliverCandidateInvitationEmail({
+      invitationId: invitation.id,
+      token: invitation.token,
+      email: invitation.email,
+      campaignId: invitation.campaignId,
+      campaignName: invitation.campaign.name,
+      organisationName: invitation.campaign.organisation.name,
+      expiresAt: invitation.expiresAt,
+      userId: user.id,
+      failureAuditAction: 'INVITATION_RESEND_EMAIL_FAILED',
+      successAuditAction: 'INVITATION_RESEND_EMAIL_SENT',
+    });
+
+    if (!delivery.sent) {
+      throw new ServiceUnavailableException(
+        'Candidate invitation email could not be sent. The invitation remains available for resend.',
+      );
+    }
+
+    return delivery.invitation;
   }
 
   async cancelInvitation(id: string, user: RequestUser) {
@@ -356,15 +400,7 @@ const participant = candidateUserId
       data: {
         status: InvitationStatus.CANCELLED,
       },
-      include: {
-        campaign: {
-          include: {
-            organisation: true,
-            assessmentForm: true,
-          },
-        },
-        sessions: true,
-      },
+      include: this.getInvitationInclude(),
     });
 
     await this.auditService.record({
@@ -380,7 +416,17 @@ const participant = candidateUserId
       },
     });
 
-    return cancelledInvitation;
+    return this.deliverCandidateInvitationLifecycleEmail({
+      invitationId: cancelledInvitation.id,
+      token: cancelledInvitation.token,
+      email: cancelledInvitation.email,
+      campaignId: cancelledInvitation.campaignId,
+      campaignName: cancelledInvitation.campaign.name,
+      organisationName: cancelledInvitation.campaign.organisation.name,
+      expiresAt: cancelledInvitation.expiresAt,
+      userId: user.id,
+      lifecycle: 'cancelled',
+    });
   }
 
   async extendInvitation(
@@ -419,15 +465,7 @@ const participant = candidateUserId
         expiresAt,
         status: nextStatus,
       },
-      include: {
-        campaign: {
-          include: {
-            organisation: true,
-            assessmentForm: true,
-          },
-        },
-        sessions: true,
-      },
+      include: this.getInvitationInclude(),
     });
 
     await this.auditService.record({
@@ -445,7 +483,223 @@ const participant = candidateUserId
       },
     });
 
-    return extendedInvitation;
+    return this.deliverCandidateInvitationLifecycleEmail({
+      invitationId: extendedInvitation.id,
+      token: extendedInvitation.token,
+      email: extendedInvitation.email,
+      campaignId: extendedInvitation.campaignId,
+      campaignName: extendedInvitation.campaign.name,
+      organisationName: extendedInvitation.campaign.organisation.name,
+      expiresAt: extendedInvitation.expiresAt,
+      userId: user.id,
+      lifecycle: 'extended',
+    });
+  }
+
+  private async deliverCandidateInvitationLifecycleEmail(input: {
+    invitationId: string;
+    token: string;
+    email: string;
+    campaignId: string;
+    campaignName: string;
+    organisationName: string | null;
+    expiresAt?: Date | null;
+    userId: string;
+    lifecycle: 'extended' | 'cancelled';
+  }) {
+    const invitationUrl = `${this.getWebAppBaseUrl()}/assessment/invitation/${encodeURIComponent(
+      input.token,
+    )}`;
+
+    try {
+      const deliveryResult =
+        input.lifecycle === 'extended'
+          ? await this.emailService.sendCandidateInvitationExtendedEmail({
+              to: {
+                email: input.email,
+                name: null,
+              },
+              organisationName: input.organisationName,
+              campaignName: input.campaignName,
+              invitationUrl,
+              expiresAt: input.expiresAt ?? new Date(),
+            })
+          : await this.emailService.sendCandidateInvitationCancelledEmail({
+              to: {
+                email: input.email,
+                name: null,
+              },
+              organisationName: input.organisationName,
+              campaignName: input.campaignName,
+            });
+
+      const invitation = await this.prisma.invitation.update({
+        where: {
+          id: input.invitationId,
+        },
+        data: {
+          emailDeliveryStatus: EmailDeliveryStatus.SENT,
+          lastEmailSentAt: new Date(),
+          lastEmailFailure: null,
+        },
+        include: this.getInvitationInclude(),
+      });
+
+      await this.auditService.record({
+        action:
+          input.lifecycle === 'extended'
+            ? 'INVITATION_EXTENSION_EMAIL_SENT'
+            : 'INVITATION_CANCELLATION_EMAIL_SENT',
+        userId: input.userId,
+        entityType: 'Invitation',
+        entityId: input.invitationId,
+        metadata: {
+          campaignId: input.campaignId,
+          email: input.email,
+          lifecycle: input.lifecycle,
+          emailDeliveryStatus: invitation.emailDeliveryStatus,
+          lastEmailSentAt: invitation.lastEmailSentAt,
+          messageId: deliveryResult.messageId ?? null,
+          accepted: deliveryResult.accepted ?? [],
+          rejected: deliveryResult.rejected ?? [],
+        },
+      });
+
+      return invitation;
+    } catch (error) {
+      const failureMessage =
+        error instanceof Error
+          ? error.message.slice(0, 500)
+          : 'Candidate invitation lifecycle email delivery failed.';
+
+      const invitation = await this.prisma.invitation.update({
+        where: {
+          id: input.invitationId,
+        },
+        data: {
+          emailDeliveryStatus: EmailDeliveryStatus.FAILED,
+          lastEmailFailure: failureMessage,
+        },
+        include: this.getInvitationInclude(),
+      });
+
+      await this.auditService.record({
+        action:
+          input.lifecycle === 'extended'
+            ? 'INVITATION_EXTENSION_EMAIL_FAILED'
+            : 'INVITATION_CANCELLATION_EMAIL_FAILED',
+        userId: input.userId,
+        entityType: 'Invitation',
+        entityId: input.invitationId,
+        metadata: {
+          campaignId: input.campaignId,
+          email: input.email,
+          lifecycle: input.lifecycle,
+          emailDeliveryStatus: invitation.emailDeliveryStatus,
+          lastEmailFailure: invitation.lastEmailFailure,
+        },
+      });
+
+      return invitation;
+    }
+  }
+
+  private async deliverCandidateInvitationEmail(input: {
+    invitationId: string;
+    token: string;
+    email: string;
+    campaignId: string;
+    campaignName: string;
+    organisationName: string | null;
+    expiresAt?: Date | null;
+    userId: string;
+    successAuditAction: string;
+    failureAuditAction: string;
+  }) {
+    const invitationUrl = `${this.getWebAppBaseUrl()}/assessment/invitation/${encodeURIComponent(
+      input.token,
+    )}`;
+
+    try {
+      const deliveryResult =
+        await this.emailService.sendCandidateInvitationEmail({
+          to: {
+            email: input.email,
+            name: null,
+          },
+          organisationName: input.organisationName,
+          campaignName: input.campaignName,
+          invitationUrl,
+          expiresAt: input.expiresAt,
+        });
+
+      const invitation = await this.prisma.invitation.update({
+        where: {
+          id: input.invitationId,
+        },
+        data: {
+          emailDeliveryStatus: EmailDeliveryStatus.SENT,
+          lastEmailSentAt: new Date(),
+          lastEmailFailure: null,
+        },
+        include: this.getInvitationInclude(),
+      });
+
+      await this.auditService.record({
+        action: input.successAuditAction,
+        userId: input.userId,
+        entityType: 'Invitation',
+        entityId: input.invitationId,
+        metadata: {
+          campaignId: input.campaignId,
+          email: input.email,
+          emailDeliveryStatus: invitation.emailDeliveryStatus,
+          lastEmailSentAt: invitation.lastEmailSentAt,
+          messageId: deliveryResult.messageId ?? null,
+          accepted: deliveryResult.accepted ?? [],
+          rejected: deliveryResult.rejected ?? [],
+        },
+      });
+
+      return {
+        sent: true,
+        invitation,
+      };
+    } catch (error) {
+      const failureMessage =
+        error instanceof Error
+          ? error.message.slice(0, 500)
+          : 'Candidate invitation email delivery failed.';
+
+      const invitation = await this.prisma.invitation.update({
+        where: {
+          id: input.invitationId,
+        },
+        data: {
+          emailDeliveryStatus: EmailDeliveryStatus.FAILED,
+          lastEmailFailure: failureMessage,
+        },
+        include: this.getInvitationInclude(),
+      });
+
+      await this.auditService.record({
+        action: input.failureAuditAction,
+        userId: input.userId,
+        entityType: 'Invitation',
+        entityId: input.invitationId,
+        metadata: {
+          campaignId: input.campaignId,
+          email: input.email,
+          emailDeliveryStatus: invitation.emailDeliveryStatus,
+          lastEmailFailure: invitation.lastEmailFailure,
+        },
+      });
+
+      return {
+        sent: false,
+        invitation,
+      };
+    }
   }
 
   private async resolveCandidateUserId(input: {
@@ -493,18 +747,10 @@ const participant = candidateUserId
     return candidate.id;
   }
 
-    private async getManageableInvitation(id: string, user: RequestUser) {
+  private async getManageableInvitation(id: string, user: RequestUser) {
     const invitation = await this.prisma.invitation.findUnique({
       where: { id },
-      include: {
-        campaign: {
-          include: {
-            organisation: true,
-            assessmentForm: true,
-          },
-        },
-        sessions: true,
-      },
+      include: this.getInvitationInclude(),
     });
 
     if (!invitation) {
@@ -516,6 +762,18 @@ const participant = candidateUserId
     return invitation;
   }
 
+  private getInvitationInclude() {
+    return {
+      campaign: {
+        include: {
+          organisation: true,
+          assessmentForm: true,
+        },
+      },
+      sessions: true,
+    };
+  }
+
   private assertInvitationHasNoSession(sessionCount: number) {
     if (sessionCount > 0) {
       throw new BadRequestException(
@@ -525,46 +783,48 @@ const participant = candidateUserId
   }
 
   private async ensureOrganisationParticipant(input: {
-  organisationId: string;
-  userId: string;
-  accessMode?: CandidateAccessMode;
-}) {
-  const existingParticipant =
-    await this.prisma.organisationParticipant.findUnique({
-      where: {
-        organisationId_userId: {
-          organisationId: input.organisationId,
-          userId: input.userId,
-        },
-      },
-    });
-
-  if (existingParticipant) {
-    if (existingParticipant.status === OrganisationParticipantStatus.ARCHIVED) {
-      return this.prisma.organisationParticipant.update({
+    organisationId: string;
+    userId: string;
+    accessMode?: CandidateAccessMode;
+  }) {
+    const existingParticipant =
+      await this.prisma.organisationParticipant.findUnique({
         where: {
-          id: existingParticipant.id,
-        },
-        data: {
-          status: OrganisationParticipantStatus.ACTIVE,
-          archivedAt: null,
+          organisationId_userId: {
+            organisationId: input.organisationId,
+            userId: input.userId,
+          },
         },
       });
+
+    if (existingParticipant) {
+      if (
+        existingParticipant.status === OrganisationParticipantStatus.ARCHIVED
+      ) {
+        return this.prisma.organisationParticipant.update({
+          where: {
+            id: existingParticipant.id,
+          },
+          data: {
+            status: OrganisationParticipantStatus.ACTIVE,
+            archivedAt: null,
+          },
+        });
+      }
+
+      return existingParticipant;
     }
 
-    return existingParticipant;
+    return this.prisma.organisationParticipant.create({
+      data: {
+        organisationId: input.organisationId,
+        userId: input.userId,
+        participantType: OrganisationParticipantType.CANDIDATE,
+        accessMode: input.accessMode ?? CandidateAccessMode.ONE_OFF,
+        status: OrganisationParticipantStatus.ACTIVE,
+      },
+    });
   }
-
-  return this.prisma.organisationParticipant.create({
-    data: {
-      organisationId: input.organisationId,
-      userId: input.userId,
-      participantType: OrganisationParticipantType.CANDIDATE,
-      accessMode: input.accessMode ?? CandidateAccessMode.ONE_OFF,
-      status: OrganisationParticipantStatus.ACTIVE,
-    },
-  });
-}
 
   private assertCanManageCampaign(user: RequestUser, organisationId: string) {
     if (user.role === UserRole.PLATFORM_ADMIN) {
@@ -579,5 +839,18 @@ const participant = candidateUserId
     }
 
     throw new ForbiddenException('Not authorised for this campaign');
+  }
+
+  private getWebAppBaseUrl() {
+    const baseUrl =
+      process.env.WEB_APP_URL ??
+      process.env.NEXT_PUBLIC_APP_URL ??
+      'http://localhost:3000';
+
+    if (process.env.NODE_ENV === 'production' && !process.env.WEB_APP_URL) {
+      throw new Error('WEB_APP_URL is required in production.');
+    }
+
+    return baseUrl.replace(/\/$/, '');
   }
 }

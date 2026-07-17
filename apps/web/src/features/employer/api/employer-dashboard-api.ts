@@ -1,5 +1,10 @@
 import { getRequiredServerApiAuthHeaders } from '@/lib/server-api-auth';
 
+export type CandidateResultVisibility =
+  | 'COMPLETION_ONLY'
+  | 'SUMMARY_ONLY'
+  | 'NONE'
+  | 'FULL_PERSONAL_REPORT';
 type CollectionResponse<T> =
   | T[]
   | {
@@ -8,6 +13,37 @@ type CollectionResponse<T> =
         total?: number;
       };
     };
+
+  export type PsychometricScoreBand =
+  | 'VERY_LOW'
+  | 'LOW'
+  | 'BELOW_AVERAGE'
+  | 'AVERAGE'
+  | 'ABOVE_AVERAGE'
+  | 'HIGH'
+  | 'VERY_HIGH';
+
+export const psychometricScoreBandOptions: Array<{
+  value: PsychometricScoreBand;
+  label: string;
+}> = [
+  { value: 'VERY_LOW', label: 'Very low' },
+  { value: 'LOW', label: 'Low' },
+  { value: 'BELOW_AVERAGE', label: 'Below average' },
+  { value: 'AVERAGE', label: 'Average' },
+  { value: 'ABOVE_AVERAGE', label: 'Above average' },
+  { value: 'HIGH', label: 'High' },
+  { value: 'VERY_HIGH', label: 'Very high' },
+];
+
+export type CandidateResultThresholdConfig = {
+  enabled: boolean;
+  minimumOverallBand: PsychometricScoreBand | null;
+  minimumAbstractReasoningBand: PsychometricScoreBand | null;
+  minimumNumericalReasoningBand: PsychometricScoreBand | null;
+  hideUnscoredFromFilteredView: boolean;
+  requireNoHighSeverityValidityFlags: boolean;
+};
 
 export type EmployerInvitationSummary = {
   id: string;
@@ -19,6 +55,9 @@ export type EmployerInvitationSummary = {
   createdAt?: string;
   expiresAt?: string | null;
   usedAt?: string | null;
+  emailDeliveryStatus?: 'NOT_SENT' | 'SENT' | 'FAILED' | string;
+  lastEmailSentAt?: string | null;
+  lastEmailFailure?: string | null;
 };
 
 export type EmployerCampaignSummary = {
@@ -26,6 +65,8 @@ export type EmployerCampaignSummary = {
   name: string;
   status: string;
   assessmentFormId?: string | null;
+  candidateResultVisibility?: CandidateResultVisibility;
+  candidateResultThresholdConfig?: CandidateResultThresholdConfig | null;
   assessmentForm?: {
     id: string;
     name: string;
@@ -78,6 +119,37 @@ export type EmployerScoreSummary = {
   updatedAt?: string;
 };
 
+export type EmployerPsychometricDomainScoreSummary = {
+  id: string;
+  domain: string;
+  label?: string;
+  scoreBand?: PsychometricScoreBand | string;
+  standardScore?: number | null;
+  percentile?: number | null;
+  accuracy?: number | null;
+};
+
+export type EmployerPsychometricValidityFlagSummary = {
+  id: string;
+  code: string;
+  label?: string;
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' | string;
+  description?: string;
+};
+
+export type EmployerPsychometricScoreResultSummary = {
+  id: string;
+  sessionId: string;
+  scoringStatus: string;
+  overallScoreBand: PsychometricScoreBand | string;
+  overallStandardScore?: number | null;
+  overallPercentile?: number | null;
+  overallAccuracy?: number | null;
+  generatedAt?: string;
+  domainScores?: EmployerPsychometricDomainScoreSummary[];
+  validityFlags?: EmployerPsychometricValidityFlagSummary[];
+};
+
 export type EmployerResponseSummary = {
   id: string;
   sessionId: string;
@@ -90,7 +162,7 @@ export type EmployerResponseSummary = {
 
 export type EmployerSessionSummary = {
   id: string;
-  userId: string;
+    userId?: string | null;
   campaignId?: string | null;
   invitationId?: string | null;
   assessmentFormId: string;
@@ -100,14 +172,18 @@ export type EmployerSessionSummary = {
   createdAt?: string;
   updatedAt?: string;
   candidateName?: string;
+  
   user?: {
     id: string;
     name?: string | null;
     email?: string | null;
   };
   invitation?: EmployerInvitationSummary | null;
+    applicantName?: string | null;
+  applicantEmail?: string | null;
   responses?: EmployerResponseSummary[];
   score?: EmployerScoreSummary | null;
+  psychometricScoreResult?: EmployerPsychometricScoreResultSummary | null;
 };
 
 export type EmployerDashboardData = {
@@ -154,6 +230,54 @@ export type UpdateEmployerCampaignStatusInput = {
   status: 'DRAFT' | 'ACTIVE' | 'CLOSED' | 'ARCHIVED';
 };
 
+export type UpdateEmployerCandidateResultVisibilityInput = {
+  candidateResultVisibility: 'COMPLETION_ONLY' | 'SUMMARY_ONLY';
+};
+
+export type UpdateEmployerCandidateResultThresholdsInput =
+  Partial<CandidateResultThresholdConfig>;
+
+export const updateEmployerCandidateResultVisibility = async (
+  campaignId: string,
+  input: UpdateEmployerCandidateResultVisibilityInput,
+): Promise<EmployerCampaignSummary> => {
+  const authHeaders = await getRequiredServerApiAuthHeaders();
+
+  const response = await fetch(
+    `${getApiBaseUrl()}/campaigns/${encodeURIComponent(
+      campaignId,
+    )}/candidate-result-visibility`,
+    {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders,
+      },
+      body: JSON.stringify(input),
+      cache: 'no-store',
+    },
+  );
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => ({}))) as {
+      message?: string | string[];
+      error?: string;
+    };
+
+    const message = Array.isArray(payload.message)
+      ? payload.message.join(' ')
+      : payload.message;
+
+    throw new Error(
+      message ??
+        payload.error ??
+        `Candidate result visibility update failed with status ${response.status}`,
+    );
+  }
+
+  return (await response.json()) as EmployerCampaignSummary;
+};
+
 const normaliseBaseUrl = (baseUrl: string): string => {
   return baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
 };
@@ -193,6 +317,47 @@ const employerRequest = async <T>(path: string): Promise<T> => {
   return (await response.json()) as T;
 };
 
+export const updateEmployerCandidateResultThresholds = async (
+  campaignId: string,
+  input: UpdateEmployerCandidateResultThresholdsInput
+): Promise<EmployerCampaignSummary> => {
+  const authHeaders = await getRequiredServerApiAuthHeaders();
+
+  const response = await fetch(
+    `${getApiBaseUrl()}/campaigns/${encodeURIComponent(
+      campaignId
+    )}/candidate-result-thresholds`,
+    {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders,
+      },
+      body: JSON.stringify(input),
+      cache: 'no-store',
+    }
+  );
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => ({}))) as {
+      message?: string | string[];
+      error?: string;
+    };
+
+    const message = Array.isArray(payload.message)
+      ? payload.message.join(' ')
+      : payload.message;
+
+    throw new Error(
+      message ??
+        payload.error ??
+        `Candidate result threshold update failed with status ${response.status}`
+    );
+  }
+
+  return (await response.json()) as EmployerCampaignSummary;
+};
+
 export const getEmployerDashboardData =
   async (): Promise<EmployerDashboardData> => {
     const [campaignPayload, sessionPayload] = await Promise.all([
@@ -218,8 +383,8 @@ export const getEmployerDashboardData =
     }).length;
 
     const reportReadyResults = sessions.filter((session) => {
-      return Boolean(session.score);
-    }).length;
+  return Boolean(session.psychometricScoreResult ?? session.score);
+}).length;
 
     return {
       campaigns,
@@ -287,7 +452,7 @@ export const createEmployerCampaign = async (
     throw new Error(
       message ??
         payload.error ??
-        `Campaign creation failed with status ${response.status}`,
+        `Campaign creation failed with status ${response.status}`
     );
   }
 

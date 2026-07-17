@@ -21,7 +21,9 @@ const readActionResponse = async (response: Response) => {
   };
 
   if (!response.ok) {
-    throw new Error(payload.message ?? `Request failed with status ${response.status}`);
+    throw new Error(
+      payload.message ?? `Request failed with status ${response.status}`
+    );
   }
 
   return payload;
@@ -45,14 +47,16 @@ export function EmployerInvitationControls({
     }
 
     return `${window.location.origin}/assessment/invitation/${encodeURIComponent(
-      token,
+      token
     )}/instructions`;
   }, [token]);
 
   const canModify =
-    !hasSession && (status === 'PENDING' || status === 'ACCEPTED' || status === 'EXPIRED');
+    !hasSession &&
+    (status === 'PENDING' || status === 'ACCEPTED' || status === 'EXPIRED');
 
-  const canResend = !hasSession && (status === 'PENDING' || status === 'ACCEPTED');
+  const canResend =
+    !hasSession && (status === 'PENDING' || status === 'ACCEPTED');
 
   const copyLink = async () => {
     try {
@@ -78,17 +82,19 @@ export function EmployerInvitationControls({
 
     try {
       await readActionResponse(
-        await fetch(`/api/employer/invitations/${encodeURIComponent(invitationId)}/resend`, {
-          method: 'POST',
-        }),
+        await fetch(
+          `/api/employer/invitations/${encodeURIComponent(invitationId)}/resend`,
+          {
+            method: 'POST',
+          }
+        )
       );
 
       await navigator.clipboard.writeText(invitationUrl).catch(() => undefined);
 
       setActionState({
         tone: 'success',
-        message:
-          'Resend action recorded. Email delivery is not wired yet, so the link has been copied for manual sending.',
+        message: 'Invitation email resent successfully.',
       });
 
       router.refresh();
@@ -96,7 +102,9 @@ export function EmployerInvitationControls({
       setActionState({
         tone: 'error',
         message:
-          error instanceof Error ? error.message : 'Invitation could not be resent.',
+          error instanceof Error
+            ? error.message
+            : 'Invitation could not be resent.',
       });
     } finally {
       setIsWorking(false);
@@ -107,7 +115,7 @@ export function EmployerInvitationControls({
     if (!canModify || isWorking) return;
 
     const confirmed = window.confirm(
-      'Cancel this invitation? The candidate will no longer be able to claim it.',
+      'Cancel this invitation? The candidate will no longer be able to claim it.'
     );
 
     if (!confirmed) return;
@@ -117,14 +125,17 @@ export function EmployerInvitationControls({
 
     try {
       await readActionResponse(
-        await fetch(`/api/employer/invitations/${encodeURIComponent(invitationId)}/cancel`, {
-          method: 'PATCH',
-        }),
+        await fetch(
+          `/api/employer/invitations/${encodeURIComponent(invitationId)}/cancel`,
+          {
+            method: 'PATCH',
+          }
+        )
       );
 
       setActionState({
         tone: 'success',
-        message: 'Invitation cancelled.',
+        message: 'Invitation cancelled and the candidate was notified.',
       });
 
       router.refresh();
@@ -132,7 +143,9 @@ export function EmployerInvitationControls({
       setActionState({
         tone: 'error',
         message:
-          error instanceof Error ? error.message : 'Invitation could not be cancelled.',
+          error instanceof Error
+            ? error.message
+            : 'Invitation could not be cancelled.',
       });
     } finally {
       setIsWorking(false);
@@ -157,22 +170,25 @@ export function EmployerInvitationControls({
 
     try {
       const expiresAt = new Date(
-        Date.now() + days * 24 * 60 * 60 * 1000,
+        Date.now() + days * 24 * 60 * 60 * 1000
       ).toISOString();
 
       await readActionResponse(
-        await fetch(`/api/employer/invitations/${encodeURIComponent(invitationId)}/extend`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ expiresAt }),
-        }),
+        await fetch(
+          `/api/employer/invitations/${encodeURIComponent(invitationId)}/extend`,
+          {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ expiresAt }),
+          }
+        )
       );
 
       setActionState({
         tone: 'success',
-        message: `Invitation extended by ${days} day${days === 1 ? '' : 's'}.`,
+        message: `Invitation extended by ${days} day${days === 1 ? '' : 's'} and the candidate was notified.`,
       });
 
       router.refresh();
@@ -180,7 +196,9 @@ export function EmployerInvitationControls({
       setActionState({
         tone: 'error',
         message:
-          error instanceof Error ? error.message : 'Invitation could not be extended.',
+          error instanceof Error
+            ? error.message
+            : 'Invitation could not be extended.',
       });
     } finally {
       setIsWorking(false);

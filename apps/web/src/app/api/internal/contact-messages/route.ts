@@ -31,7 +31,7 @@ export async function GET(request: Request) {
       },
       {
         status: 403,
-      },
+      }
     );
   }
 
@@ -62,7 +62,7 @@ export async function GET(request: Request) {
       },
       {
         status: 502,
-      },
+      }
     );
   }
 }

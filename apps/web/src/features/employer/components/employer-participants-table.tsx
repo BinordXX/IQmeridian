@@ -43,7 +43,9 @@ const readActionResponse = async (response: Response) => {
       : payload.message;
 
     throw new Error(
-      message ?? payload.error ?? `Request failed with status ${response.status}`,
+      message ??
+        payload.error ??
+        `Request failed with status ${response.status}`
     );
   }
 
@@ -75,14 +77,14 @@ export function EmployerParticipantsTable({
 
   const updateStatus = async (
     participant: EmployerParticipantSummary,
-    status: ParticipantStatus,
+    status: ParticipantStatus
   ) => {
     if (isWorkingId) return;
 
     if (
       status === 'ARCHIVED' &&
       !window.confirm(
-        'Archive this participant? Existing historical records remain available, but this participant will be removed from the active register.',
+        'Archive this participant? Existing historical records remain available, but this participant will be removed from the active register.'
       )
     ) {
       return;
@@ -101,8 +103,8 @@ export function EmployerParticipantsTable({
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({ status }),
-          },
-        ),
+          }
+        )
       );
 
       setActionState({
@@ -140,7 +142,9 @@ export function EmployerParticipantsTable({
           <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-300">
             Active
           </p>
-          <p className="mt-2 text-3xl font-black text-white">{metrics.active}</p>
+          <p className="mt-2 text-3xl font-black text-white">
+            {metrics.active}
+          </p>
         </div>
 
         <div className="rounded-[1.5rem] border border-amber-300/15 bg-[#07142f]/88 p-5">
@@ -324,8 +328,8 @@ export function EmployerParticipantsTable({
                     colSpan={7}
                   >
                     No organisation participants have been linked yet. Invite a
-                    candidate and have them claim the invitation to populate this
-                    register.
+                    candidate and have them claim the invitation to populate
+                    this register.
                   </td>
                 </tr>
               )}

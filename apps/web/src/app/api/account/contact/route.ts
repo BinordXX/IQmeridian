@@ -29,7 +29,7 @@ export async function POST(request: Request) {
       },
       {
         status: 401,
-      },
+      }
     );
   }
 
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
       },
       {
         status: 400,
-      },
+      }
     );
   }
 
@@ -59,7 +59,7 @@ export async function POST(request: Request) {
           'Content-Type': 'application/json',
         },
         method: 'POST',
-      },
+      }
     );
 
     const payload = await parseApiResponse(response);
@@ -74,7 +74,7 @@ export async function POST(request: Request) {
       },
       {
         status: 502,
-      },
+      }
     );
   }
 }

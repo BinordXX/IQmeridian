@@ -52,9 +52,11 @@ enum UserRole {
 }
 
 enum UserStatus {
+  PENDING_EMAIL_VERIFICATION
   ACTIVE
   SUSPENDED
   DISABLED
+  
 }
 
 enum AuthRateLimitAction {
@@ -62,7 +64,17 @@ enum AuthRateLimitAction {
   REGISTER
   REGISTER_CANDIDATE
   REFRESH
+  PASSWORD_RESET
 }
+
+enum VerificationTokenPurpose {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+  ORGANISATION_ADMIN_INVITATION
+  CANDIDATE_INVITATION_NOTIFICATION
+  CANDIDATE_RESULT_ACCESS
+}
+
 
 enum AuthProvider {
   LOCAL
@@ -223,6 +235,10 @@ model User {
   organisationId  String?
 
   organisation        Organisation? @relation(fields: [organisationId], references: [id])
+  reviewedOrganisationAccessRequests OrganisationAccessRequest[] @relation("OrganisationAccessRequestReviewer")
+  sentOrganisationAdminInvitations OrganisationAdminInvitation[] @relation("OrganisationAdminInvitationInviter")
+  acceptedOrganisationAdminInvitations OrganisationAdminInvitation[] @relation("OrganisationAdminInvitationAcceptedBy")
+  verificationTokens VerificationToken[] @relation("VerificationTokenSubjectUser")
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
   deletionRequestedAt DateTime?
@@ -246,6 +262,48 @@ model User {
   @@index([organisationId])
 }
 
+model OrganisationAdminInvitation {
+  id String @id @default(cuid())
+
+  organisationId String
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+
+  organisationAccessRequestId String? @unique
+  organisationAccessRequest   OrganisationAccessRequest? @relation(fields: [organisationAccessRequestId], references: [id], onDelete: SetNull)
+
+  email String
+  token String @unique
+  role  UserRole @default(EMPLOYER_ADMIN)
+  verificationTokens VerificationToken[]
+
+  status OrganisationAdminInvitationStatus @default(PENDING)
+
+    emailDeliveryStatus EmailDeliveryStatus @default(NOT_SENT)
+  lastEmailSentAt     DateTime?
+  lastEmailFailure    String?
+
+  invitedById String?
+  invitedBy   User? @relation("OrganisationAdminInvitationInviter", fields: [invitedById], references: [id], onDelete: SetNull)
+
+  acceptedById String?
+  acceptedBy   User? @relation("OrganisationAdminInvitationAcceptedBy", fields: [acceptedById], references: [id], onDelete: SetNull)
+
+  expiresAt DateTime
+  usedAt    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organisationId])
+  @@index([organisationAccessRequestId])
+  @@index([email])
+  @@index([token])
+  @@index([status])
+  @@index([invitedById])
+  @@index([acceptedById])
+  @@index([expiresAt])
+}
+
 model AuthRateLimitEvent {
   id        String              @id @default(cuid())
   action    AuthRateLimitAction
@@ -256,6 +314,47 @@ model AuthRateLimitEvent {
   @@index([action, keyHash, createdAt])
   @@index([createdAt])
 }
+
+
+model VerificationToken {
+  id String @id @default(cuid())
+
+  purpose   VerificationTokenPurpose
+  tokenHash String                   @unique
+  tokenLastFour String?
+
+  email String
+
+  subjectUserId String?
+  subjectUser   User?   @relation("VerificationTokenSubjectUser", fields: [subjectUserId], references: [id], onDelete: SetNull)
+
+  organisationAdminInvitationId String?
+  organisationAdminInvitation   OrganisationAdminInvitation? @relation(fields: [organisationAdminInvitationId], references: [id], onDelete: Cascade)
+
+  candidateInvitationId String?
+  candidateInvitation   Invitation? @relation(fields: [candidateInvitationId], references: [id], onDelete: Cascade)
+
+  expiresAt DateTime
+  usedAt    DateTime?
+
+  revokedAt     DateTime?
+  revokedReason String?
+
+  metadata Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([purpose])
+  @@index([email])
+  @@index([subjectUserId])
+  @@index([organisationAdminInvitationId])
+  @@index([candidateInvitationId])
+  @@index([expiresAt])
+  @@index([usedAt])
+  @@index([revokedAt])
+}
+
 
 model AuthAccount {
   id                String       @id @default(cuid())
@@ -312,6 +411,33 @@ model AccountNotificationPreference {
   @@index([userId])
 }
 
+model OrganisationAccessRequest {
+  id             String                          @id @default(cuid())
+  organisationName String
+  website        String?
+  industry       String?
+  country        String?
+  contactName    String
+  contactEmail   String
+  contactPhone   String?
+  intendedUse    String
+  expectedVolume String?
+  status         OrganisationAccessRequestStatus @default(PENDING)
+  reviewedAt     DateTime?
+  reviewedById   String?
+  reviewNotes    String?
+  convertedOrganisationId String?
+  createdAt      DateTime                        @default(now())
+  updatedAt      DateTime                        @updatedAt
+  adminInvitation OrganisationAdminInvitation?
+
+  reviewedBy User? @relation("OrganisationAccessRequestReviewer", fields: [reviewedById], references: [id])
+
+  @@index([status])
+  @@index([contactEmail])
+  @@index([createdAt])
+}
+
 model Organisation {
   id        String   @id @default(cuid())
   name      String
@@ -327,6 +453,7 @@ model Organisation {
   users        User[]
   campaigns    Campaign[]
   participants OrganisationParticipant[]
+  adminInvitations OrganisationAdminInvitation[]
 
   @@index([candidateAccessMode])
   @@index([reassessmentMode])
@@ -372,9 +499,11 @@ model Campaign {
   organisation     Organisation    @relation(fields: [organisationId], references: [id])
   ownerId          String?
   owner            User?           @relation("CampaignOwner", fields: [ownerId], references: [id])
-  assessmentFormId String?
-  assessmentForm   AssessmentForm? @relation(fields: [assessmentFormId], references: [id])
-  createdAt        DateTime        @default(now())
+  assessmentFormId           String?
+  assessmentForm             AssessmentForm?            @relation(fields: [assessmentFormId], references: [id])
+  candidateResultVisibility  CandidateResultVisibility  @default(SUMMARY_ONLY)
+  candidateResultThresholdConfig Json?
+  createdAt                  DateTime                   @default(now())
   updatedAt        DateTime        @updatedAt
 
   invitations Invitation[]
@@ -506,22 +635,28 @@ model Invitation {
   createdAt       DateTime                 @default(now())
   expiresAt       DateTime?
   usedAt          DateTime?
-
+  emailDeliveryStatus EmailDeliveryStatus @default(NOT_SENT)
+  lastEmailSentAt     DateTime?
+  lastEmailFailure    String?
   sessions Session[]
-
+  verificationTokens VerificationToken[]
   @@index([participantId])
 }
 
 model Session {
   id                         String                   @id @default(cuid())
-  userId                     String
-  user                       User                     @relation(fields: [userId], references: [id])
+  userId                     String?
+  user                       User?                    @relation(fields: [userId], references: [id])
   campaignId                 String?
   campaign                   Campaign?                @relation(fields: [campaignId], references: [id])
   invitationId               String?
   invitation                 Invitation?              @relation(fields: [invitationId], references: [id])
   participantId              String?
   participant                OrganisationParticipant? @relation(fields: [participantId], references: [id], onDelete: SetNull)
+  applicantEmail             String?
+  applicantName              String?
+  consentAcceptedAt          DateTime?
+  sessionAccessTokenHash     String?                  @unique
   assessmentFormId           String
   assessmentForm             AssessmentForm           @relation(fields: [assessmentFormId], references: [id])
   assessmentFormVersion      Int                      @default(1)
@@ -546,6 +681,7 @@ model Session {
   report                  Report[]
 
   @@index([participantId])
+  @@index([applicantEmail])
 }
 
 model Response {
@@ -853,11 +989,31 @@ enum FormItemMappingStatus {
   INACTIVE
 }
 
+enum OrganisationAccessRequestStatus {
+  PENDING
+  APPROVED
+  DECLINED
+  CONVERTED
+}
+
+enum OrganisationAdminInvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  CANCELLED
+}
+
 enum InvitationStatus {
   PENDING
   ACCEPTED
   EXPIRED
   CANCELLED
+}
+
+enum EmailDeliveryStatus {
+  NOT_SENT
+  SENT
+  FAILED
 }
 
 enum PsychometricScoringStatus {

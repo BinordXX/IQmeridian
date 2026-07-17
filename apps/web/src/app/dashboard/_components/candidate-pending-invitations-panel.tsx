@@ -26,9 +26,7 @@ const getInvitationTitle = (invitation: CandidatePendingInvitationSummary) => {
   );
 };
 
-const getOrganisationName = (
-  invitation: CandidatePendingInvitationSummary,
-) => {
+const getOrganisationName = (invitation: CandidatePendingInvitationSummary) => {
   return invitation.campaign?.organisation?.name ?? 'Inviting organisation';
 };
 
@@ -45,7 +43,6 @@ export function CandidatePendingInvitationsPanel({
   invitations,
   errorMessage = null,
 }: CandidatePendingInvitationsPanelProps) {
-
   if (errorMessage) {
     return (
       <section className="rounded-[2rem] border border-amber-300/20 bg-amber-400/10 p-5 text-amber-100">
@@ -86,7 +83,8 @@ export function CandidatePendingInvitationsPanel({
               </p>
 
               <h2 className="mt-2 text-2xl font-black text-white">
-                You have assessment invitation{invitations.length === 1 ? '' : 's'} waiting
+                You have assessment invitation
+                {invitations.length === 1 ? '' : 's'} waiting
               </h2>
 
               <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">

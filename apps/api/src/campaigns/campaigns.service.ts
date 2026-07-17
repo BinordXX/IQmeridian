@@ -4,7 +4,15 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { CampaignStatus, Prisma, UserRole } from '@prisma/client';
+
+import {
+  CampaignStatus,
+  CandidateResultVisibility,
+  Prisma,
+  PsychometricScoreBand,
+  UserRole,
+} from '@prisma/client';
+
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -13,6 +21,27 @@ type RequestUser = {
   role: string;
   organisationId?: string | null;
 };
+
+type CandidateResultThresholdConfig = {
+  enabled: boolean;
+  minimumOverallBand: PsychometricScoreBand | null;
+  minimumAbstractReasoningBand: PsychometricScoreBand | null;
+  minimumNumericalReasoningBand: PsychometricScoreBand | null;
+  hideUnscoredFromFilteredView: boolean;
+  requireNoHighSeverityValidityFlags: boolean;
+};
+
+type UpdateCandidateResultThresholdsInput = Partial<CandidateResultThresholdConfig>;
+
+const DEFAULT_CANDIDATE_RESULT_THRESHOLD_CONFIG: CandidateResultThresholdConfig =
+  {
+    enabled: false,
+    minimumOverallBand: null,
+    minimumAbstractReasoningBand: null,
+    minimumNumericalReasoningBand: null,
+    hideUnscoredFromFilteredView: true,
+    requireNoHighSeverityValidityFlags: false,
+  };
 
 @Injectable()
 export class CampaignsService {
@@ -64,6 +93,9 @@ export class CampaignsService {
         organisationId,
         ownerId,
         assessmentFormId: input.assessmentFormId,
+        candidateResultVisibility: CandidateResultVisibility.SUMMARY_ONLY,
+        candidateResultThresholdConfig:
+        DEFAULT_CANDIDATE_RESULT_THRESHOLD_CONFIG as Prisma.InputJsonValue,
       },
       include: {
         organisation: true,
@@ -194,6 +226,12 @@ export class CampaignsService {
             invitation: true,
             responses: true,
             score: true,
+            psychometricScoreResult: {
+              include: {
+                domainScores: true,
+                validityFlags: true,
+              },
+            },
           },
         },
       },
@@ -245,6 +283,175 @@ export class CampaignsService {
     return updatedCampaign;
   }
 
+    async updateCandidateResultVisibility(
+    id: string,
+    candidateResultVisibility: CandidateResultVisibility,
+    user: RequestUser,
+  ) {
+    if (
+      candidateResultVisibility !== CandidateResultVisibility.COMPLETION_ONLY &&
+      candidateResultVisibility !== CandidateResultVisibility.SUMMARY_ONLY
+    ) {
+      throw new BadRequestException(
+        'Only completion-only or limited summary candidate visibility is supported for employer campaigns.',
+      );
+    }
+
+    const campaign = await this.prisma.campaign.findUnique({
+      where: { id },
+    });
+
+    if (!campaign) {
+      throw new NotFoundException('Campaign not found');
+    }
+
+    this.assertCanManageOrganisation(user, campaign.organisationId);
+
+    const updatedCampaign = await this.prisma.campaign.update({
+      where: { id },
+      data: {
+        candidateResultVisibility,
+      },
+      include: {
+        organisation: true,
+        owner: {
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            role: true,
+            organisationId: true,
+          },
+        },
+        assessmentForm: true,
+      },
+    });
+
+    await this.auditService.record({
+      action: 'CAMPAIGN_CANDIDATE_RESULT_VISIBILITY_UPDATED',
+      userId: user.id,
+      entityType: 'Campaign',
+      entityId: updatedCampaign.id,
+      metadata: {
+        previousCandidateResultVisibility:
+          campaign.candidateResultVisibility,
+        newCandidateResultVisibility:
+          updatedCampaign.candidateResultVisibility,
+        organisationId: updatedCampaign.organisationId,
+        assessmentFormId: updatedCampaign.assessmentFormId,
+      },
+    });
+
+    return updatedCampaign;
+  }
+
+    async updateCandidateResultThresholds(
+    id: string,
+    input: UpdateCandidateResultThresholdsInput,
+    user: RequestUser,
+  ) {
+    const campaign = await this.prisma.campaign.findUnique({
+      where: { id },
+    });
+
+    if (!campaign) {
+      throw new NotFoundException('Campaign not found');
+    }
+
+    this.assertCanManageOrganisation(user, campaign.organisationId);
+
+    const previousConfig = this.normaliseCandidateResultThresholdConfig(
+      campaign.candidateResultThresholdConfig,
+    );
+
+    const nextConfig: CandidateResultThresholdConfig = {
+      ...previousConfig,
+      enabled: input.enabled ?? previousConfig.enabled,
+      minimumOverallBand:
+        input.minimumOverallBand === undefined
+          ? previousConfig.minimumOverallBand
+          : input.minimumOverallBand,
+      minimumAbstractReasoningBand:
+        input.minimumAbstractReasoningBand === undefined
+          ? previousConfig.minimumAbstractReasoningBand
+          : input.minimumAbstractReasoningBand,
+      minimumNumericalReasoningBand:
+        input.minimumNumericalReasoningBand === undefined
+          ? previousConfig.minimumNumericalReasoningBand
+          : input.minimumNumericalReasoningBand,
+      hideUnscoredFromFilteredView:
+        input.hideUnscoredFromFilteredView ??
+        previousConfig.hideUnscoredFromFilteredView,
+      requireNoHighSeverityValidityFlags:
+        input.requireNoHighSeverityValidityFlags ??
+        previousConfig.requireNoHighSeverityValidityFlags,
+    };
+
+    const updatedCampaign = await this.prisma.campaign.update({
+      where: { id },
+      data: {
+        candidateResultThresholdConfig:
+          nextConfig as Prisma.InputJsonValue,
+      },
+      include: {
+        organisation: true,
+        owner: {
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            role: true,
+            organisationId: true,
+          },
+        },
+        assessmentForm: true,
+      },
+    });
+
+    await this.auditService.record({
+      action: 'CAMPAIGN_CANDIDATE_RESULT_THRESHOLDS_UPDATED',
+      userId: user.id,
+      entityType: 'Campaign',
+      entityId: updatedCampaign.id,
+      metadata: {
+        previousConfig,
+        nextConfig,
+        organisationId: updatedCampaign.organisationId,
+        assessmentFormId: updatedCampaign.assessmentFormId,
+      },
+    });
+
+    return updatedCampaign;
+  }
+    private normaliseCandidateResultThresholdConfig(
+    value: unknown,
+  ): CandidateResultThresholdConfig {
+    if (!value || typeof value !== 'object') {
+      return DEFAULT_CANDIDATE_RESULT_THRESHOLD_CONFIG;
+    }
+
+    const config = value as Partial<CandidateResultThresholdConfig>;
+
+    return {
+      enabled: config.enabled ?? DEFAULT_CANDIDATE_RESULT_THRESHOLD_CONFIG.enabled,
+      minimumOverallBand:
+        config.minimumOverallBand ??
+        DEFAULT_CANDIDATE_RESULT_THRESHOLD_CONFIG.minimumOverallBand,
+      minimumAbstractReasoningBand:
+        config.minimumAbstractReasoningBand ??
+        DEFAULT_CANDIDATE_RESULT_THRESHOLD_CONFIG.minimumAbstractReasoningBand,
+      minimumNumericalReasoningBand:
+        config.minimumNumericalReasoningBand ??
+        DEFAULT_CANDIDATE_RESULT_THRESHOLD_CONFIG.minimumNumericalReasoningBand,
+      hideUnscoredFromFilteredView:
+        config.hideUnscoredFromFilteredView ??
+        DEFAULT_CANDIDATE_RESULT_THRESHOLD_CONFIG.hideUnscoredFromFilteredView,
+      requireNoHighSeverityValidityFlags:
+        config.requireNoHighSeverityValidityFlags ??
+        DEFAULT_CANDIDATE_RESULT_THRESHOLD_CONFIG.requireNoHighSeverityValidityFlags,
+    };
+  }
+  
   private assertCanManageOrganisation(
     user: RequestUser,
     organisationId: string,

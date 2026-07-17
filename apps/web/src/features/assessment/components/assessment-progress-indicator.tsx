@@ -40,29 +40,29 @@ export function AssessmentProgressIndicator({
 
   return (
     <section
-      className={`rounded-2xl border border-slate-200 bg-white p-4 shadow-sm ${className}`}
+      className={`rounded-[1.5rem] border border-cyan-300/15 bg-[#07142f]/95 p-4 shadow-[0_18px_60px_rgba(0,0,0,0.22)] sm:rounded-[2rem] sm:p-5 ${className}`}
       aria-label="Assessment progress"
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           {sectionPosition ? (
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-300">
               Section {sectionPosition.current} of {sectionPosition.total}
             </p>
           ) : null}
 
-          <h2 className="mt-1 text-sm font-semibold text-slate-900">
+          <h2 className="mt-1 text-sm font-black text-white">
             {sectionTitle ?? 'Current section'}
           </h2>
         </div>
 
         <div className="text-left sm:text-right">
-          <p className="text-sm font-semibold text-slate-900">
+          <p className="text-sm font-black text-white">
             Item {safeCurrentItem} of {safeTotalItems}
           </p>
 
           {typeof safeAnsweredItems === 'number' ? (
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-400">
               {safeAnsweredItems} answered
             </p>
           ) : null}
@@ -70,9 +70,9 @@ export function AssessmentProgressIndicator({
       </div>
 
       <div className="mt-4">
-        <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+        <div className="h-2 w-full overflow-hidden rounded-full bg-white/10">
           <div
-            className="h-full rounded-full bg-slate-900 transition-all duration-300"
+            className="h-full rounded-full bg-cyan-300 transition-all duration-300"
             style={{ width: `${progressPercent}%` }}
             role="progressbar"
             aria-valuemin={0}
@@ -82,7 +82,7 @@ export function AssessmentProgressIndicator({
           />
         </div>
 
-        <p className="mt-2 text-xs text-slate-500">
+        <p className="mt-2 text-xs text-slate-400">
           {progressPercent}% complete in this section
         </p>
       </div>

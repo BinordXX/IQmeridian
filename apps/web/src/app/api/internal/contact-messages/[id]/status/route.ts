@@ -37,7 +37,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       },
       {
         status: 403,
-      },
+      }
     );
   }
 
@@ -54,7 +54,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       },
       {
         status: 400,
-      },
+      }
     );
   }
 
@@ -69,7 +69,7 @@ export async function PATCH(request: Request, context: RouteContext) {
           'Content-Type': 'application/json',
         },
         method: 'PATCH',
-      },
+      }
     );
 
     const payload = await parseApiResponse(response);
@@ -84,7 +84,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       },
       {
         status: 502,
-      },
+      }
     );
   }
 }

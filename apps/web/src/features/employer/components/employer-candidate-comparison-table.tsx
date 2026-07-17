@@ -16,10 +16,14 @@ const BAND_RANK: Record<string, number> = {
 
 const getCandidateIdentifier = (session: EmployerSessionSummary): string => {
   return (
-    session.user?.name ??
-    session.user?.email ??
+    session.applicantName ??
+    session.applicantEmail ??
     session.invitation?.email ??
-    session.userId
+    session.user?.email ??
+    session.user?.name ??
+    session.userId ??
+    session.id ??
+    'Applicant'
   );
 };
 
@@ -45,9 +49,7 @@ export const EmployerCandidateComparisonTable = ({
   return (
     <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-[#07142f]/88 shadow-[0_24px_70px_rgba(0,0,0,0.22)]">
       <div className="border-b border-white/10 px-5 py-4">
-        <h3 className="text-lg font-black text-white">
-          Candidate comparison
-        </h3>
+        <h3 className="text-lg font-black text-white">Candidate comparison</h3>
 
         <p className="mt-1 text-sm leading-6 text-slate-400">
           Compare candidates within this campaign only. The table supports
@@ -106,7 +108,7 @@ export const EmployerCandidateComparisonTable = ({
                   <td className="px-4 py-4 text-sm">
                     <Link
                       href={`/employer/campaigns/${encodeURIComponent(
-                        campaignId,
+                        campaignId
                       )}/candidates/${encodeURIComponent(session.id)}`}
                       className="font-black text-cyan-100 hover:underline"
                     >

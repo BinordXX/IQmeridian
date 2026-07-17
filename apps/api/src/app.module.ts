@@ -22,6 +22,9 @@ import { AuthModule } from './auth/auth.module';
 import { ConsumerAssessmentsModule } from './consumer-assessments/consumer-assessments.module';
 import { ContactModule } from './contact/contact.module';
 import { AccountModule } from './account/account.module';
+import { OrganisationAccessRequestsModule } from './organisation-access-requests/organisation-access-requests.module';
+import { EmailModule } from './email/email.module';
+import { VerificationTokensModule } from './verification-tokens/verification-tokens.module';
 @Module({
   imports: [
     PrismaModule,
@@ -45,6 +48,9 @@ import { AccountModule } from './account/account.module';
     ContactModule,
     AccountModule,
     OrganisationParticipantsModule,
+    OrganisationAccessRequestsModule,
+    EmailModule,
+    VerificationTokensModule,
   ],
   controllers: [AppController],
   providers: [AppService],

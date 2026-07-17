@@ -110,6 +110,9 @@ export function PublicPageShell({
               <Link className="hover:text-cyan-300" href="/about">
                 About
               </Link>
+              <Link className="hover:text-cyan-300" href="/employers/apply">
+                Employer access
+              </Link>
               <Link className="hover:text-cyan-300" href="/pricing">
                 Pricing
               </Link>
@@ -184,11 +187,7 @@ export function PublicBulletList({ items }: { items: string[] }) {
   );
 }
 
-export function PublicMetric({
-  value,
-  label,
-  description,
-}: PublicMetricProps) {
+export function PublicMetric({ value, label, description }: PublicMetricProps) {
   return (
     <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-5 backdrop-blur transition hover:-translate-y-1 hover:border-cyan-300/20">
       <p className="text-3xl font-black text-white">{value}</p>

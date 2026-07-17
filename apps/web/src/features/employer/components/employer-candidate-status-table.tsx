@@ -27,7 +27,7 @@ type CandidateRow = {
 };
 
 const getInvitationDisplayStatus = (
-  invitation: EmployerInvitationSummary,
+  invitation: EmployerInvitationSummary
 ): string => {
   if (invitation.status !== 'PENDING') {
     return invitation.status;
@@ -74,7 +74,7 @@ const normaliseSearchValue = (value: string): string => {
 
 const buildCandidateRows = (
   invitations: EmployerInvitationSummary[],
-  sessions: EmployerSessionSummary[],
+  sessions: EmployerSessionSummary[]
 ): CandidateRow[] => {
   return invitations.map((invitation) => {
     const session = sessions.find((entry) => {
@@ -125,7 +125,7 @@ export const EmployerCandidateStatusTable = ({
         normaliseSearchValue(row.candidateIdentifier).includes(searchValue) ||
         normaliseSearchValue(row.invitation.email).includes(searchValue) ||
         normaliseSearchValue(row.invitation.candidateUserId ?? '').includes(
-          searchValue,
+          searchValue
         );
 
       const matchesInvitationStatus =
@@ -272,7 +272,7 @@ export const EmployerCandidateStatusTable = ({
                   <td className="px-4 py-4 text-sm">
                     <Link
                       href={`/employer/campaigns/${encodeURIComponent(
-                        campaignId,
+                        campaignId
                       )}/candidates/${encodeURIComponent(row.id)}`}
                       className="font-black text-cyan-100 hover:underline"
                     >

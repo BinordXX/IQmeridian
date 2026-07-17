@@ -274,9 +274,14 @@ export class ReportsService {
 
     return {
       audience: ReportVisibility.CANDIDATE,
-      candidate: {
-        id: session.user.id,
-        name: session.user.name,
+      subject: {
+        id: session.user?.id ?? session.userId ?? session.id,
+        name:
+          session.applicantName ??
+          session.user?.name ??
+          session.applicantEmail ??
+          session.user?.email ??
+          'Applicant',
       },
       result: {
         overallBand: session.score.overallBand,
@@ -307,9 +312,14 @@ export class ReportsService {
     return {
       audience: ReportVisibility.EMPLOYER,
       candidate: {
-        id: session.user.id,
-        name: session.user.name,
-        email: session.user.email,
+        id: session.user?.id ?? session.userId ?? session.id,
+        name:
+          session.applicantName ??
+          session.user?.name ??
+          session.applicantEmail ??
+          session.user?.email ??
+          'Applicant',
+        email: session.user?.email ?? session.applicantEmail ?? null,
       },
       campaign: session.campaign
         ? {
@@ -346,7 +356,7 @@ export class ReportsService {
 
   private assertCanGenerateReport(
     session: {
-      userId: string;
+      userId: string | null;
       campaign?: { organisationId: string } | null;
     },
     visibility: ReportVisibility,
@@ -380,7 +390,7 @@ export class ReportsService {
       visibility: ReportVisibility;
       subjectUserId: string | null;
       session: {
-        userId: string;
+        userId: string | null;
         campaign?: { organisationId: string } | null;
       };
     },

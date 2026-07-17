@@ -61,6 +61,14 @@ const stimulusLabel: Record<CandidateItemStimulus['kind'], string> = {
   pattern: 'Pattern',
 };
 
+const shouldShowOptionText = (label: string, text?: string): boolean => {
+  if (!text) {
+    return false;
+  }
+
+  return text.trim().toLowerCase() !== label.trim().toLowerCase();
+};
+
 const NumericalStimulus = ({
   stimulus,
 }: {
@@ -74,20 +82,20 @@ const NumericalStimulus = ({
     const columns = Object.keys(tableRows[0] ?? {});
 
     return (
-      <section className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-5">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+      <section className="mt-6 rounded-2xl border border-cyan-300/15 bg-[#020817]/75 p-4 sm:p-5">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300">
           {label}
         </p>
 
-        <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200 bg-white">
-          <table className="min-w-full divide-y divide-slate-200 text-sm">
-            <thead className="bg-slate-50">
+        <div className="mt-4 overflow-x-auto rounded-2xl border border-white/10 bg-[#07142f]/80">
+          <table className="min-w-full divide-y divide-white/10 text-sm">
+            <thead className="bg-cyan-400/10">
               <tr>
                 {columns.map((column) => (
                   <th
                     key={column}
                     scope="col"
-                    className="px-4 py-3 text-left font-semibold text-slate-700"
+                    className="px-4 py-3 text-left font-black text-cyan-100"
                   >
                     {column}
                   </th>
@@ -95,11 +103,11 @@ const NumericalStimulus = ({
               </tr>
             </thead>
 
-            <tbody className="divide-y divide-slate-100 bg-white">
+            <tbody className="divide-y divide-white/10">
               {tableRows.map((row, rowIndex) => (
                 <tr key={`${rowIndex}-${JSON.stringify(row)}`}>
                   {columns.map((column) => (
-                    <td key={column} className="px-4 py-3 text-slate-700">
+                    <td key={column} className="px-4 py-3 text-slate-300">
                       {row[column]}
                     </td>
                   ))}
@@ -114,16 +122,16 @@ const NumericalStimulus = ({
 
   if (stimulus.kind === 'image' || isImageSource(stimulus.content)) {
     return (
-      <section className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-5">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+      <section className="mt-6 rounded-2xl border border-cyan-300/15 bg-[#020817]/75 p-4 sm:p-5">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300">
           {label}
         </p>
 
-        <div className="mt-4 flex justify-center rounded-xl bg-white p-4">
+        <div className="mt-4 flex justify-center rounded-2xl border border-white/10 bg-[#07142f]/80 p-3 sm:p-4">
           <img
             src={stimulus.content}
             alt={stimulus.altText ?? 'Numerical reasoning stimulus'}
-            className="max-h-[420px] max-w-full object-contain"
+            className="max-h-[360px] max-w-full object-contain sm:max-h-[420px]"
           />
         </div>
       </section>
@@ -131,12 +139,12 @@ const NumericalStimulus = ({
   }
 
   return (
-    <section className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-5">
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+    <section className="mt-6 rounded-2xl border border-cyan-300/15 bg-[#020817]/75 p-4 sm:p-5">
+      <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300">
         {label}
       </p>
 
-      <pre className="mt-4 whitespace-pre-wrap rounded-xl bg-white p-4 text-sm leading-7 text-slate-800">
+      <pre className="mt-4 whitespace-pre-wrap rounded-2xl border border-white/10 bg-[#07142f]/80 p-4 text-sm leading-7 text-slate-300">
         {stimulus.content}
       </pre>
     </section>
@@ -153,26 +161,26 @@ export const NumericalReasoningItem = ({
     typeof responseValue === 'string' ? responseValue : undefined;
 
   return (
-    <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <article className="rounded-[1.5rem] border border-cyan-300/15 bg-[#07142f]/95 p-4 shadow-[0_18px_60px_rgba(0,0,0,0.24)] sm:rounded-[2rem] sm:p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-300">
             Numerical reasoning · Question {item.position}
           </p>
 
-          <h2 className="mt-3 text-xl font-semibold leading-8 text-slate-950">
+          <h2 className="mt-3 text-lg font-black leading-7 text-white sm:text-xl sm:leading-8">
             {item.stem}
           </h2>
 
-          {item.prompt ? (
-            <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
+          {item.prompt && item.prompt.trim() !== item.stem.trim() ? (
+            <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-400">
               {item.prompt}
             </p>
           ) : null}
         </div>
 
         {item.timeLimitSeconds ? (
-          <span className="w-fit rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+          <span className="w-fit rounded-full border border-cyan-300/15 bg-cyan-400/10 px-3 py-1 text-xs font-black text-cyan-100">
             {Math.round(item.timeLimitSeconds / 60)} min
           </span>
         ) : null}
@@ -181,12 +189,12 @@ export const NumericalReasoningItem = ({
       {item.stimulus ? <NumericalStimulus stimulus={item.stimulus} /> : null}
 
       <fieldset className="mt-6" disabled={disabled}>
-        <legend className="text-sm font-semibold text-slate-950">
+        <legend className="text-sm font-black text-white">
           Select the best answer using the information provided.
         </legend>
 
         {item.options.length === 0 ? (
-          <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+          <p className="mt-3 rounded-2xl border border-amber-300/20 bg-amber-400/10 p-4 text-sm font-bold text-amber-100">
             No answer options were returned for this item.
           </p>
         ) : (
@@ -197,10 +205,10 @@ export const NumericalReasoningItem = ({
               return (
                 <label
                   key={option.optionId}
-                  className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition ${
+                  className={`flex min-h-14 cursor-pointer items-start gap-3 rounded-2xl border p-4 transition ${
                     isSelected
-                      ? 'border-slate-950 bg-slate-50'
-                      : 'border-slate-200 bg-white hover:bg-slate-50'
+                      ? 'border-cyan-300 bg-cyan-400/15 text-cyan-50'
+                      : 'border-white/10 bg-[#020817]/70 text-slate-300 hover:border-cyan-300/35 hover:bg-cyan-400/10'
                   } ${disabled ? 'cursor-not-allowed opacity-70' : ''}`}
                 >
                   <input
@@ -209,26 +217,26 @@ export const NumericalReasoningItem = ({
                     value={option.optionId}
                     checked={isSelected}
                     onChange={() => onResponseChange(option.optionId)}
-                    className="mt-1 h-4 w-4"
+                    className="mt-1 h-5 w-5 shrink-0 accent-cyan-300"
                   />
 
                   <span className="flex-1">
-                    <span className="font-semibold text-slate-950">
+                    <span className="font-black text-white">
                       {option.label}
                     </span>
 
-                    {option.text ? (
-                      <span className="ml-2 text-sm leading-6 text-slate-700">
+                    {shouldShowOptionText(option.label, option.text) ? (
+                      <span className="ml-2 text-sm leading-6 text-slate-400">
                         {option.text}
                       </span>
                     ) : null}
 
                     {option.imageUrl ? (
-                      <span className="mt-3 flex justify-center rounded-xl bg-slate-50 p-3">
+                      <span className="mt-3 flex justify-center rounded-2xl border border-white/10 bg-[#07142f]/80 p-3">
                         <img
                           src={option.imageUrl}
                           alt={`Option ${option.label}`}
-                          className="max-h-48 max-w-full object-contain"
+                          className="max-h-44 max-w-full object-contain sm:max-h-48"
                         />
                       </span>
                     ) : null}

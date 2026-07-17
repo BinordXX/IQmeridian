@@ -43,21 +43,21 @@ export const NumericalReasoningSectionScreen = ({
 
   return (
     <section>
-      <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+      <div className="mb-5 rounded-[1.5rem] border border-cyan-300/15 bg-[#07142f]/95 p-4 shadow-[0_18px_60px_rgba(0,0,0,0.22)] sm:mb-6 sm:rounded-[2rem] sm:p-5">
+        <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-300">
           Current section
         </p>
 
-        <h2 className="mt-2 text-lg font-semibold text-slate-950">
+        <h2 className="mt-2 text-lg font-black text-white">
           {sectionTitle ?? 'Numerical reasoning'}
         </h2>
 
         {sectionInstructions ? (
-          <p className="mt-2 text-sm leading-6 text-slate-600">
+          <p className="mt-2 text-sm leading-6 text-slate-400">
             {sectionInstructions}
           </p>
         ) : (
-          <p className="mt-2 text-sm leading-6 text-slate-600">
+          <p className="mt-2 text-sm leading-6 text-slate-400">
             Use the data, figures, or statements provided to select the most
             appropriate answer. Work carefully and avoid assumptions not
             supported by the item.
@@ -72,17 +72,17 @@ export const NumericalReasoningSectionScreen = ({
         disabled={isSubmitting}
       />
 
-      <div className="mt-6 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+      <div className="mt-5 flex flex-col gap-3 rounded-[1.5rem] border border-cyan-300/15 bg-[#07142f]/95 p-4 shadow-[0_18px_60px_rgba(0,0,0,0.22)] sm:mt-6 sm:rounded-[2rem] sm:flex-row sm:items-center sm:justify-between">
         <button
           type="button"
           onClick={onPrevious}
           disabled={isFirstItem || controlsDisabled}
-          className="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-black text-slate-200 transition hover:bg-white/[0.07] disabled:cursor-not-allowed disabled:opacity-40"
         >
           Previous
         </button>
 
-        <p className="text-center text-sm font-medium text-slate-500">
+        <p className="text-center text-sm font-bold text-slate-400">
           Question {currentItemIndex + 1} of {totalItems}
         </p>
 
@@ -91,7 +91,7 @@ export const NumericalReasoningSectionScreen = ({
             type="button"
             onClick={onSubmit}
             disabled={controlsDisabled}
-            className="rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+            className="rounded-2xl border border-cyan-300/25 bg-cyan-400/15 px-5 py-3 text-sm font-black text-cyan-50 transition hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {isSubmitting ? 'Submitting...' : 'Submit assessment'}
           </button>
@@ -100,7 +100,7 @@ export const NumericalReasoningSectionScreen = ({
             type="button"
             onClick={onNext}
             disabled={controlsDisabled}
-            className="rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+            className="rounded-2xl border border-cyan-300/25 bg-cyan-400/15 px-5 py-3 text-sm font-black text-cyan-50 transition hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-40"
           >
             Next
           </button>
@@ -108,7 +108,7 @@ export const NumericalReasoningSectionScreen = ({
       </div>
 
       {errorMessage ? (
-        <p className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
+        <p className="mt-4 rounded-2xl border border-red-300/20 bg-red-400/10 p-4 text-sm font-bold text-red-100">
           {errorMessage}
         </p>
       ) : null}

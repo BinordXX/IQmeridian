@@ -272,7 +272,7 @@ export class ScoringService {
 
   private assertUserCanAccessSession(
     session: {
-      userId: string;
+      userId: string | null;
       campaign?: { organisationId: string } | null;
     },
     user: RequestUser,

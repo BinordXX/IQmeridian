@@ -81,6 +81,8 @@ export type InvitationValidationResult = {
 
 export type CreateAssessmentSessionInput = {
   invitationToken: string;
+  applicantName?: string;
+  consentAccepted?: boolean;
 };
 
 export type CreateAssessmentSessionResult = {
@@ -88,6 +90,7 @@ export type CreateAssessmentSessionResult = {
   assessmentId: string;
   status: AssessmentSessionStatus;
   expiresAt?: string;
+  sessionAccessToken?: string | null;
 };
 
 export type AssessmentSessionTiming = {
@@ -190,6 +193,17 @@ export type AssessmentReportResult = {
   score: AssessmentScoreResult;
   interpretation?: string;
   recommendations?: string[];
+};
+
+export type CandidateResultSummaryAudience = 'employer-invited' | 'consumer';
+
+export type CandidateResultSummaryResult = {
+  visibility: 'summary' | 'hidden';
+  audience?: CandidateResultSummaryAudience;
+  reason?: 'not_completed' | 'policy_hidden' | 'not_scored';
+  overallBand?: string | null;
+  abstractReasoningBand?: string | null;
+  numericalReasoningBand?: string | null;
 };
 
 const forbiddenCandidateItemFields = new Set([

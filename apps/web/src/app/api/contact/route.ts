@@ -56,7 +56,7 @@ export async function POST(request: Request) {
       },
       {
         status: 400,
-      },
+      }
     );
   }
 
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
       },
       {
         status: 400,
-      },
+      }
     );
   }
 
@@ -92,7 +92,7 @@ export async function POST(request: Request) {
       },
       {
         status: 400,
-      },
+      }
     );
   }
 
@@ -103,7 +103,7 @@ export async function POST(request: Request) {
       },
       {
         status: 400,
-      },
+      }
     );
   }
 
@@ -132,7 +132,7 @@ export async function POST(request: Request) {
         },
         {
           status: response.status,
-        },
+        }
       );
     }
 
@@ -146,7 +146,7 @@ export async function POST(request: Request) {
       },
       {
         status: 502,
-      },
+      }
     );
   }
 }

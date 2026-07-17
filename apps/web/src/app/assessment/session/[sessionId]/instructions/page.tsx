@@ -22,47 +22,83 @@ export default async function SessionInstructionsPage({
   const session = guard.data;
 
   return (
-    <main className="min-h-screen bg-slate-50 px-6 py-12">
-      <section className="mx-auto max-w-4xl rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-        <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-          IQMeridian Assessment
-        </p>
+    <main className="min-h-screen bg-[#020817] px-4 py-6 text-white sm:px-6 sm:py-12">
+      <section className="relative mx-auto w-full max-w-5xl overflow-hidden rounded-[1.5rem] border border-cyan-300/15 bg-[#07142f]/95 p-5 shadow-[0_24px_90px_rgba(0,0,0,0.36)] sm:rounded-[2rem] sm:p-8">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.14),transparent_34%),radial-gradient(circle_at_90%_10%,rgba(59,130,246,0.12),transparent_30%)]" />
 
-        <h1 className="mt-3 text-3xl font-bold text-slate-950">
-          {session.assessmentTitle}
-        </h1>
-
-        {session.candidateName ? (
-          <p className="mt-4 text-base text-slate-700">
-            Candidate:{' '}
-            <span className="font-medium text-slate-950">
-              {session.candidateName}
-            </span>
-          </p>
-        ) : null}
-
-        <div className="mt-8 space-y-4 text-sm leading-6 text-slate-700">
-          <p>
-            Read the instructions carefully before beginning. Once you confirm
-            readiness, the timed assessment session will begin.
+        <div className="relative">
+          <p className="text-xs font-black uppercase tracking-[0.28em] text-cyan-300">
+            IQMeridian assessment
           </p>
 
-          <p>
-            Use a stable internet connection, avoid refreshing the browser, and
-            complete the assessment without external assistance.
-          </p>
+          <h1 className="mt-4 text-2xl font-black tracking-tight text-white sm:text-3xl md:text-4xl">
+            {session.assessmentTitle}
+          </h1>
 
-          <p>
-            The assessment contains timed sections. Section movement and final
-            submission are controlled by the system.
-          </p>
+          {session.candidateName ? (
+            <p className="mt-4 text-sm leading-6 text-slate-300">
+              Candidate:{' '}
+              <span className="font-black text-cyan-100">
+                {session.candidateName}
+              </span>
+            </p>
+          ) : null}
+
+          <div className="mt-8 grid gap-4 md:grid-cols-3">
+            <article className="rounded-2xl border border-cyan-300/10 bg-[#020817]/75 p-5">
+              <h2 className="text-sm font-black text-white">Environment</h2>
+              <p className="mt-3 text-sm leading-6 text-slate-400">
+                Use a stable internet connection and avoid refreshing the
+                browser while the timed assessment is active.
+              </p>
+            </article>
+
+            <article className="rounded-2xl border border-cyan-300/10 bg-[#020817]/75 p-5">
+              <h2 className="text-sm font-black text-white">Timing</h2>
+              <p className="mt-3 text-sm leading-6 text-slate-400">
+                Timed sections begin only after you confirm readiness. Section
+                movement is controlled by the system.
+              </p>
+            </article>
+
+            <article className="rounded-2xl border border-cyan-300/10 bg-[#020817]/75 p-5">
+              <h2 className="text-sm font-black text-white">Submission</h2>
+              <p className="mt-3 text-sm leading-6 text-slate-400">
+                Submit only when ready. Once the session is finalised, responses
+                cannot be changed.
+              </p>
+            </article>
+          </div>
+
+          <div className="mt-8 rounded-2xl border border-white/10 bg-[#020817]/75 p-5">
+            <h2 className="text-sm font-black text-white">Before you begin</h2>
+
+            <div className="mt-4 space-y-4 text-sm leading-7 text-slate-300">
+              <p>
+                Read the instructions carefully before beginning. Once you
+                confirm readiness, the timed assessment session will begin.
+              </p>
+
+              <p>
+                Complete the assessment independently and without external
+                assistance. The system will save responses and control the
+                active assessment state.
+              </p>
+
+              <p>
+                If your connection drops, return through the valid assessment
+                route so the platform can recover the latest backend session
+                state.
+              </p>
+            </div>
+          </div>
+
+          <ReadinessConfirmation
+            sessionId={session.sessionId}
+            mode="start"
+            buttonLabel="I confirm I am ready to begin"
+          />
         </div>
-
-        <ReadinessConfirmation
-          sessionId={session.sessionId}
-          mode="start"
-          buttonLabel="I confirm I am ready to begin"
-        />
       </section>
     </main>
   );

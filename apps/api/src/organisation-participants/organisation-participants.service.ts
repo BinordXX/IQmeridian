@@ -94,8 +94,8 @@ export class OrganisationParticipantsService {
 
     const previousStatus = participant.status;
 
-    const updatedParticipant =
-      await this.prisma.organisationParticipant.update({
+    const updatedParticipant = await this.prisma.organisationParticipant.update(
+      {
         where: {
           id,
         },
@@ -129,7 +129,8 @@ export class OrganisationParticipantsService {
             },
           },
         },
-      });
+      },
+    );
 
     await this.auditService.record({
       action: 'ORGANISATION_PARTICIPANT_STATUS_UPDATED',
@@ -156,7 +157,10 @@ export class OrganisationParticipantsService {
     return user.organisationId;
   }
 
-  private assertCanManageOrganisation(user: RequestUser, organisationId: string) {
+  private assertCanManageOrganisation(
+    user: RequestUser,
+    organisationId: string,
+  ) {
     if (user.role === UserRole.PLATFORM_ADMIN) {
       return;
     }

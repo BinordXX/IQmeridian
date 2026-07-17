@@ -18,14 +18,18 @@ type EmployerCandidateReportProps = {
 
 const getCandidateIdentifier = (
   invitation: EmployerInvitationSummary | undefined,
-  session: EmployerSessionSummary
+  session: EmployerSessionSummary,
 ): string => {
   return (
-    session.user?.name ??
-    session.user?.email ??
+    session.applicantName ??
+    session.applicantEmail ??
     invitation?.email ??
-    invitation?.candidateUserId ??
-    session.userId
+    session.invitation?.email ??
+    session.user?.email ??
+    session.user?.name ??
+    session.userId ??
+    session.id ??
+    'Applicant'
   );
 };
 

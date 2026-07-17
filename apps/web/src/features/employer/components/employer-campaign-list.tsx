@@ -136,7 +136,7 @@ export function EmployerCampaignList({ campaigns }: EmployerCampaignListProps) {
                       <Link
                         className="inline-flex rounded-xl border border-cyan-300/20 bg-cyan-400/10 px-3 py-2 text-xs font-black text-cyan-100 transition hover:bg-cyan-400/15"
                         href={`/employer/campaigns/${encodeURIComponent(
-                          campaign.id,
+                          campaign.id
                         )}`}
                       >
                         Open

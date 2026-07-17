@@ -13,22 +13,26 @@ import {
   Mail,
   UserRound,
 } from 'lucide-react';
-import { signIn } from 'next-auth/react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FormEvent, useState } from 'react';
 
 type RegisterResponse = {
+  status?: string;
+  email?: string;
   message?: string | string[];
+  error?: string;
 };
 
-function getReadableRegisterMessage(message: string | string[] | undefined) {
+function getReadableRegisterMessage(payload: RegisterResponse) {
+  const message = payload.message;
+
   if (Array.isArray(message)) {
     return message.join(' ');
   }
 
   if (!message) {
-    return 'Account registration failed.';
+    return payload.error ?? 'Account registration failed.';
   }
 
   if (message.toLowerCase().includes('already')) {
@@ -42,24 +46,6 @@ function getReadableRegisterMessage(message: string | string[] | undefined) {
   return message;
 }
 
-function getSafeResultUrl(resultUrl: string | null | undefined, fallback: string) {
-  if (!resultUrl) {
-    return fallback;
-  }
-
-  try {
-    const parsedUrl = new URL(resultUrl, window.location.origin);
-
-    if (parsedUrl.origin !== window.location.origin) {
-      return fallback;
-    }
-
-    return `${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`;
-  } catch {
-    return fallback;
-  }
-}
-
 export function RegisterForm() {
   const router = useRouter();
 
@@ -70,11 +56,11 @@ export function RegisterForm() {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [status, setStatus] = useState<
-    'idle' | 'registering' | 'signing-in' | 'success'
+    'idle' | 'registering' | 'verification-required'
   >('idle');
   const [error, setError] = useState<string | null>(null);
 
-  const isBusy = status === 'registering' || status === 'signing-in';
+  const isBusy = status === 'registering';
   const passwordIsLongEnough = password.length >= 12;
   const passwordsMatch =
     password.length > 0 &&
@@ -108,7 +94,9 @@ export function RegisterForm() {
     }
 
     if (!acceptedTerms) {
-      setError('You must accept the platform terms before creating an account.');
+      setError(
+        'You must accept the platform terms before creating an account.'
+      );
       return;
     }
 
@@ -137,29 +125,23 @@ export function RegisterForm() {
 
       if (!response.ok) {
         setStatus('idle');
-        setError(getReadableRegisterMessage(payload.message));
+        setError(getReadableRegisterMessage(payload));
         return;
       }
 
-      setStatus('signing-in');
-
-      const signInResult = await signIn('credentials', {
-        callbackUrl: '/auth/redirect',
-        email: normalisedEmail,
-        password,
-        redirect: false,
-      });
-
-      if (signInResult?.error) {
-        setStatus('success');
-        router.push('/login');
+      if (payload.status === 'verification_required') {
+        setStatus('verification-required');
+        router.push(
+          `/verify-email?email=${encodeURIComponent(
+            payload.email ?? normalisedEmail
+          )}`
+        );
         router.refresh();
         return;
       }
 
-      const nextUrl = getSafeResultUrl(signInResult?.url, '/auth/redirect');
-
-      router.push(nextUrl);
+      setStatus('verification-required');
+      router.push(`/verify-email?email=${encodeURIComponent(normalisedEmail)}`);
       router.refresh();
     } catch {
       setStatus('idle');
@@ -188,12 +170,11 @@ export function RegisterForm() {
           <Info className="mt-0.5 shrink-0 text-cyan-300" size={18} />
           <div>
             <h3 className="text-sm font-black text-cyan-100">
-              Registration clarity
+              Email verification required
             </h3>
             <p className="mt-2 text-sm leading-6 text-slate-300">
-              Use this page for standard consumer access. If you received an
-              assessment invitation, use the invitation link. Employer,
-              researcher, and admin accounts should not be self-created here.
+              After registration, IQMeridian sends a verification email. You
+              must verify the address before sign-in is allowed.
             </p>
           </div>
         </div>
@@ -235,9 +216,7 @@ export function RegisterForm() {
         </label>
 
         <label className="block">
-          <span className="text-sm font-semibold text-slate-300">
-            Password
-          </span>
+          <span className="text-sm font-semibold text-slate-300">Password</span>
           <span className="mt-2 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 transition focus-within:border-cyan-300/50">
             <LockKeyhole
               className="text-slate-500"
@@ -339,13 +318,14 @@ export function RegisterForm() {
 
           {status === 'registering' ? (
             <div className="rounded-2xl border border-cyan-300/15 bg-cyan-400/10 px-4 py-3 text-sm leading-6 text-cyan-100">
-              Creating your consumer account.
+              Creating your consumer account and sending verification email.
             </div>
           ) : null}
 
-          {status === 'signing-in' ? (
-            <div className="rounded-2xl border border-cyan-300/15 bg-cyan-400/10 px-4 py-3 text-sm leading-6 text-cyan-100">
-              Account created. Opening your dashboard.
+          {status === 'verification-required' ? (
+            <div className="rounded-2xl border border-emerald-300/15 bg-emerald-400/10 px-4 py-3 text-sm leading-6 text-emerald-100">
+              Account created. Check your inbox to verify your email before
+              signing in.
             </div>
           ) : null}
         </div>
@@ -359,11 +339,6 @@ export function RegisterForm() {
             <>
               <Loader2 className="animate-spin" size={17} />
               Creating account
-            </>
-          ) : status === 'signing-in' ? (
-            <>
-              <Loader2 className="animate-spin" size={17} />
-              Opening dashboard
             </>
           ) : (
             <>

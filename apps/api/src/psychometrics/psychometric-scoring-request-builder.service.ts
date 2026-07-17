@@ -517,30 +517,30 @@ export class PsychometricScoringRequestBuilderService {
     return null;
   }
 
-private median(values: number[]): number | null {
-  if (values.length === 0) {
-    return null;
+  private median(values: number[]): number | null {
+    if (values.length === 0) {
+      return null;
+    }
+
+    const middleIndex = Math.floor(values.length / 2);
+    const middleValue = values[middleIndex];
+
+    if (typeof middleValue !== 'number') {
+      return null;
+    }
+
+    if (values.length % 2 === 1) {
+      return middleValue;
+    }
+
+    const previousValue = values[middleIndex - 1];
+
+    if (typeof previousValue !== 'number') {
+      return null;
+    }
+
+    return Math.round((previousValue + middleValue) / 2);
   }
-
-  const middleIndex = Math.floor(values.length / 2);
-  const middleValue = values[middleIndex];
-
-  if (typeof middleValue !== 'number') {
-    return null;
-  }
-
-  if (values.length % 2 === 1) {
-    return middleValue;
-  }
-
-  const previousValue = values[middleIndex - 1];
-
-  if (typeof previousValue !== 'number') {
-    return null;
-  }
-
-  return Math.round((previousValue + middleValue) / 2);
-}
 
   private humaniseLabel(value: string): string {
     return value

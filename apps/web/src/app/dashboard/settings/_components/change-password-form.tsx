@@ -19,10 +19,7 @@ export function ChangePasswordForm() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const updateField = (
-    field: keyof typeof initialFormState,
-    value: string
-  ) => {
+  const updateField = (field: keyof typeof initialFormState, value: string) => {
     setFormState((current) => ({
       ...current,
       [field]: value,
@@ -62,15 +59,11 @@ export function ChangePasswordForm() {
         : null;
 
       if (!response.ok) {
-        setErrorMessage(
-          payload?.message ?? 'Password could not be changed.'
-        );
+        setErrorMessage(payload?.message ?? 'Password could not be changed.');
         return;
       }
 
-      setSuccessMessage(
-        payload?.message ?? 'Password changed successfully.'
-      );
+      setSuccessMessage(payload?.message ?? 'Password changed successfully.');
       setFormState(initialFormState);
     } catch {
       setErrorMessage('Password could not be changed. Please try again.');
@@ -83,14 +76,14 @@ export function ChangePasswordForm() {
     <form className="mt-6 space-y-5" onSubmit={handleSubmit}>
       <div>
         <label
-          className="text-sm font-semibold text-slate-700"
+          className="text-sm font-black text-cyan-100"
           htmlFor="currentPassword"
         >
           Current password
         </label>
         <input
           autoComplete="current-password"
-          className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-950 outline-none transition focus:border-slate-950"
+          className="mt-2 min-h-12 w-full rounded-2xl border border-cyan-300/15 bg-[#020817] px-4 py-3 text-base font-bold text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-300/50 sm:text-sm"
           id="currentPassword"
           name="currentPassword"
           onChange={(event) =>
@@ -104,14 +97,14 @@ export function ChangePasswordForm() {
 
       <div>
         <label
-          className="text-sm font-semibold text-slate-700"
+          className="text-sm font-black text-cyan-100"
           htmlFor="newPassword"
         >
           New password
         </label>
         <input
           autoComplete="new-password"
-          className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-950 outline-none transition focus:border-slate-950"
+          className="mt-2 min-h-12 w-full rounded-2xl border border-cyan-300/15 bg-[#020817] px-4 py-3 text-base font-bold text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-300/50 sm:text-sm"
           id="newPassword"
           minLength={12}
           name="newPassword"
@@ -127,14 +120,14 @@ export function ChangePasswordForm() {
 
       <div>
         <label
-          className="text-sm font-semibold text-slate-700"
+          className="text-sm font-black text-cyan-100"
           htmlFor="confirmNewPassword"
         >
           Confirm new password
         </label>
         <input
           autoComplete="new-password"
-          className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-950 outline-none transition focus:border-slate-950"
+          className="mt-2 min-h-12 w-full rounded-2xl border border-cyan-300/15 bg-[#020817] px-4 py-3 text-base font-bold text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-300/50 sm:text-sm"
           id="confirmNewPassword"
           minLength={12}
           name="confirmNewPassword"
@@ -160,7 +153,7 @@ export function ChangePasswordForm() {
       ) : null}
 
       <button
-        className="rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+        className="inline-flex min-h-12 w-full items-center justify-center rounded-2xl border border-cyan-300/20 bg-cyan-400/10 px-5 py-3 text-sm font-black text-cyan-100 transition hover:bg-cyan-400/15 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/[0.04] disabled:text-slate-500 sm:w-auto"
         disabled={isSubmitting}
         type="submit"
       >

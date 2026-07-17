@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Req,
+  Param,
+  UseGuards,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { CurrentUser } from './current-user.decorator';
 import { LoginDto } from './dto/login.dto';
@@ -9,6 +17,12 @@ import { RegisterDto } from './dto/register.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { RequestUser } from './request-user.type';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { AcceptOrganisationAdminInvitationDto } from './dto/accept-organisation-admin-invitation.dto';
+import { ResendEmailVerificationDto } from './dto/resend-email-verification.dto';
+import { VerifyEmailDto } from './dto/verify-email.dto';
+import type { Request } from 'express';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 
 type RequestMetadataSource = {
   ip?: string;
@@ -22,6 +36,55 @@ type RequestMetadataSource = {
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  @Get('organisation-admin-invitations/:token')
+  getOrganisationAdminInvitation(@Param('token') token: string) {
+    return this.authService.getOrganisationAdminInvitationByToken(token);
+  }
+
+  @Post('organisation-admin-invitations/:token/accept')
+  acceptOrganisationAdminInvitation(
+    @Param('token') token: string,
+    @Body() dto: AcceptOrganisationAdminInvitationDto,
+    @Req() request: Request,
+  ) {
+    return this.authService.acceptOrganisationAdminInvitation(
+      token,
+      dto,
+      this.getRequestMetadata(request),
+    );
+  }
+
+  @Post('verify-email')
+  verifyEmail(@Body() dto: VerifyEmailDto) {
+    return this.authService.verifyEmail(dto);
+  }
+
+  @Post('resend-email-verification')
+  resendEmailVerification(
+    @Body() dto: ResendEmailVerificationDto,
+    @Req() request: Request,
+  ) {
+    return this.authService.resendEmailVerification(
+      dto,
+      this.getRequestMetadata(request),
+    );
+  }
+
+  @Post('forgot-password')
+  forgotPassword(@Body() dto: ForgotPasswordDto, @Req() request: Request) {
+    return this.authService.forgotPassword(
+      dto,
+      this.getRequestMetadata(request),
+    );
+  }
+
+  @Post('reset-password')
+  resetPassword(@Body() dto: ResetPasswordDto, @Req() request: Request) {
+    return this.authService.resetPassword(
+      dto,
+      this.getRequestMetadata(request),
+    );
+  }
   @Post('register')
   register(@Body() body: RegisterDto, @Req() request: RequestMetadataSource) {
     return this.authService.register(body, this.getRequestMetadata(request));
@@ -64,7 +127,7 @@ export class AuthController {
   ) {
     return this.authService.changePassword(user, body);
   }
-  
+
   @UseGuards(JwtAuthGuard)
   @Get('me')
   me(@CurrentUser() user: RequestUser) {

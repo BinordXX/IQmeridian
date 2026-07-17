@@ -1,5 +1,5 @@
 import Link from 'next/link';
-
+import { CompletedResultAccess } from '@/features/assessment/components/completed-result-access';
 type AssessmentStatusReason =
   | 'completed'
   | 'expired'
@@ -15,7 +15,7 @@ type AssessmentStatusReason =
   | 'submit-failed'
   | 'error';
 
-type CandidateResultVisibility = 'summary' | 'hidden';
+
 type CandidateAudience = 'employer-invited' | 'consumer';
 
 type AssessmentStatusPageProps = {
@@ -48,11 +48,7 @@ const normaliseReason = (reason?: string): AssessmentStatusReason => {
   }
 };
 
-const normaliseResultVisibility = (
-  visibility?: string
-): CandidateResultVisibility => {
-  return visibility === 'summary' ? 'summary' : 'hidden';
-};
+
 
 const normaliseAudience = (audience?: string): CandidateAudience => {
   return audience === 'consumer' ? 'consumer' : 'employer-invited';
@@ -179,14 +175,14 @@ const getToneClasses = (
 ): string => {
   switch (tone) {
     case 'success':
-      return 'border-emerald-200 bg-emerald-50 text-emerald-900';
+      return 'border-emerald-300/25 bg-emerald-400/10 text-emerald-100';
     case 'warning':
-      return 'border-amber-200 bg-amber-50 text-amber-900';
+      return 'border-amber-300/25 bg-amber-400/10 text-amber-100';
     case 'error':
-      return 'border-red-200 bg-red-50 text-red-900';
+      return 'border-red-300/25 bg-red-400/10 text-red-100';
     case 'neutral':
     default:
-      return 'border-slate-200 bg-slate-50 text-slate-800';
+      return 'border-cyan-300/20 bg-cyan-400/10 text-cyan-100';
   }
 };
 
@@ -195,40 +191,34 @@ export default async function AssessmentStatusPage({
 }: AssessmentStatusPageProps) {
   const params = searchParams ? await searchParams : {};
   const reason = normaliseReason(params.reason);
-  const resultVisibility = normaliseResultVisibility(params.resultVisibility);
+
   const audience = normaliseAudience(params.audience);
   const copy = getStatusCopy(reason);
 
-  const canShowResultSummary =
-    reason === 'completed' &&
-    resultVisibility === 'summary' &&
-    Boolean(params.sessionId);
 
-  const shouldHideResults =
-    reason === 'completed' && resultVisibility !== 'summary';
 
   return (
-    <main className="min-h-screen bg-slate-50 px-6 py-12">
-      <section className="mx-auto max-w-3xl rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+    <main className="min-h-screen bg-[#020817] px-4 py-6 text-white sm:px-6 sm:py-12">
+      <section className="mx-auto w-full max-w-3xl rounded-[1.5rem] border border-cyan-300/15 bg-[#07142f]/95 p-5 shadow-[0_24px_90px_rgba(0,0,0,0.36)] sm:rounded-[2rem] sm:p-8">
         <div
-          className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wide ${getToneClasses(
+          className={`inline-flex rounded-full border px-3 py-1 text-xs font-black uppercase tracking-[0.18em] ${getToneClasses(
             copy.tone
           )}`}
         >
           {copy.eyebrow}
         </div>
 
-        <h1 className="mt-5 text-3xl font-bold text-slate-950">{copy.title}</h1>
+        <h1 className="mt-5 text-3xl font-black text-white">{copy.title}</h1>
 
-        <p className="mt-4 text-base leading-7 text-slate-600">{copy.body}</p>
+        <p className="mt-4 text-base leading-7 text-slate-300">{copy.body}</p>
 
         {reason === 'completed' ? (
-          <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-5">
-            <h2 className="text-lg font-semibold text-slate-950">
+          <div className="mt-8 rounded-2xl border border-emerald-300/15 bg-emerald-400/10 p-5">
+            <h2 className="text-lg font-black text-white">
               Submission confirmed
             </h2>
 
-            <p className="mt-2 text-sm leading-6 text-slate-600">
+            <p className="mt-2 text-sm leading-6 text-emerald-50/80">
               Your responses have been submitted for processing. You do not need
               to retake or resubmit this assessment unless the assessment
               administrator explicitly asks you to do so.
@@ -236,50 +226,20 @@ export default async function AssessmentStatusPage({
           </div>
         ) : null}
 
-        {canShowResultSummary ? (
-          <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5">
-            <h2 className="text-lg font-semibold text-slate-950">
-              Result summary available
-            </h2>
-
-            <p className="mt-2 text-sm leading-6 text-slate-600">
-              A limited candidate result summary is available for this
-              assessment. This view is restricted to the result information that
-              candidates are permitted to see.
-            </p>
-
-            <Link
-              href={`/assessment/session/${encodeURIComponent(
-                params.sessionId ?? ''
-              )}/report`}
-              className="mt-4 inline-flex rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800"
-            >
-              View result summary
-            </Link>
-          </div>
-        ) : null}
-
-        {shouldHideResults ? (
-          <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5">
-            <h2 className="text-lg font-semibold text-slate-950">
-              Result visibility
-            </h2>
-
-            <p className="mt-2 text-sm leading-6 text-slate-600">
-              {audience === 'consumer'
-                ? 'Immediate result release is not enabled for this assessment attempt. If a summary becomes available, it will be shown through the candidate result page.'
-                : 'Immediate candidate results are not enabled for this employer-invited assessment. If results or feedback are released, they will be communicated through the process defined by the assessment administrator.'}
-            </p>
-          </div>
+               {reason === 'completed' ? (
+          <CompletedResultAccess
+            sessionId={params.sessionId}
+            audience={audience}
+          />
         ) : null}
 
         {reason !== 'completed' ? (
-          <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-5">
-            <h2 className="text-lg font-semibold text-slate-950">
+          <div className="mt-8 rounded-2xl border border-cyan-300/15 bg-white/[0.035] p-5">
+            <h2 className="text-lg font-black text-white">
               Controlled assessment state
             </h2>
 
-            <p className="mt-2 text-sm leading-6 text-slate-600">
+            <p className="mt-2 text-sm leading-6 text-slate-300">
               This page is shown deliberately so that invalid invitations,
               expired access, failed saves, lost sessions, timed-out sections,
               completed attempts, and inaccessible sessions do not fall through
@@ -288,17 +248,17 @@ export default async function AssessmentStatusPage({
           </div>
         ) : null}
 
-        <div className="mt-8 flex flex-col gap-3 border-t border-slate-200 pt-6 sm:flex-row sm:items-center">
+        <div className="mt-8 flex flex-col gap-3 border-t border-white/10 pt-6 sm:flex-row sm:items-center">
           <Link
             href="/dashboard"
-            className="inline-flex items-center justify-center rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+            className="inline-flex items-center justify-center rounded-2xl border border-cyan-300/25 bg-cyan-400/15 px-5 py-3 text-sm font-black text-cyan-50 transition hover:bg-cyan-400/20"
           >
             Back to dashboard
           </Link>
 
           <Link
             href="/"
-            className="inline-flex items-center justify-center rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-950 hover:text-slate-950"
+            className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-black text-slate-200 transition hover:bg-white/[0.07]"
           >
             Go home
           </Link>

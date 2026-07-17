@@ -3,7 +3,7 @@ import { EmployerParticipantsTable } from '@/features/employer/components/employ
 import { listEmployerParticipants } from '@/features/employer/api/employer-participants-api';
 
 export default async function EmployerParticipantsPage() {
- let participants: Awaited<ReturnType<typeof listEmployerParticipants>> = [];
+  let participants: Awaited<ReturnType<typeof listEmployerParticipants>> = [];
   let errorMessage: string | null = null;
 
   try {

@@ -9,7 +9,7 @@ type AssessmentLayoutProps = {
 export default function AssessmentLayout({ children }: AssessmentLayoutProps) {
   return (
     <AssessmentDeviceGate>
-      <div className="min-h-screen bg-slate-50 text-slate-950">{children}</div>
+      <div className="min-h-screen bg-[#020817] text-white">{children}</div>
     </AssessmentDeviceGate>
   );
 }

@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { createHash, randomBytes } from 'crypto';
 import { PsychometricsService } from '../psychometrics/psychometrics.service';
 import {
   AssessmentDomain,
@@ -12,11 +13,16 @@ import {
   ItemStatus,
   Prisma,
   SessionStatus,
-  UserRole,
+    UserRole,
   CandidateAccessMode,
-OrganisationParticipantStatus,
-OrganisationParticipantType,
+  CandidateResultVisibility,
+  OrganisationParticipantStatus,
+  OrganisationParticipantType,
+  VerificationTokenPurpose,
+
 } from '@prisma/client';
+import { EmailService } from '../email/email.service';
+import { VerificationTokensService } from '../verification-tokens/verification-tokens.service';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -26,6 +32,11 @@ type RequestUser = {
   id: string;
   role: string;
   organisationId?: string | null;
+};
+
+type SessionActor = {
+  userId?: string | null;
+  sessionAccessToken?: string | null;
 };
 
 type CandidateItemOption = {
@@ -90,14 +101,27 @@ type CandidateAssessmentSessionPayload = {
   currentItemId?: string;
   sections: CandidateAssessmentSection[];
 };
+type CandidateResultSummaryAudience = 'employer-invited' | 'consumer';
+type CandidateResultSummaryVisibility = 'summary' | 'hidden';
+
+type CandidateResultSummaryPayload = {
+  visibility: CandidateResultSummaryVisibility;
+  audience: CandidateResultSummaryAudience;
+  reason?: 'not_completed' | 'policy_hidden' | 'not_scored';
+  overallBand?: string | null;
+  abstractReasoningBand?: string | null;
+  numericalReasoningBand?: string | null;
+};
 
 @Injectable()
 export class SessionsService {
-constructor(
-  private readonly prisma: PrismaService,
-  private readonly auditService: AuditService,
-  private readonly psychometricsService: PsychometricsService,
-) {}
+    constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditService: AuditService,
+    private readonly psychometricsService: PsychometricsService,
+    private readonly emailService: EmailService,
+    private readonly verificationTokensService: VerificationTokensService,
+  ) {}
 
   async getSessionPsychometricScore(
     sessionId: string,
@@ -139,6 +163,198 @@ constructor(
     }
 
     return session.psychometricScoreResult;
+  }
+
+
+    async getCandidateResultSummary(
+    sessionId: string,
+    userId: string,
+  ): Promise<CandidateResultSummaryPayload> {
+    return this.getCandidateResultSummaryForActor(sessionId, {
+      userId,
+    });
+  }
+
+  async getPublicCandidateResultSummary(
+    sessionId: string,
+    sessionAccessToken?: string,
+  ): Promise<CandidateResultSummaryPayload> {
+    return this.getCandidateResultSummaryForActor(sessionId, {
+      sessionAccessToken,
+    });
+  }
+
+  private async getCandidateResultSummaryForActor(
+    sessionId: string,
+    actor: SessionActor,
+  ): Promise<CandidateResultSummaryPayload> {
+    const session = await this.prisma.session.findUnique({
+      where: { id: sessionId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            name: true,
+          },
+        },
+        campaign: {
+          select: {
+            id: true,
+            candidateResultVisibility: true,
+          },
+        },
+        psychometricScoreResult: {
+          include: {
+            domainScores: {
+              orderBy: { domain: 'asc' },
+            },
+          },
+        },
+      },
+    });
+
+    if (!session) {
+      throw new NotFoundException('Session not found');
+    }
+
+    this.assertActorCanAccessSession(session, actor);
+
+    const audience: CandidateResultSummaryAudience = session.campaignId
+      ? 'employer-invited'
+      : 'consumer';
+
+    if (session.status !== SessionStatus.COMPLETED) {
+      return {
+        visibility: 'hidden',
+        audience,
+        reason: 'not_completed',
+      };
+    }
+
+    if (
+      session.campaignId &&
+      session.campaign?.candidateResultVisibility !==
+        CandidateResultVisibility.SUMMARY_ONLY
+    ) {
+      return {
+        visibility: 'hidden',
+        audience,
+        reason: 'policy_hidden',
+      };
+    }
+
+    const score = session.psychometricScoreResult;
+
+    if (!score) {
+      return {
+        visibility: 'hidden',
+        audience,
+        reason: 'not_scored',
+      };
+    }
+
+    const getDomainBand = (domain: AssessmentDomain) => {
+      return (
+        score.domainScores.find((domainScore) => domainScore.domain === domain)
+          ?.scoreBand ?? null
+      );
+    };
+
+    return {
+      visibility: 'summary',
+      audience,
+      overallBand: score.overallScoreBand,
+      abstractReasoningBand: getDomainBand(AssessmentDomain.ABSTRACT_REASONING),
+      numericalReasoningBand: getDomainBand(
+        AssessmentDomain.NUMERICAL_REASONING,
+      ),
+    };
+  }
+
+    async exchangeCandidateResultAccessToken(rawToken: string) {
+    const verificationToken =
+      await this.verificationTokensService.findUsableToken({
+        rawToken,
+        purpose: VerificationTokenPurpose.CANDIDATE_RESULT_ACCESS,
+      });
+
+    const sessionId = this.getSessionIdFromVerificationTokenMetadata(
+      verificationToken.metadata,
+    );
+
+    const session = await this.prisma.session.findUnique({
+      where: { id: sessionId },
+      include: {
+        campaign: {
+          select: {
+            id: true,
+            candidateResultVisibility: true,
+          },
+        },
+        psychometricScoreResult: {
+          select: {
+            id: true,
+          },
+        },
+      },
+    });
+
+    if (!session) {
+      throw new NotFoundException('Assessment session not found.');
+    }
+
+    if (session.invitationId !== verificationToken.candidateInvitationId) {
+      throw new ForbiddenException(
+        'This result access token does not belong to the requested assessment session.',
+      );
+    }
+
+    if (session.status !== SessionStatus.COMPLETED) {
+      throw new BadRequestException(
+        'This assessment session has not been completed.',
+      );
+    }
+
+    if (
+      !session.campaign ||
+      session.campaign.candidateResultVisibility !==
+        CandidateResultVisibility.SUMMARY_ONLY
+    ) {
+      throw new ForbiddenException(
+        'Candidate-facing results are not currently available for this assessment.',
+      );
+    }
+
+    const sessionAccessToken = this.generateSessionAccessToken();
+
+    await this.prisma.session.update({
+      where: { id: session.id },
+      data: {
+        sessionAccessTokenHash:
+          this.hashSessionAccessToken(sessionAccessToken),
+      },
+    });
+
+    await this.auditService.record({
+      action: 'CANDIDATE_RESULT_ACCESS_TOKEN_EXCHANGED',
+      userId: null,
+      entityType: 'Session',
+      entityId: session.id,
+      metadata: {
+        campaignId: session.campaignId,
+        invitationId: session.invitationId,
+        applicantEmail: session.applicantEmail,
+        resultTokenId: verificationToken.id,
+        scoreResultId: session.psychometricScoreResult?.id ?? null,
+      },
+    });
+
+    return {
+      sessionId: session.id,
+      sessionAccessToken,
+      resultVisibility: CandidateResultVisibility.SUMMARY_ONLY,
+    };
   }
 
   async listSessions(
@@ -190,23 +406,23 @@ constructor(
         },
         skip,
         take: limit,
-include: {
-  campaign: true,
-  assessmentForm: true,
-  currentSection: true,
-  responses: true,
-  score: true,
-  psychometricScoreResult: {
-    include: {
-      domainScores: {
-        orderBy: { domain: 'asc' },
-      },
-      validityFlags: {
-        orderBy: [{ severity: 'desc' }, { code: 'asc' }],
-      },
-    },
-  },
-},
+        include: {
+          campaign: true,
+          assessmentForm: true,
+          currentSection: true,
+          responses: true,
+          score: true,
+          psychometricScoreResult: {
+            include: {
+              domainScores: {
+                orderBy: { domain: 'asc' },
+              },
+              validityFlags: {
+                orderBy: [{ severity: 'desc' }, { code: 'asc' }],
+              },
+            },
+          },
+        },
       }),
     ]);
 
@@ -258,11 +474,11 @@ include: {
       input.assessmentFormId,
     );
 
-const form = await this.getUsableForm(assessmentFormId);
+    const form = await this.getUsableForm(assessmentFormId);
 
-await this.completeTimedOutConsumerSessions(input.userId, form.id);
+    await this.completeTimedOutConsumerSessions(input.userId, form.id);
 
-const existing = await this.prisma.session.findFirst({
+    const existing = await this.prisma.session.findFirst({
       where: {
         userId: input.userId,
         assessmentFormId: form.id,
@@ -310,166 +526,346 @@ const existing = await this.prisma.session.findFirst({
     return session;
   }
 
- async createSessionFromInvitation(input: {
-  userId: string;
-  invitationToken: string;
-}) {
-  const invitation = await this.prisma.invitation.findUnique({
-    where: { token: input.invitationToken },
-    include: {
-      campaign: {
-        include: {
-          assessmentForm: true,
-          organisation: {
-            select: {
-              id: true,
-              candidateAccessMode: true,
-              candidateResultVisibility: true,
-              candidateHistoryVisibility: true,
-              reassessmentMode: true,
+  async createSessionFromInvitation(input: {
+    userId?: string;
+    invitationToken: string;
+    applicantName?: string;
+    consentAccepted?: boolean;
+  }) {
+    const invitation = await this.prisma.invitation.findUnique({
+      where: { token: input.invitationToken },
+      include: {
+        campaign: {
+          include: {
+            assessmentForm: true,
+            organisation: {
+              select: {
+                id: true,
+                candidateAccessMode: true,
+                candidateResultVisibility: true,
+                candidateHistoryVisibility: true,
+                reassessmentMode: true,
+              },
             },
           },
         },
-      },
-      candidateUser: true,
-      participant: true,
-    },
-  });
-
-  if (!invitation) {
-    throw new NotFoundException('Invitation not found');
-  }
-
-  const candidate = await this.prisma.user.findUnique({
-    where: {
-      id: input.userId,
-    },
-    select: {
-      id: true,
-      email: true,
-    },
-  });
-
-  if (!candidate) {
-    throw new NotFoundException('Candidate user not found');
-  }
-
-  if (
-    invitation.email.trim().toLowerCase() !==
-    candidate.email.trim().toLowerCase()
-  ) {
-    throw new ForbiddenException(
-      'This invitation is assigned to a different email address',
-    );
-  }
-
-  if (
-    invitation.status === InvitationStatus.PENDING &&
-    invitation.expiresAt &&
-    invitation.expiresAt < new Date()
-  ) {
-    const expiredInvitation = await this.prisma.invitation.update({
-      where: {
-        id: invitation.id,
-      },
-      data: {
-        status: InvitationStatus.EXPIRED,
+        candidateUser: true,
+        participant: true,
       },
     });
 
-    await this.auditService.record({
-      action: 'INVITATION_EXPIRED',
-      userId: null,
-      entityType: 'Invitation',
-      entityId: expiredInvitation.id,
-      metadata: {
-        campaignId: expiredInvitation.campaignId,
-        email: expiredInvitation.email,
-        status: expiredInvitation.status,
-        expiredAt: expiredInvitation.expiresAt,
-      },
-    });
+    if (!invitation) {
+      throw new NotFoundException('Invitation not found');
+    }
 
-    throw new BadRequestException('Invitation has expired');
-  }
+    const applicantEmail = invitation.email.trim().toLowerCase();
+    const applicantName = input.applicantName?.trim() || applicantEmail;
+    const isAuthenticatedCandidate = Boolean(input.userId);
 
-  if (
-    invitation.status !== InvitationStatus.PENDING &&
-    invitation.status !== InvitationStatus.ACCEPTED
-  ) {
-    throw new BadRequestException('Invitation is no longer available');
-  }
-
-  if (
-    invitation.candidateUserId &&
-    invitation.candidateUserId !== input.userId
-  ) {
-    throw new ForbiddenException(
-      'This invitation has already been assigned to another candidate',
-    );
-  }
-
-  if (!invitation.campaign.assessmentFormId) {
-    throw new BadRequestException('Campaign has no assessment form assigned');
-  }
-
-  const form = invitation.campaign.assessmentForm;
-
-  if (!form) {
-    throw new BadRequestException('Campaign assessment form was not found');
-  }
-
-  if (!form.isActive) {
-    throw new BadRequestException('Campaign assessment form is not active');
-  }
-
-  const participant =
-    invitation.participant ??
-    (await this.ensureOrganisationParticipant({
-      organisationId: invitation.campaign.organisationId,
-      userId: input.userId,
-      accessMode:
-        invitation.campaign.organisation?.candidateAccessMode ??
-        CandidateAccessMode.ONE_OFF,
-    }));
-
-  const existing = await this.prisma.session.findFirst({
-    where: {
-      invitationId: invitation.id,
-    },
-  });
-
-  if (existing) {
-    if (existing.userId !== input.userId) {
-      throw new ForbiddenException(
-        'This invitation session belongs to another user',
+    if (!isAuthenticatedCandidate && input.consentAccepted !== true) {
+      throw new BadRequestException(
+        'Applicant identity confirmation and consent are required.',
       );
     }
 
-    if (!existing.participantId) {
-      await this.prisma.session.update({
+    let candidate: {
+      id: string;
+      email: string;
+    } | null = null;
+
+    if (input.userId) {
+      candidate = await this.prisma.user.findUnique({
+        where: {
+          id: input.userId,
+        },
+        select: {
+          id: true,
+          email: true,
+        },
+      });
+
+      if (!candidate) {
+        throw new NotFoundException('Candidate user not found');
+      }
+
+      if (applicantEmail !== candidate.email.trim().toLowerCase()) {
+        throw new ForbiddenException(
+          'This invitation is assigned to a different email address',
+        );
+      }
+    }
+
+    if (
+      invitation.status === InvitationStatus.PENDING &&
+      invitation.expiresAt &&
+      invitation.expiresAt < new Date()
+    ) {
+      const expiredInvitation = await this.prisma.invitation.update({
+        where: {
+          id: invitation.id,
+        },
+        data: {
+          status: InvitationStatus.EXPIRED,
+        },
+      });
+
+      await this.auditService.record({
+        action: 'INVITATION_EXPIRED',
+        userId: null,
+        entityType: 'Invitation',
+        entityId: expiredInvitation.id,
+        metadata: {
+          campaignId: expiredInvitation.campaignId,
+          email: expiredInvitation.email,
+          status: expiredInvitation.status,
+          expiredAt: expiredInvitation.expiresAt,
+        },
+      });
+
+      throw new BadRequestException('Invitation has expired');
+    }
+
+    if (
+      invitation.status !== InvitationStatus.PENDING &&
+      invitation.status !== InvitationStatus.ACCEPTED
+    ) {
+      throw new BadRequestException('Invitation is no longer available');
+    }
+
+    if (
+      invitation.candidateUserId &&
+      (!input.userId || invitation.candidateUserId !== input.userId)
+    ) {
+      throw new ForbiddenException(
+        'This invitation has already been assigned to another candidate',
+      );
+    }
+
+    if (!invitation.campaign.assessmentFormId) {
+      throw new BadRequestException('Campaign has no assessment form assigned');
+    }
+
+    const form = invitation.campaign.assessmentForm;
+
+    if (!form) {
+      throw new BadRequestException('Campaign assessment form was not found');
+    }
+
+    if (!form.isActive) {
+      throw new BadRequestException('Campaign assessment form is not active');
+    }
+
+    const participant =
+      input.userId && candidate
+        ? (invitation.participant ??
+          (await this.ensureOrganisationParticipant({
+            organisationId: invitation.campaign.organisationId,
+            userId: input.userId,
+            accessMode:
+              invitation.campaign.organisation?.candidateAccessMode ??
+              CandidateAccessMode.ONE_OFF,
+          })))
+        : invitation.participant;
+
+    const existing = await this.prisma.session.findFirst({
+      where: {
+        invitationId: invitation.id,
+      },
+    });
+
+    if (existing) {
+      if (input.userId && existing.userId !== input.userId) {
+        throw new ForbiddenException(
+          'This invitation session belongs to another user',
+        );
+      }
+
+      if (!input.userId && existing.userId) {
+        throw new ForbiddenException(
+          'This invitation has already been claimed by a candidate account',
+        );
+      }
+
+      const sessionAccessToken = input.userId
+        ? null
+        : this.generateSessionAccessToken();
+
+      const repairedSession = await this.prisma.session.update({
         where: {
           id: existing.id,
         },
         data: {
-          participantId: participant.id,
+          ...(participant && !existing.participantId
+            ? { participantId: participant.id }
+            : {}),
+          ...(sessionAccessToken
+            ? {
+                sessionAccessTokenHash:
+                  this.hashSessionAccessToken(sessionAccessToken),
+              }
+            : {}),
+        },
+      });
+
+      const wasAutoFinalised =
+        await this.completeSessionIfTimedOut(repairedSession);
+      const resolvedStatus = wasAutoFinalised
+        ? SessionStatus.COMPLETED
+        : repairedSession.status;
+
+      return {
+        sessionId: repairedSession.id,
+        assessmentId: repairedSession.assessmentFormId,
+        status: this.toCandidateStatus(resolvedStatus),
+        sessionAccessToken,
+        candidateAccessPolicy: {
+          accessMode: participant?.accessMode ?? CandidateAccessMode.ONE_OFF,
+          resultVisibility:
+            invitation.campaign.candidateResultVisibility,
+          historyVisibility:
+            invitation.campaign.organisation.candidateHistoryVisibility,
+          reassessmentMode: invitation.campaign.organisation.reassessmentMode,
+        },
+      };
+    }
+
+    if (invitation.status === InvitationStatus.PENDING) {
+      const acceptedInvitation = await this.prisma.invitation.updateMany({
+        where: {
+          id: invitation.id,
+          status: InvitationStatus.PENDING,
+          OR: input.userId
+            ? [
+                {
+                  candidateUserId: null,
+                },
+                {
+                  candidateUserId: input.userId,
+                },
+              ]
+            : [
+                {
+                  candidateUserId: null,
+                },
+              ],
+        },
+        data: input.userId
+          ? {
+              candidateUserId: input.userId,
+              participantId: participant?.id,
+              status: InvitationStatus.ACCEPTED,
+              usedAt: new Date(),
+            }
+          : {
+              status: InvitationStatus.ACCEPTED,
+              usedAt: new Date(),
+            },
+      });
+
+      if (acceptedInvitation.count !== 1) {
+        throw new BadRequestException(
+          'Invitation could not be accepted. It may have already been used.',
+        );
+      }
+
+      await this.auditService.record({
+        action: 'INVITATION_ACCEPTED',
+        userId: input.userId ?? null,
+        entityType: 'Invitation',
+        entityId: invitation.id,
+        metadata: {
+          campaignId: invitation.campaignId,
+          email: invitation.email,
+          candidateUserId: input.userId ?? null,
+          participantId: participant?.id ?? null,
+          applicantName,
+          applicantEmail,
+          invitationMode: input.userId ? 'ACCOUNT' : 'TOKEN_ONLY_APPLICANT',
         },
       });
     }
 
-    const wasAutoFinalised = await this.completeSessionIfTimedOut(existing);
-    const resolvedStatus = wasAutoFinalised
-      ? SessionStatus.COMPLETED
-      : existing.status;
+    if (input.userId && invitation.status === InvitationStatus.ACCEPTED) {
+      const invitationNeedsRepair =
+        !invitation.participantId || !invitation.candidateUserId;
+
+      if (invitationNeedsRepair) {
+        await this.prisma.invitation.update({
+          where: {
+            id: invitation.id,
+          },
+          data: {
+            candidateUserId: input.userId,
+            participantId: participant?.id,
+          },
+        });
+      }
+    }
+
+    const sessionAccessToken = input.userId
+      ? null
+      : this.generateSessionAccessToken();
+
+    const session = await this.prisma.session.create({
+      data: {
+        userId: input.userId ?? null,
+        campaignId: invitation.campaignId,
+        invitationId: invitation.id,
+        participantId: participant?.id ?? null,
+        applicantEmail,
+        applicantName,
+        consentAcceptedAt: input.consentAccepted ? new Date() : null,
+        sessionAccessTokenHash: sessionAccessToken
+          ? this.hashSessionAccessToken(sessionAccessToken)
+          : null,
+        assessmentFormId: form.id,
+        assessmentFormVersion: form.version,
+        assessmentFormVersionLabel: form.versionLabel,
+        scoringVersion: form.scoringVersion,
+        reportVersion: form.reportVersion,
+        formSnapshot: this.toFormSnapshot(form),
+        status: SessionStatus.NOT_STARTED,
+      },
+    });
+
+    await this.auditService.record({
+      action: 'INVITATION_SESSION_CREATED',
+      userId: input.userId ?? null,
+      entityType: 'Session',
+      entityId: session.id,
+      metadata: {
+        campaignId: session.campaignId,
+        invitationId: session.invitationId,
+        participantId: session.participantId,
+        applicantEmail: session.applicantEmail,
+        applicantName: session.applicantName,
+        invitationMode: input.userId ? 'ACCOUNT' : 'TOKEN_ONLY_APPLICANT',
+        assessmentFormId: session.assessmentFormId,
+        status: session.status,
+        assessmentFormVersion: session.assessmentFormVersion,
+        assessmentFormVersionLabel: session.assessmentFormVersionLabel,
+        scoringVersion: session.scoringVersion,
+        reportVersion: session.reportVersion,
+        candidateAccessPolicy: {
+          accessMode: participant?.accessMode ?? CandidateAccessMode.ONE_OFF,
+          resultVisibility:
+            invitation.campaign.candidateResultVisibility,
+          historyVisibility:
+            invitation.campaign.organisation.candidateHistoryVisibility,
+          reassessmentMode: invitation.campaign.organisation.reassessmentMode,
+        },
+      },
+    });
 
     return {
-      sessionId: existing.id,
-      assessmentId: existing.assessmentFormId,
-      status: this.toCandidateStatus(resolvedStatus),
+      sessionId: session.id,
+      assessmentId: session.assessmentFormId,
+      status: this.toCandidateStatus(session.status),
+      sessionAccessToken,
       candidateAccessPolicy: {
-        accessMode: participant.accessMode,
+        accessMode: participant?.accessMode ?? CandidateAccessMode.ONE_OFF,
         resultVisibility:
-          invitation.campaign.organisation.candidateResultVisibility,
+          invitation.campaign.candidateResultVisibility,
         historyVisibility:
           invitation.campaign.organisation.candidateHistoryVisibility,
         reassessmentMode: invitation.campaign.organisation.reassessmentMode,
@@ -477,126 +873,44 @@ const existing = await this.prisma.session.findFirst({
     };
   }
 
-  if (invitation.status === InvitationStatus.PENDING) {
-    const acceptedInvitation = await this.prisma.invitation.updateMany({
-      where: {
-        id: invitation.id,
-        status: InvitationStatus.PENDING,
-        OR: [
-          {
-            candidateUserId: null,
-          },
-          {
-            candidateUserId: input.userId,
-          },
-        ],
-      },
-      data: {
-        candidateUserId: input.userId,
-        participantId: participant.id,
-        status: InvitationStatus.ACCEPTED,
-        usedAt: new Date(),
-      },
-    });
-
-    if (acceptedInvitation.count !== 1) {
-      throw new BadRequestException(
-        'Invitation could not be accepted. It may have already been used.',
-      );
-    }
-
-    await this.auditService.record({
-      action: 'INVITATION_ACCEPTED',
-      userId: input.userId,
-      entityType: 'Invitation',
-      entityId: invitation.id,
-      metadata: {
-        campaignId: invitation.campaignId,
-        email: invitation.email,
-        candidateUserId: input.userId,
-        participantId: participant.id,
-      },
+  async startSessionWithAccessToken(
+    sessionId: string,
+    sessionAccessToken?: string,
+  ) {
+    return this.startSessionForActor(sessionId, {
+      sessionAccessToken,
     });
   }
 
-  if (invitation.status === InvitationStatus.ACCEPTED) {
-    const invitationNeedsRepair =
-      !invitation.participantId || !invitation.candidateUserId;
-
-    if (invitationNeedsRepair) {
-      await this.prisma.invitation.update({
-        where: {
-          id: invitation.id,
-        },
-        data: {
-          candidateUserId: input.userId,
-          participantId: participant.id,
-        },
-      });
-    }
+  async resumeSessionWithAccessToken(
+    sessionId: string,
+    sessionAccessToken?: string,
+  ) {
+    return this.resumeSessionForActor(sessionId, {
+      sessionAccessToken,
+    });
   }
 
-  const session = await this.prisma.session.create({
-    data: {
-      userId: input.userId,
-      campaignId: invitation.campaignId,
-      invitationId: invitation.id,
-      participantId: participant.id,
-      assessmentFormId: form.id,
-      assessmentFormVersion: form.version,
-      assessmentFormVersionLabel: form.versionLabel,
-      scoringVersion: form.scoringVersion,
-      reportVersion: form.reportVersion,
-      formSnapshot: this.toFormSnapshot(form),
-      status: SessionStatus.NOT_STARTED,
-    },
-  });
+  async finaliseSessionWithAccessToken(
+    sessionId: string,
+    sessionAccessToken?: string,
+  ) {
+    return this.finaliseSessionForActor(sessionId, {
+      sessionAccessToken,
+    });
+  }
 
-  await this.auditService.record({
-    action: 'INVITATION_SESSION_CREATED',
-    userId: input.userId,
-    entityType: 'Session',
-    entityId: session.id,
-    metadata: {
-      campaignId: session.campaignId,
-      invitationId: session.invitationId,
-      participantId: session.participantId,
-      assessmentFormId: session.assessmentFormId,
-      status: session.status,
-      assessmentFormVersion: session.assessmentFormVersion,
-      assessmentFormVersionLabel: session.assessmentFormVersionLabel,
-      scoringVersion: session.scoringVersion,
-      reportVersion: session.reportVersion,
-      candidateAccessPolicy: {
-        accessMode: participant.accessMode,
-        resultVisibility:
-          invitation.campaign.organisation.candidateResultVisibility,
-        historyVisibility:
-          invitation.campaign.organisation.candidateHistoryVisibility,
-        reassessmentMode: invitation.campaign.organisation.reassessmentMode,
-      },
-    },
-  });
-
-  return {
-    sessionId: session.id,
-    assessmentId: session.assessmentFormId,
-    status: this.toCandidateStatus(session.status),
-    candidateAccessPolicy: {
-      accessMode: participant.accessMode,
-      resultVisibility:
-        invitation.campaign.organisation.candidateResultVisibility,
-      historyVisibility:
-        invitation.campaign.organisation.candidateHistoryVisibility,
-      reassessmentMode: invitation.campaign.organisation.reassessmentMode,
-    },
-  };
-}
   async startSession(sessionId: string, userId: string) {
-    const session = await this.getSessionForUser(sessionId, userId);
+    return this.startSessionForActor(sessionId, {
+      userId,
+    });
+  }
+
+  private async startSessionForActor(sessionId: string, actor: SessionActor) {
+    const session = await this.getSessionForActor(sessionId, actor);
 
     if (session.status === SessionStatus.IN_PROGRESS) {
-      return this.getCandidateAssessmentSessionPayload(sessionId, userId);
+      return this.getCandidateAssessmentSessionPayload(sessionId, actor);
     }
 
     if (session.status !== SessionStatus.NOT_STARTED) {
@@ -636,6 +950,9 @@ const existing = await this.prisma.session.findFirst({
       metadata: {
         campaignId: startedSession.campaignId,
         invitationId: startedSession.invitationId,
+        participantId: startedSession.participantId,
+        applicantEmail: startedSession.applicantEmail,
+        applicantName: startedSession.applicantName,
         assessmentFormId: startedSession.assessmentFormId,
         currentSectionId: startedSession.currentSectionId,
         currentSectionOrder: startedSession.currentSectionOrder,
@@ -648,150 +965,170 @@ const existing = await this.prisma.session.findFirst({
       },
     });
 
-    return this.getCandidateAssessmentSessionPayload(sessionId, userId);
+    return this.getCandidateAssessmentSessionPayload(sessionId, actor);
   }
 
-async resumeSession(sessionId: string, userId: string) {
-  const session = await this.getSessionForUser(sessionId, userId);
+  async resumeSession(sessionId: string, userId: string) {
+    return this.resumeSessionForActor(sessionId, {
+      userId,
+    });
+  }
 
-  await this.completeSessionIfTimedOut(session);
+  private async resumeSessionForActor(sessionId: string, actor: SessionActor) {
+    const session = await this.getSessionForActor(sessionId, actor);
 
-  const refreshedSession = await this.getSessionForUser(sessionId, userId);
+    await this.completeSessionIfTimedOut(session);
 
-  if (
-    refreshedSession.status !== SessionStatus.NOT_STARTED &&
-    refreshedSession.status !== SessionStatus.IN_PROGRESS &&
-    refreshedSession.status !== SessionStatus.COMPLETED
+    const refreshedSession = await this.getSessionForActor(sessionId, actor);
+
+    if (
+      refreshedSession.status !== SessionStatus.NOT_STARTED &&
+      refreshedSession.status !== SessionStatus.IN_PROGRESS &&
+      refreshedSession.status !== SessionStatus.COMPLETED
+    ) {
+      throw new BadRequestException(
+        'Only not-started, in-progress, or completed sessions can be resumed',
+      );
+    }
+
+    return this.getCandidateAssessmentSessionPayload(sessionId, actor);
+  }
+
+  async finaliseSession(sessionId: string, userId: string) {
+    return this.finaliseSessionForActor(sessionId, {
+      userId,
+    });
+  }
+
+  private async finaliseSessionForActor(
+    sessionId: string,
+    actor: SessionActor,
   ) {
-    throw new BadRequestException(
-      'Only not-started, in-progress, or completed sessions can be resumed',
-    );
-  }
+    const session = await this.getSessionForActor(sessionId, actor);
 
-  return this.getCandidateAssessmentSessionPayload(sessionId, userId);
-}
+    if (session.status === SessionStatus.COMPLETED) {
+      const psychometricScoring = await this.scoreCompletedSessionBestEffort(
+        session.id,
+        session.userId,
+        'ALREADY_COMPLETED',
+      );
 
-async finaliseSession(sessionId: string, userId: string) {
-  const session = await this.getSessionForUser(sessionId, userId);
+      return {
+        sessionId: session.id,
+        status: 'completed',
+        submittedAt:
+          session.completedAt?.toISOString() ?? new Date().toISOString(),
+        psychometricScoring,
+      };
+    }
 
-if (session.status === SessionStatus.COMPLETED) {
-  const psychometricScoring =
-    await this.scoreCompletedSessionBestEffort(
-      session.id,
-      session.userId,
-      'ALREADY_COMPLETED',
-    );
+    if (session.status === SessionStatus.ABANDONED) {
+      throw new BadRequestException('This session cannot be finalised');
+    }
 
-  return {
-    sessionId: session.id,
-    status: 'completed',
-    submittedAt:
-      session.completedAt?.toISOString() ?? new Date().toISOString(),
-    psychometricScoring,
-  };
-}
+    const isTimeoutFinalisation = this.isTimedOutSession(session);
+    const completedAt =
+      isTimeoutFinalisation && session.sectionEndsAt
+        ? session.sectionEndsAt
+        : new Date();
 
-  if (session.status === SessionStatus.ABANDONED) {
-    throw new BadRequestException('This session cannot be finalised');
-  }
-
-  const isTimeoutFinalisation = this.isTimedOutSession(session);
-  const completedAt =
-    isTimeoutFinalisation && session.sectionEndsAt
-      ? session.sectionEndsAt
-      : new Date();
-
-  const finalisedSession = await this.prisma.session.update({
-    where: { id: sessionId },
-    data: {
-      status: SessionStatus.COMPLETED,
-      completedAt,
-    },
-  });
-
-  await this.auditService.record({
-    action: isTimeoutFinalisation
-      ? 'SESSION_TIMEOUT_AUTO_FINALISED'
-      : 'SESSION_SUBMITTED',
-    userId: finalisedSession.userId,
-    entityType: 'Session',
-    entityId: finalisedSession.id,
-    metadata: {
-            campaignId: finalisedSession.campaignId,
-      invitationId: finalisedSession.invitationId,
-      participantId: finalisedSession.participantId,
-      assessmentFormId: finalisedSession.assessmentFormId,
-      completedAt: finalisedSession.completedAt,
-      status: finalisedSession.status,
-      assessmentFormVersion: finalisedSession.assessmentFormVersion,
-      assessmentFormVersionLabel: finalisedSession.assessmentFormVersionLabel,
-      scoringVersion: finalisedSession.scoringVersion,
-      reportVersion: finalisedSession.reportVersion,
-      finalisationMode: isTimeoutFinalisation
-        ? 'TIMEOUT_AUTO_FINALISED'
-        : 'USER_SUBMITTED',
-    },
-  });
-
-const psychometricScoring = await this.scoreCompletedSessionBestEffort(
-  finalisedSession.id,
-  finalisedSession.userId,
-  isTimeoutFinalisation ? 'TIMEOUT_AUTO_FINALISED' : 'USER_SUBMITTED',
-);
-
-return {
-  sessionId: finalisedSession.id,
-  status: 'completed',
-  submittedAt: completedAt.toISOString(),
-  psychometricScoring,
-};
-}
-
-private async ensureOrganisationParticipant(input: {
-  organisationId: string;
-  userId: string;
-  accessMode?: CandidateAccessMode;
-}) {
-  const existingParticipant =
-    await this.prisma.organisationParticipant.findUnique({
-      where: {
-        organisationId_userId: {
-          organisationId: input.organisationId,
-          userId: input.userId,
-        },
+    const finalisedSession = await this.prisma.session.update({
+      where: { id: sessionId },
+      data: {
+        status: SessionStatus.COMPLETED,
+        completedAt,
       },
     });
 
-  if (existingParticipant) {
-    if (existingParticipant.status === OrganisationParticipantStatus.ARCHIVED) {
-      return this.prisma.organisationParticipant.update({
-        where: {
-          id: existingParticipant.id,
-        },
-        data: {
-          status: OrganisationParticipantStatus.ACTIVE,
-          archivedAt: null,
-        },
-      });
-    }
+    await this.auditService.record({
+      action: isTimeoutFinalisation
+        ? 'SESSION_TIMEOUT_AUTO_FINALISED'
+        : 'SESSION_SUBMITTED',
+      userId: finalisedSession.userId,
+      entityType: 'Session',
+      entityId: finalisedSession.id,
+      metadata: {
+        campaignId: finalisedSession.campaignId,
+        invitationId: finalisedSession.invitationId,
+        participantId: finalisedSession.participantId,
+        applicantEmail: finalisedSession.applicantEmail,
+        applicantName: finalisedSession.applicantName,
+        assessmentFormId: finalisedSession.assessmentFormId,
+        completedAt: finalisedSession.completedAt,
+        status: finalisedSession.status,
+        assessmentFormVersion: finalisedSession.assessmentFormVersion,
+        assessmentFormVersionLabel: finalisedSession.assessmentFormVersionLabel,
+        scoringVersion: finalisedSession.scoringVersion,
+        reportVersion: finalisedSession.reportVersion,
+        finalisationMode: isTimeoutFinalisation
+          ? 'TIMEOUT_AUTO_FINALISED'
+          : 'USER_SUBMITTED',
+      },
+    });
 
-    return existingParticipant;
+        const psychometricScoring = await this.scoreCompletedSessionBestEffort(
+      finalisedSession.id,
+      finalisedSession.userId,
+      isTimeoutFinalisation ? 'TIMEOUT_AUTO_FINALISED' : 'USER_SUBMITTED',
+    );
+
+    await this.sendCandidateResultNotificationBestEffort(finalisedSession.id);
+
+    return {
+      sessionId: finalisedSession.id,
+      status: 'completed',
+      submittedAt: completedAt.toISOString(),
+      psychometricScoring,
+    };
   }
 
-  return this.prisma.organisationParticipant.create({
-    data: {
-      organisationId: input.organisationId,
-      userId: input.userId,
-      participantType: OrganisationParticipantType.CANDIDATE,
-      accessMode: input.accessMode ?? CandidateAccessMode.ONE_OFF,
-      status: OrganisationParticipantStatus.ACTIVE,
-    },
-  });
-}
+  private async ensureOrganisationParticipant(input: {
+    organisationId: string;
+    userId: string;
+    accessMode?: CandidateAccessMode;
+  }) {
+    const existingParticipant =
+      await this.prisma.organisationParticipant.findUnique({
+        where: {
+          organisationId_userId: {
+            organisationId: input.organisationId,
+            userId: input.userId,
+          },
+        },
+      });
+
+    if (existingParticipant) {
+      if (
+        existingParticipant.status === OrganisationParticipantStatus.ARCHIVED
+      ) {
+        return this.prisma.organisationParticipant.update({
+          where: {
+            id: existingParticipant.id,
+          },
+          data: {
+            status: OrganisationParticipantStatus.ACTIVE,
+            archivedAt: null,
+          },
+        });
+      }
+
+      return existingParticipant;
+    }
+
+    return this.prisma.organisationParticipant.create({
+      data: {
+        organisationId: input.organisationId,
+        userId: input.userId,
+        participantType: OrganisationParticipantType.CANDIDATE,
+        accessMode: input.accessMode ?? CandidateAccessMode.ONE_OFF,
+        status: OrganisationParticipantStatus.ACTIVE,
+      },
+    });
+  }
 
   private async getCandidateAssessmentSessionPayload(
     sessionId: string,
-    userId: string,
+    actor: SessionActor,
   ): Promise<CandidateAssessmentSessionPayload> {
     let session = await this.prisma.session.findUnique({
       where: { id: sessionId },
@@ -806,22 +1143,20 @@ private async ensureOrganisationParticipant(input: {
       throw new NotFoundException('Session not found');
     }
 
-if (session.userId !== userId) {
-  throw new ForbiddenException('Session does not belong to this user');
-}
+    this.assertActorCanAccessSession(session, actor);
 
-if (this.isTimedOutSession(session)) {
-  const completedSession = await this.completeTimedOutSession(session);
+    if (this.isTimedOutSession(session)) {
+      const completedSession = await this.completeTimedOutSession(session);
 
-  session = {
-    ...session,
-    status: completedSession.status,
-    completedAt: completedSession.completedAt,
-    updatedAt: completedSession.updatedAt,
-  };
-}
+      session = {
+        ...session,
+        status: completedSession.status,
+        completedAt: completedSession.completedAt,
+        updatedAt: completedSession.updatedAt,
+      };
+    }
 
-const sections = await this.prisma.assessmentSection.findMany({
+    const sections = await this.prisma.assessmentSection.findMany({
       where: {
         formId: session.assessmentFormId,
       },
@@ -901,7 +1236,12 @@ const sections = await this.prisma.assessmentSection.findMany({
       sessionId: session.id,
       assessmentId: session.assessmentFormId,
       assessmentTitle: session.assessmentForm.name,
-      candidateName: session.user.name ?? session.user.email,
+      candidateName:
+        session.applicantName ??
+        session.user?.name ??
+        session.applicantEmail ??
+        session.user?.email ??
+        undefined,
       status: this.toCandidateStatus(session.status),
       startedAt: session.startedAt?.toISOString(),
       expiresAt: session.sectionEndsAt?.toISOString(),
@@ -1061,7 +1401,7 @@ const sections = await this.prisma.assessmentSection.findMany({
     return form;
   }
 
-  private async getSessionForUser(sessionId: string, userId: string) {
+  private async getSessionForActor(sessionId: string, actor: SessionActor) {
     const session = await this.prisma.session.findUnique({
       where: { id: sessionId },
       include: {
@@ -1074,127 +1414,164 @@ const sections = await this.prisma.assessmentSection.findMany({
       throw new NotFoundException('Session not found');
     }
 
-    if (session.userId !== userId) {
-      throw new ForbiddenException('Session does not belong to this user');
-    }
+    this.assertActorCanAccessSession(session, actor);
 
     return session;
   }
-private isTimedOutSession(session: {
-  status: SessionStatus;
-  sectionEndsAt: Date | null;
-}) {
-  const sectionEndsAt = session.sectionEndsAt;
 
-  return (
-    session.status === SessionStatus.IN_PROGRESS &&
-    sectionEndsAt !== null &&
-    sectionEndsAt <= new Date()
-  );
-}
+  private assertActorCanAccessSession(
+    session: {
+      userId: string | null;
+      sessionAccessTokenHash: string | null;
+    },
+    actor: SessionActor,
+  ) {
+    if (actor.userId) {
+      if (session.userId !== actor.userId) {
+        throw new ForbiddenException('Session does not belong to this user');
+      }
 
-private async completeSessionIfTimedOut(session: {
-  id: string;
-  userId: string;
-  campaignId: string | null;
-  invitationId: string | null;
-  assessmentFormId: string;
-  assessmentFormVersion: number;
-  assessmentFormVersionLabel: string | null;
-  scoringVersion: number;
-  reportVersion: number;
-  status: SessionStatus;
-  sectionEndsAt: Date | null;
-}) {
-  if (!this.isTimedOutSession(session)) {
-    return false;
+      return;
+    }
+
+    const sessionAccessToken = actor.sessionAccessToken?.trim();
+
+    if (!sessionAccessToken) {
+      throw new ForbiddenException(
+        'Assessment session access token is required',
+      );
+    }
+
+    if (!session.sessionAccessTokenHash) {
+      throw new ForbiddenException(
+        'This session does not support token access',
+      );
+    }
+
+    if (
+      this.hashSessionAccessToken(sessionAccessToken) !==
+      session.sessionAccessTokenHash
+    ) {
+      throw new ForbiddenException(
+        'Assessment session access token is invalid',
+      );
+    }
   }
 
-  await this.completeTimedOutSession(session);
+  private isTimedOutSession(session: {
+    status: SessionStatus;
+    sectionEndsAt: Date | null;
+  }) {
+    const sectionEndsAt = session.sectionEndsAt;
 
-  return true;
-}
+    return (
+      session.status === SessionStatus.IN_PROGRESS &&
+      sectionEndsAt !== null &&
+      sectionEndsAt <= new Date()
+    );
+  }
 
-private async completeTimedOutConsumerSessions(
-  userId: string,
-  assessmentFormId: string,
-) {
-  const timedOutSessions = await this.prisma.session.findMany({
-    where: {
-      userId,
-      assessmentFormId,
-      campaignId: null,
-      status: SessionStatus.IN_PROGRESS,
-      sectionEndsAt: {
-        lte: new Date(),
-      },
-    },
-  });
+  private async completeSessionIfTimedOut(session: {
+    id: string;
+    userId: string | null;
+    campaignId: string | null;
+    invitationId: string | null;
+    assessmentFormId: string;
+    assessmentFormVersion: number;
+    assessmentFormVersionLabel: string | null;
+    scoringVersion: number;
+    reportVersion: number;
+    status: SessionStatus;
+    sectionEndsAt: Date | null;
+  }) {
+    if (!this.isTimedOutSession(session)) {
+      return false;
+    }
 
-  for (const session of timedOutSessions) {
     await this.completeTimedOutSession(session);
+
+    return true;
   }
-}
 
-private async completeTimedOutSession(session: {
-  id: string;
-  userId: string;
-  campaignId: string | null;
-  invitationId: string | null;
-  assessmentFormId: string;
-  assessmentFormVersion: number;
-  assessmentFormVersionLabel: string | null;
-  scoringVersion: number;
-  reportVersion: number;
-  sectionEndsAt: Date | null;
-}) {
-  const completedAt = session.sectionEndsAt ?? new Date();
+  private async completeTimedOutConsumerSessions(
+    userId: string,
+    assessmentFormId: string,
+  ) {
+    const timedOutSessions = await this.prisma.session.findMany({
+      where: {
+        userId,
+        assessmentFormId,
+        campaignId: null,
+        status: SessionStatus.IN_PROGRESS,
+        sectionEndsAt: {
+          lte: new Date(),
+        },
+      },
+    });
 
-  const updatedSession = await this.prisma.session.update({
-    where: { id: session.id },
-    data: {
-      status: SessionStatus.COMPLETED,
-      completedAt,
-    },
-  });
+    for (const session of timedOutSessions) {
+      await this.completeTimedOutSession(session);
+    }
+  }
 
-  await this.auditService.record({
-    action: 'SESSION_TIMEOUT_AUTO_FINALISED',
-    userId: updatedSession.userId,
-    entityType: 'Session',
-    entityId: updatedSession.id,
-    metadata: {
-            campaignId: updatedSession.campaignId,
-      invitationId: updatedSession.invitationId,
-      participantId: updatedSession.participantId,
-      assessmentFormId: updatedSession.assessmentFormId,
-      completedAt: updatedSession.completedAt,
-      status: updatedSession.status,
-      assessmentFormVersion: updatedSession.assessmentFormVersion,
-      assessmentFormVersionLabel: updatedSession.assessmentFormVersionLabel,
-      scoringVersion: updatedSession.scoringVersion,
-      reportVersion: updatedSession.reportVersion,
-      finalisationMode: 'TIMEOUT_AUTO_FINALISED',
-    },
-  });
-await this.scoreCompletedSessionBestEffort(
-  updatedSession.id,
-  updatedSession.userId,
-  'TIMEOUT_AUTO_FINALISED',
-);
-  return updatedSession;
-}
+  private async completeTimedOutSession(session: {
+    id: string;
+    userId: string | null;
+    campaignId: string | null;
+    invitationId: string | null;
+    assessmentFormId: string;
+    assessmentFormVersion: number;
+    assessmentFormVersionLabel: string | null;
+    scoringVersion: number;
+    reportVersion: number;
+    sectionEndsAt: Date | null;
+  }) {
+    const completedAt = session.sectionEndsAt ?? new Date();
 
-private async scoreCompletedSessionBestEffort(
-  sessionId: string,
-  userId: string | null,
-  trigger:
-    | 'USER_SUBMITTED'
-    | 'TIMEOUT_AUTO_FINALISED'
-    | 'ALREADY_COMPLETED',
-) {
-  const existingScore =
-    await this.prisma.psychometricScoreResult.findUnique({
+    const updatedSession = await this.prisma.session.update({
+      where: { id: session.id },
+      data: {
+        status: SessionStatus.COMPLETED,
+        completedAt,
+      },
+    });
+
+    await this.auditService.record({
+      action: 'SESSION_TIMEOUT_AUTO_FINALISED',
+      userId: updatedSession.userId,
+      entityType: 'Session',
+      entityId: updatedSession.id,
+      metadata: {
+        campaignId: updatedSession.campaignId,
+        invitationId: updatedSession.invitationId,
+        participantId: updatedSession.participantId,
+        assessmentFormId: updatedSession.assessmentFormId,
+        completedAt: updatedSession.completedAt,
+        status: updatedSession.status,
+        assessmentFormVersion: updatedSession.assessmentFormVersion,
+        assessmentFormVersionLabel: updatedSession.assessmentFormVersionLabel,
+        scoringVersion: updatedSession.scoringVersion,
+        reportVersion: updatedSession.reportVersion,
+        finalisationMode: 'TIMEOUT_AUTO_FINALISED',
+      },
+    });
+        await this.scoreCompletedSessionBestEffort(
+      updatedSession.id,
+      updatedSession.userId,
+      'TIMEOUT_AUTO_FINALISED',
+    );
+
+    await this.sendCandidateResultNotificationBestEffort(updatedSession.id);
+
+    return updatedSession;
+  }
+
+  private async scoreCompletedSessionBestEffort(
+    sessionId: string,
+    userId: string | null,
+    trigger: 'USER_SUBMITTED' | 'TIMEOUT_AUTO_FINALISED' | 'ALREADY_COMPLETED',
+  ) {
+    const existingScore = await this.prisma.psychometricScoreResult.findUnique({
       where: { sessionId },
       select: {
         id: true,
@@ -1204,71 +1581,71 @@ private async scoreCompletedSessionBestEffort(
       },
     });
 
-  if (existingScore) {
-    return {
-      status: 'already_scored',
-      scoreResultId: existingScore.id,
-      scoringStatus: existingScore.scoringStatus,
-      modelVersion: existingScore.modelVersion,
-      generatedAt: existingScore.generatedAt.toISOString(),
-    };
-  }
+    if (existingScore) {
+      return {
+        status: 'already_scored',
+        scoreResultId: existingScore.id,
+        scoringStatus: existingScore.scoringStatus,
+        modelVersion: existingScore.modelVersion,
+        generatedAt: existingScore.generatedAt.toISOString(),
+      };
+    }
 
-  try {
-    const scoreResult =
-      await this.psychometricsService.scoreCompletedSession(sessionId);
+    try {
+      const scoreResult =
+        await this.psychometricsService.scoreCompletedSession(sessionId);
 
-    const typedScoreResult = scoreResult as {
-      id?: string;
-      scoringStatus?: string;
-      modelVersion?: string;
-      generatedAt?: Date | string;
-    };
+      const typedScoreResult = scoreResult as {
+        id?: string;
+        scoringStatus?: string;
+        modelVersion?: string;
+        generatedAt?: Date | string;
+      };
 
-    await this.auditService.record({
-      action: 'SESSION_PSYCHOMETRIC_AUTO_SCORE_COMPLETED',
-      userId,
-      entityType: 'Session',
-      entityId: sessionId,
-      metadata: {
-        trigger,
+      await this.auditService.record({
+        action: 'SESSION_PSYCHOMETRIC_AUTO_SCORE_COMPLETED',
+        userId,
+        entityType: 'Session',
+        entityId: sessionId,
+        metadata: {
+          trigger,
+          scoreResultId: typedScoreResult.id ?? null,
+          scoringStatus: typedScoreResult.scoringStatus ?? null,
+          modelVersion: typedScoreResult.modelVersion ?? null,
+          generatedAt: typedScoreResult.generatedAt ?? null,
+        },
+      });
+
+      return {
+        status: 'scored',
         scoreResultId: typedScoreResult.id ?? null,
         scoringStatus: typedScoreResult.scoringStatus ?? null,
         modelVersion: typedScoreResult.modelVersion ?? null,
-        generatedAt: typedScoreResult.generatedAt ?? null,
-      },
-    });
+      };
+    } catch (error) {
+      await this.auditService.record({
+        action: 'SESSION_PSYCHOMETRIC_AUTO_SCORE_FAILED',
+        userId,
+        entityType: 'Session',
+        entityId: sessionId,
+        metadata: {
+          trigger,
+          message:
+            error instanceof Error
+              ? error.message
+              : 'Unknown psychometric scoring error',
+        },
+      });
 
-    return {
-      status: 'scored',
-      scoreResultId: typedScoreResult.id ?? null,
-      scoringStatus: typedScoreResult.scoringStatus ?? null,
-      modelVersion: typedScoreResult.modelVersion ?? null,
-    };
-  } catch (error) {
-    await this.auditService.record({
-      action: 'SESSION_PSYCHOMETRIC_AUTO_SCORE_FAILED',
-      userId,
-      entityType: 'Session',
-      entityId: sessionId,
-      metadata: {
-        trigger,
+      return {
+        status: 'failed',
         message:
           error instanceof Error
             ? error.message
             : 'Unknown psychometric scoring error',
-      },
-    });
-
-    return {
-      status: 'failed',
-      message:
-        error instanceof Error
-          ? error.message
-          : 'Unknown psychometric scoring error',
-    };
+      };
+    }
   }
-}
   private isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
   }
@@ -1279,7 +1656,7 @@ private async scoreCompletedSessionBestEffort(
 
   private canReadSessionPsychometricScore(
     session: {
-      userId: string;
+      userId: string | null;
       campaign: {
         organisationId: string | null;
       } | null;
@@ -1310,5 +1687,187 @@ private async scoreCompletedSessionBestEffort(
     }
 
     return false;
+  }
+
+
+    private async sendCandidateResultNotificationBestEffort(sessionId: string) {
+    try {
+      await this.sendCandidateResultNotification(sessionId);
+    } catch (error) {
+      await this.auditService.record({
+        action: 'CANDIDATE_RESULT_NOTIFICATION_FAILED',
+        userId: null,
+        entityType: 'Session',
+        entityId: sessionId,
+        metadata: {
+          message:
+            error instanceof Error
+              ? error.message
+              : 'Candidate result notification failed.',
+        },
+      });
+    }
+  }
+
+  private async sendCandidateResultNotification(sessionId: string) {
+    const session = await this.prisma.session.findUnique({
+      where: { id: sessionId },
+      include: {
+        campaign: {
+          include: {
+            organisation: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+        invitation: true,
+        psychometricScoreResult: {
+          select: {
+            id: true,
+          },
+        },
+      },
+    });
+
+    if (!session || !session.campaign || !session.invitationId) {
+      return;
+    }
+
+    if (!session.applicantEmail) {
+      return;
+    }
+
+    if (session.status !== SessionStatus.COMPLETED) {
+      return;
+    }
+
+    const recipient = {
+      email: session.applicantEmail,
+      name: session.applicantName,
+    };
+
+    if (
+      session.campaign.candidateResultVisibility ===
+      CandidateResultVisibility.SUMMARY_ONLY
+    ) {
+      if (!session.psychometricScoreResult) {
+        return;
+      }
+
+      const expiresAt = this.verificationTokensService.getExpiryDate(
+        60 * 24 * 7,
+      );
+
+      const resultToken = await this.verificationTokensService.createToken({
+        purpose: VerificationTokenPurpose.CANDIDATE_RESULT_ACCESS,
+        email: session.applicantEmail,
+        candidateInvitationId: session.invitationId,
+        expiresAt,
+        metadata: {
+          sessionId: session.id,
+          campaignId: session.campaignId,
+          organisationId: session.campaign.organisationId,
+          notificationType: 'RESULT_AVAILABLE',
+        },
+        revokeExisting: true,
+      });
+
+      const resultUrl = `${this.getWebAppBaseUrl()}/assessment/result/${encodeURIComponent(
+        resultToken.rawToken,
+      )}`;
+
+      const delivery =
+        await this.emailService.sendCandidateResultAvailableEmail({
+          to: recipient,
+          organisationName: session.campaign.organisation.name,
+          campaignName: session.campaign.name,
+          resultUrl,
+          expiresAt,
+        });
+
+      await this.auditService.record({
+        action: 'CANDIDATE_RESULT_AVAILABLE_EMAIL_SENT',
+        userId: null,
+        entityType: 'Session',
+        entityId: session.id,
+        metadata: {
+          campaignId: session.campaignId,
+          invitationId: session.invitationId,
+          applicantEmail: session.applicantEmail,
+          resultTokenId: resultToken.token.id,
+          emailDeliveryMode: delivery.mode,
+          emailMessageId: delivery.messageId ?? null,
+        },
+      });
+
+      return;
+    }
+
+    if (
+      session.campaign.candidateResultVisibility ===
+      CandidateResultVisibility.COMPLETION_ONLY
+    ) {
+      const delivery = await this.emailService.sendCandidateResultHiddenEmail({
+        to: recipient,
+        organisationName: session.campaign.organisation.name,
+        campaignName: session.campaign.name,
+      });
+
+      await this.auditService.record({
+        action: 'CANDIDATE_RESULT_HIDDEN_EMAIL_SENT',
+        userId: null,
+        entityType: 'Session',
+        entityId: session.id,
+        metadata: {
+          campaignId: session.campaignId,
+          invitationId: session.invitationId,
+          applicantEmail: session.applicantEmail,
+          emailDeliveryMode: delivery.mode,
+          emailMessageId: delivery.messageId ?? null,
+        },
+      });
+    }
+  }
+
+  private getSessionIdFromVerificationTokenMetadata(metadata: unknown) {
+    if (
+      typeof metadata !== 'object' ||
+      metadata === null ||
+      !('sessionId' in metadata)
+    ) {
+      throw new BadRequestException(
+        'Result access token metadata is invalid.',
+      );
+    }
+
+    const sessionId = (metadata as { sessionId?: unknown }).sessionId;
+
+    if (typeof sessionId !== 'string' || !sessionId.trim()) {
+      throw new BadRequestException(
+        'Result access token session reference is invalid.',
+      );
+    }
+
+    return sessionId;
+  }
+
+  private getWebAppBaseUrl() {
+    return (
+      process.env.WEB_APP_URL ??
+      process.env.FRONTEND_URL ??
+      process.env.NEXT_PUBLIC_WEB_APP_URL ??
+      'http://localhost:3000'
+    ).replace(/\/$/, '');
+  }
+  
+  private generateSessionAccessToken() {
+    return randomBytes(32).toString('hex');
+  }
+
+  private hashSessionAccessToken(rawToken: string) {
+    return createHash('sha256').update(rawToken).digest('hex');
   }
 }

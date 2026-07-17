@@ -94,12 +94,10 @@ type AccountSettingsClientProps = {
   sessionExpires?: string | null;
 };
 
-type RequestStatus =
-  | {
-      tone: 'success' | 'error' | 'info';
-      message: string;
-    }
-  | null;
+type RequestStatus = {
+  tone: 'success' | 'error' | 'info';
+  message: string;
+} | null;
 
 const preferenceLabels: Array<{
   key: keyof Pick<
@@ -215,7 +213,7 @@ function getSessionStatusClassName(session: AccountSession) {
     return 'border-amber-300/25 bg-amber-400/10 text-amber-100';
   }
 
-  return 'border-slate-300/20 bg-white/[0.04] text-slate-300';
+  return 'border-white/10 bg-[#020817]/70 text-slate-300';
 }
 
 function getStatusClassName(status: RequestStatus) {
@@ -235,11 +233,10 @@ function getStatusClassName(status: RequestStatus) {
 }
 
 export function AccountSettingsClient({
-
   initialUser,
   sessionExpires,
 }: AccountSettingsClientProps) {
-      const router = useRouter();
+  const router = useRouter();
   const { update } = useSession();
   const [profile, setProfile] = useState<AccountProfileResponse | null>(null);
   const [sessions, setSessions] = useState<AccountSession[]>([]);
@@ -249,8 +246,7 @@ export function AccountSettingsClient({
   const [preferences, setPreferences] =
     useState<NotificationPreferences | null>(null);
   const [profileStatus, setProfileStatus] = useState<RequestStatus>(null);
-  const [preferenceStatus, setPreferenceStatus] =
-    useState<RequestStatus>(null);
+  const [preferenceStatus, setPreferenceStatus] = useState<RequestStatus>(null);
   const [sessionStatus, setSessionStatus] = useState<RequestStatus>(null);
   const [deleteStatus, setDeleteStatus] = useState<RequestStatus>(null);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
@@ -263,15 +259,16 @@ export function AccountSettingsClient({
   const accountUser = profile?.user;
   const displayName =
     accountUser?.name || initialUser.name || initialUser.email || 'User';
-  const displayEmail = accountUser?.email || initialUser.email || 'Not available';
+  const displayEmail =
+    accountUser?.email || initialUser.email || 'Not available';
   const displayRole = accountUser?.role || initialUser.role || 'CONSUMER';
   const initials = useMemo(
     () => getInitials(displayName, displayEmail),
-    [displayEmail, displayName],
+    [displayEmail, displayName]
   );
 
   const activeSessionCount = sessions.filter(
-    (session) => session.status === 'ACTIVE',
+    (session) => session.status === 'ACTIVE'
   ).length;
 
   const isPlatformAdmin = displayRole === 'PLATFORM_ADMIN';
@@ -309,7 +306,7 @@ export function AccountSettingsClient({
 
     try {
       const nextSessions = await fetchJson<AccountSessionsResponse>(
-        '/api/account/sessions',
+        '/api/account/sessions'
       );
 
       setSessions(nextSessions.items);
@@ -317,7 +314,9 @@ export function AccountSettingsClient({
       setSessionStatus({
         tone: 'error',
         message:
-          error instanceof Error ? error.message : 'Unable to refresh sessions.',
+          error instanceof Error
+            ? error.message
+            : 'Unable to refresh sessions.',
       });
     } finally {
       setIsRefreshingSessions(false);
@@ -355,10 +354,10 @@ export function AccountSettingsClient({
               ...currentProfile,
               user: response.user,
             }
-          : currentProfile,
+          : currentProfile
       );
 
-       await update({
+      await update({
         user: {
           name: response.user.name,
         },
@@ -389,7 +388,7 @@ export function AccountSettingsClient({
       | 'productUpdates'
       | 'researchGovernanceUpdates'
     >,
-    value: boolean,
+    value: boolean
   ) {
     setPreferences((currentPreferences) =>
       currentPreferences
@@ -397,7 +396,7 @@ export function AccountSettingsClient({
             ...currentPreferences,
             [key]: value,
           }
-        : currentPreferences,
+        : currentPreferences
     );
   }
 
@@ -451,7 +450,7 @@ export function AccountSettingsClient({
         `/api/account/sessions/${encodeURIComponent(sessionId)}/revoke`,
         {
           method: 'PATCH',
-        },
+        }
       );
 
       setSessionStatus({
@@ -514,7 +513,7 @@ export function AccountSettingsClient({
             password: deletePassword,
           }),
           method: 'POST',
-        },
+        }
       );
 
       setDeleteStatus({
@@ -586,7 +585,12 @@ export function AccountSettingsClient({
         </div>
       </section>
 
-      <div className={['rounded-2xl border px-4 py-3 text-sm font-bold', getStatusClassName(profileStatus)].join(' ')}>
+      <div
+        className={[
+          'rounded-2xl border px-4 py-3 text-sm font-bold',
+          getStatusClassName(profileStatus),
+        ].join(' ')}
+      >
         {profileStatus?.message}
       </div>
 
@@ -680,9 +684,7 @@ export function AccountSettingsClient({
               <KeyRound size={20} strokeWidth={2} />
             </span>
             <div>
-              <h2 className="text-lg font-black text-white">
-                Change password
-              </h2>
+              <h2 className="text-lg font-black text-white">Change password</h2>
               <p className="text-sm text-slate-500">
                 Updating your password revokes other active sessions.
               </p>
@@ -711,7 +713,12 @@ export function AccountSettingsClient({
             </div>
           </div>
 
-          <div className={['rounded-2xl border px-4 py-3 text-xs font-bold', getStatusClassName(preferenceStatus)].join(' ')}>
+          <div
+            className={[
+              'rounded-2xl border px-4 py-3 text-xs font-bold',
+              getStatusClassName(preferenceStatus),
+            ].join(' ')}
+          >
             {preferenceStatus?.message}
           </div>
         </div>
@@ -836,7 +843,12 @@ export function AccountSettingsClient({
           </div>
         </div>
 
-        <div className={['mt-4 rounded-2xl border px-4 py-3 text-sm font-bold', getStatusClassName(sessionStatus)].join(' ')}>
+        <div
+          className={[
+            'mt-4 rounded-2xl border px-4 py-3 text-sm font-bold',
+            getStatusClassName(sessionStatus),
+          ].join(' ')}
+        >
           {sessionStatus?.message}
         </div>
 
@@ -931,7 +943,12 @@ export function AccountSettingsClient({
           </div>
         </div>
 
-        <div className={['mt-4 rounded-2xl border px-4 py-3 text-sm font-bold', getStatusClassName(deleteStatus)].join(' ')}>
+        <div
+          className={[
+            'mt-4 rounded-2xl border px-4 py-3 text-sm font-bold',
+            getStatusClassName(deleteStatus),
+          ].join(' ')}
+        >
           {deleteStatus?.message}
         </div>
 
@@ -941,7 +958,10 @@ export function AccountSettingsClient({
             screen. Use a controlled admin handover workflow instead.
           </div>
         ) : (
-          <form className="mt-5 grid gap-4 lg:grid-cols-3" onSubmit={handleDeleteAccount}>
+          <form
+            className="mt-5 grid gap-4 lg:grid-cols-3"
+            onSubmit={handleDeleteAccount}
+          >
             <label className="block">
               <span className="text-xs font-black uppercase tracking-[0.18em] text-red-100/70">
                 Current password
@@ -961,9 +981,7 @@ export function AccountSettingsClient({
               </span>
               <input
                 className="mt-2 w-full rounded-2xl border border-red-300/15 bg-[#020817] px-4 py-3 text-sm font-bold text-white outline-none transition placeholder:text-slate-600 focus:border-red-300/40"
-                onChange={(event) =>
-                  setDeleteConfirmation(event.target.value)
-                }
+                onChange={(event) => setDeleteConfirmation(event.target.value)}
                 placeholder="DELETE MY ACCOUNT"
                 value={deleteConfirmation}
               />

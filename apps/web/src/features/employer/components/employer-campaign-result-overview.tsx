@@ -8,7 +8,7 @@ const BAND_ORDER = ['ADVANCED', 'PROFICIENT', 'DEVELOPING', 'EMERGING'];
 
 const getBandCount = (
   sessions: EmployerSessionSummary[],
-  band: string,
+  band: string
 ): number => {
   return sessions.filter((session) => {
     return session.score?.overallBand === band;

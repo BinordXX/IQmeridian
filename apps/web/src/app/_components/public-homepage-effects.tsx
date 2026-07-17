@@ -1,13 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import {
-  MouseEvent,
-  ReactNode,
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
+import { MouseEvent, ReactNode, useEffect, useRef, useState } from 'react';
 
 export function ScrollProgressBar() {
   const [progress, setProgress] = useState(0);
@@ -165,13 +159,13 @@ export function AnimatedNumber({
       return;
     }
 
-   const observer = new IntersectionObserver(
-  (entries) => {
-    const entry = entries[0];
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
 
-    if (!entry || !entry.isIntersecting || hasRun) {
-      return;
-    }
+        if (!entry || !entry.isIntersecting || hasRun) {
+          return;
+        }
 
         setHasRun(true);
 
@@ -312,7 +306,6 @@ export function SignalConsole() {
     </div>
   );
 }
-
 
 export function HeroSignalParticles() {
   const particles = [
