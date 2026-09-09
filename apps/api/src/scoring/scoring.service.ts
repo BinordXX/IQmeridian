@@ -93,6 +93,10 @@ export class ScoringService {
         rawScore: 0,
         maxScore: 0,
       },
+      [AssessmentDomain.SPATIAL_REASONING]: {
+        rawScore: 0,
+        maxScore: 0,
+      },
     };
 
     for (const mapping of mappings) {

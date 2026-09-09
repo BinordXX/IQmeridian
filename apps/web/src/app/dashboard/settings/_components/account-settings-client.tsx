@@ -693,6 +693,26 @@ export function AccountSettingsClient({
 
           <div className="mt-6">
             <ChangePasswordForm />
+
+            {displayEmail !== 'Not available' ? (
+              <div className="mt-4 rounded-2xl border border-cyan-300/15 bg-cyan-400/10 p-4 text-sm leading-6 text-cyan-50/85">
+                <p className="font-bold text-cyan-100">
+                  Forgot your current password?
+                </p>
+                <p className="mt-1 text-slate-400">
+                  Use the reset-password email flow to recover access, then
+                  return here to manage your account security.
+                </p>
+                <a
+                  className="mt-3 inline-flex rounded-full border border-cyan-300/25 bg-cyan-400/15 px-4 py-2 text-xs font-black text-cyan-50 transition hover:bg-cyan-400/20"
+                  href={`/forgot-password?email=${encodeURIComponent(
+                    displayEmail
+                  )}`}
+                >
+                  Reset password by email
+                </a>
+              </div>
+            ) : null}
           </div>
         </section>
       </div>
@@ -770,153 +790,6 @@ export function AccountSettingsClient({
             )}
           </button>
         </form>
-      </section>
-
-      <section className="rounded-[2rem] border border-white/10 bg-[#07142f]/82 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.22)]">
-        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
-          <div className="flex items-center gap-3">
-            <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-emerald-300/15 bg-emerald-400/10 text-emerald-200">
-              <Laptop size={20} strokeWidth={2} />
-            </span>
-            <div>
-              <h2 className="text-lg font-black text-white">
-                Sessions and security activity
-              </h2>
-              <p className="text-sm text-slate-500">
-                Review recent sign-ins and revoke sessions you no longer trust.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <button
-              className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-black text-slate-200 transition hover:border-cyan-300/20 hover:text-cyan-100 disabled:opacity-60"
-              disabled={isRefreshingSessions}
-              onClick={() => void refreshSessions()}
-              type="button"
-            >
-              <RefreshCw
-                className={isRefreshingSessions ? 'mr-2 animate-spin' : 'mr-2'}
-                size={14}
-              />
-              Refresh
-            </button>
-
-            <button
-              className="inline-flex items-center justify-center rounded-2xl border border-amber-300/20 bg-amber-400/10 px-4 py-2 text-xs font-black text-amber-100 transition hover:bg-amber-400/15 disabled:opacity-60"
-              disabled={isRevokingOthers}
-              onClick={() => void revokeOtherSessions()}
-              type="button"
-            >
-              <LogOut className="mr-2" size={14} />
-              Revoke others
-            </button>
-          </div>
-        </div>
-
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
-          <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4">
-            <p className="text-xs font-black uppercase tracking-wide text-slate-500">
-              Active sessions
-            </p>
-            <p className="mt-2 text-2xl font-black text-white">
-              {activeSessionCount}
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4">
-            <p className="text-xs font-black uppercase tracking-wide text-slate-500">
-              Assessment sessions
-            </p>
-            <p className="mt-2 text-2xl font-black text-white">
-              {profile?.accountStats.assessmentSessionCount ?? 0}
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4">
-            <p className="text-xs font-black uppercase tracking-wide text-slate-500">
-              Web session expires
-            </p>
-            <p className="mt-2 text-sm font-bold text-slate-300">
-              {formatDate(sessionExpires)}
-            </p>
-          </div>
-        </div>
-
-        <div
-          className={[
-            'mt-4 rounded-2xl border px-4 py-3 text-sm font-bold',
-            getStatusClassName(sessionStatus),
-          ].join(' ')}
-        >
-          {sessionStatus?.message}
-        </div>
-
-        <div className="mt-6 space-y-3">
-          {sessions.length ? (
-            sessions.map((session) => (
-              <article
-                className="rounded-2xl border border-white/10 bg-white/[0.035] p-4"
-                key={session.id}
-              >
-                <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span
-                        className={[
-                          'rounded-full border px-2.5 py-1 text-[0.65rem] font-black uppercase tracking-[0.16em]',
-                          getSessionStatusClassName(session),
-                        ].join(' ')}
-                      >
-                        {session.isCurrent ? 'Current' : session.status}
-                      </span>
-
-                      <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[0.65rem] font-black uppercase tracking-[0.16em] text-slate-300">
-                        {session.ipAddress ?? 'Unknown IP'}
-                      </span>
-                    </div>
-
-                    <p className="mt-3 break-words text-sm font-bold text-white">
-                      {session.userAgent ?? 'Unknown device'}
-                    </p>
-
-                    <div className="mt-3 grid gap-2 text-xs text-slate-500 sm:grid-cols-2">
-                      <span className="inline-flex items-center gap-2">
-                        <Clock3 size={14} />
-                        Created: {formatDate(session.createdAt)}
-                      </span>
-                      <span className="inline-flex items-center gap-2">
-                        <Clock3 size={14} />
-                        Last used: {formatDate(session.lastUsedAt)}
-                      </span>
-                      <span className="inline-flex items-center gap-2">
-                        <Clock3 size={14} />
-                        Expires: {formatDate(session.expiresAt)}
-                      </span>
-                      <span className="inline-flex items-center gap-2">
-                        <ShieldCheck size={14} />
-                        Reason: {session.revokedReason ?? 'None'}
-                      </span>
-                    </div>
-                  </div>
-
-                  <button
-                    className="inline-flex items-center justify-center rounded-2xl border border-red-300/20 bg-red-400/10 px-4 py-2 text-xs font-black text-red-100 transition hover:bg-red-400/15 disabled:cursor-not-allowed disabled:opacity-50"
-                    disabled={session.isCurrent || session.status !== 'ACTIVE'}
-                    onClick={() => void revokeSession(session.id)}
-                    type="button"
-                  >
-                    Revoke
-                  </button>
-                </div>
-              </article>
-            ))
-          ) : (
-            <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-5 text-sm text-slate-500">
-              No sessions found.
-            </div>
-          )}
-        </div>
       </section>
 
       <section className="rounded-[2rem] border border-red-300/20 bg-red-950/20 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.22)]">

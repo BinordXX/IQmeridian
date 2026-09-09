@@ -99,6 +99,45 @@ export class PsychometricScorePersistenceService {
   }
 
   private toResultData(response: PsychometricScoringResponse) {
+    const overallIqScore =
+      response.overall.iqScore ?? response.overall.standardScore;
+
+    const overallIqPercentile =
+      response.overall.iqPercentile ?? response.overall.percentile;
+
+    const overallIqCi90Lower =
+      response.overall.iqConfidenceInterval90?.lower ??
+      this.thetaToIqScore(response.overall.confidenceInterval90.lower);
+
+    const overallIqCi90Upper =
+      response.overall.iqConfidenceInterval90?.upper ??
+      this.thetaToIqScore(response.overall.confidenceInterval90.upper);
+
+    const scoringSignalsUsed =
+      response.audit.scoringSignalsUsed ??
+      this.deriveScoringSignalsUsed(response);
+
+    const featureVector =
+      response.audit.featureVector ?? this.deriveFeatureVector(response);
+
+    const featureSummary =
+      response.audit.featureSummary ??
+      this.deriveFeatureSummary({
+        featureVector,
+        scoringSignalsUsed,
+      });
+
+    const leaderboardEligible = this.resolveLeaderboardEligibility({
+      response,
+      overallIqScore,
+    });
+
+    const leaderboardIneligibilityReasons =
+      this.resolveLeaderboardIneligibilityReasons({
+        response,
+        overallIqScore,
+      });
+
     return {
       contractVersion: response.contractVersion,
       scoringStatus: response.scoringStatus as PrismaPsychometricScoringStatus,
@@ -109,6 +148,12 @@ export class PsychometricScorePersistenceService {
       overallTheta: response.overall.theta,
       overallStandardScore: response.overall.standardScore,
       overallPercentile: response.overall.percentile,
+      overallIqScore,
+      overallIqPercentile,
+      overallIqCi90Lower,
+      overallIqCi90Upper,
+      overallIqScaleMean: response.overall.iqScale?.mean ?? 100,
+      overallIqScaleSd: response.overall.iqScale?.standardDeviation ?? 15,
       overallScoreBand: response.overall
         .scoreBand as PrismaPsychometricScoreBand,
       overallStandardError: response.overall.standardError,
@@ -132,10 +177,32 @@ export class PsychometricScorePersistenceService {
       generatedAt: new Date(response.audit.generatedAt),
       inputHash: response.audit.inputHash,
       warnings: response.audit.warnings as Prisma.InputJsonValue,
+
+      scoringEngineVersion:
+        response.audit.scoringEngineVersion ??
+        'iqmeridian-cognitive-intelligence-engine.0.1.0',
+      scoringModelFamily:
+        response.audit.scoringModelFamily ?? 'HYBRID_PSYCHOMETRIC',
+      scoringModelVersion:
+        response.audit.scoringModelVersion ?? response.audit.modelVersion,
+      featureSetVersion:
+        response.audit.featureSetVersion ?? 'iqmeridian-feature-set.0.1.0',
+
+      scoringSignalsUsed: scoringSignalsUsed as Prisma.InputJsonValue,
+      scoringFeatureVector: featureVector as Prisma.InputJsonValue,
+      scoringFeatureSummary: featureSummary as Prisma.InputJsonValue,
+
+      validityAdjusted: response.audit.validityAdjusted ?? false,
+      leaderboardEligible,
+      leaderboardIneligibilityReasons:
+        leaderboardIneligibilityReasons as Prisma.InputJsonValue,
     };
   }
 
   private toDomainScoreData(domainScore: PsychometricDomainScore) {
+    const iqScore = domainScore.iqScore ?? domainScore.standardScore;
+    const iqPercentile = domainScore.iqPercentile ?? domainScore.percentile;
+
     return {
       domain: domainScore.domain,
       label: domainScore.label,
@@ -145,6 +212,16 @@ export class PsychometricScorePersistenceService {
       theta: domainScore.theta,
       standardScore: domainScore.standardScore,
       percentile: domainScore.percentile,
+      iqScore,
+      iqPercentile,
+      iqCi90Lower:
+        domainScore.iqConfidenceInterval90?.lower ??
+        this.thetaToIqScore(domainScore.confidenceInterval90.lower),
+      iqCi90Upper:
+        domainScore.iqConfidenceInterval90?.upper ??
+        this.thetaToIqScore(domainScore.confidenceInterval90.upper),
+      iqScaleMean: domainScore.iqScale?.mean ?? 100,
+      iqScaleSd: domainScore.iqScale?.standardDeviation ?? 15,
       scoreBand: domainScore.scoreBand as PrismaPsychometricScoreBand,
       standardError: domainScore.standardError,
       ci90Lower: domainScore.confidenceInterval90.lower,
@@ -152,6 +229,7 @@ export class PsychometricScorePersistenceService {
       testInformation: domainScore.testInformation,
       reliability: domainScore.reliability,
       interpretation: domainScore.interpretation,
+      featureVector: (domainScore.featureVector ?? {}) as Prisma.InputJsonValue,
     };
   }
 
@@ -162,6 +240,205 @@ export class PsychometricScorePersistenceService {
       severity: flag.severity as PrismaPsychometricValiditySeverity,
       description: flag.description,
       evidence: flag.evidence as Prisma.InputJsonValue,
+    };
+  }
+
+  private thetaToIqScore(theta: number | null | undefined) {
+    if (theta === null || theta === undefined) {
+      return null;
+    }
+
+    return Number((100 + 15 * theta).toFixed(1));
+  }
+
+  private resolveLeaderboardEligibility({
+    response,
+    overallIqScore,
+  }: {
+    response: PsychometricScoringResponse;
+    overallIqScore: number | null | undefined;
+  }) {
+    const hasIqScore = typeof overallIqScore === 'number';
+
+    const scoringStatusAllowsRanking =
+      response.scoringStatus === 'SCORED' ||
+      response.scoringStatus === 'PARTIAL';
+
+    const hasHighValidityFlag = response.validityFlags.some((flag) => {
+      return flag.severity === 'HIGH';
+    });
+
+    const hasUnavailableBand = response.overall.scoreBand === 'UNAVAILABLE';
+
+    return (
+      hasIqScore &&
+      scoringStatusAllowsRanking &&
+      !hasHighValidityFlag &&
+      !hasUnavailableBand
+    );
+  }
+
+  private resolveLeaderboardIneligibilityReasons({
+    response,
+    overallIqScore,
+  }: {
+    response: PsychometricScoringResponse;
+    overallIqScore: number | null | undefined;
+  }) {
+    const reasons: string[] = [];
+
+    if (typeof overallIqScore !== 'number') {
+      reasons.push('No IQ Score is available for leaderboard ranking.');
+    }
+
+    if (
+      response.scoringStatus !== 'SCORED' &&
+      response.scoringStatus !== 'PARTIAL'
+    ) {
+      reasons.push('Scoring status is not eligible for public ranking.');
+    }
+
+    if (response.overall.scoreBand === 'UNAVAILABLE') {
+      reasons.push('Score band is unavailable.');
+    }
+
+    if (response.validityFlags.some((flag) => flag.severity === 'HIGH')) {
+      reasons.push('High-severity validity flag prevents public ranking.');
+    }
+
+    return reasons;
+  }
+
+  private deriveScoringSignalsUsed(response: PsychometricScoringResponse) {
+    const domainCount = response.domains.length;
+    const validityFlagCount = response.validityFlags.length;
+
+    return [
+      'overall_raw_score',
+      'overall_max_raw_score',
+      'overall_accuracy',
+      'overall_theta',
+      'overall_standard_score',
+      'overall_iq_score',
+      'overall_percentile',
+      'overall_score_band',
+      'overall_standard_error',
+      'overall_confidence_interval_90',
+      'overall_test_information',
+      'overall_reliability',
+      'total_response_time_ms',
+      'median_response_time_ms',
+      'speed_index',
+      'speed_accuracy_tradeoff',
+      'rapid_guessing_rate',
+      'omission_rate',
+      'domain_raw_scores',
+      'domain_accuracy_scores',
+      'domain_theta_estimates',
+      'domain_iq_scores',
+      'domain_percentiles',
+      'domain_standard_errors',
+      'domain_confidence_intervals',
+      'domain_test_information',
+      'domain_reliability',
+      'validity_flag_count',
+      'high_severity_validity_flags',
+      'calibration_version',
+      'scoring_mode_used',
+      'model_version',
+      'contract_version',
+      `domain_count_${domainCount}`,
+      `validity_flag_count_${validityFlagCount}`,
+    ];
+  }
+
+  private deriveFeatureVector(response: PsychometricScoringResponse) {
+    const highSeverityFlagCount = response.validityFlags.filter(
+      (flag) => flag.severity === 'HIGH',
+    ).length;
+
+    const mediumSeverityFlagCount = response.validityFlags.filter(
+      (flag) => flag.severity === 'MEDIUM',
+    ).length;
+
+    const domainAccuracies = response.domains
+      .map((domain) => domain.accuracy)
+      .filter((accuracy): accuracy is number => accuracy !== null);
+
+    const domainAccuracySpread =
+      domainAccuracies.length > 1
+        ? Number(
+            (
+              Math.max(...domainAccuracies) - Math.min(...domainAccuracies)
+            ).toFixed(4),
+          )
+        : null;
+
+    return {
+      overall_raw_score: response.overall.rawScore,
+      overall_max_raw_score: response.overall.maxRawScore,
+      overall_accuracy: response.overall.accuracy,
+      overall_theta: response.overall.theta,
+      overall_standard_score: response.overall.standardScore,
+      overall_iq_score:
+        response.overall.iqScore ?? response.overall.standardScore,
+      overall_percentile: response.overall.percentile,
+      overall_standard_error: response.overall.standardError,
+      overall_test_information: response.overall.testInformation,
+      overall_reliability: response.overall.reliability,
+      timing_total_response_time_ms: response.timingProfile.totalResponseTimeMs,
+      timing_median_response_time_ms:
+        response.timingProfile.medianResponseTimeMs,
+      timing_speed_index: response.timingProfile.speedIndex,
+      timing_rapid_guessing_rate: response.timingProfile.rapidGuessingRate,
+      timing_omission_rate: response.timingProfile.omissionRate,
+      domain_count: response.domains.length,
+      domain_accuracy_spread: domainAccuracySpread,
+      validity_flag_count: response.validityFlags.length,
+      high_severity_validity_flag_count: highSeverityFlagCount,
+      medium_severity_validity_flag_count: mediumSeverityFlagCount,
+      scoring_mode_used: response.audit.scoringModeUsed,
+      model_version: response.audit.modelVersion,
+      calibration_version: response.audit.calibrationVersion,
+      contract_version: response.audit.contractVersion,
+      feature_set_version:
+        response.audit.featureSetVersion ?? 'iqmeridian-feature-set.0.1.0',
+      ml_ready: true,
+    };
+  }
+
+  private deriveFeatureSummary({
+    featureVector,
+    scoringSignalsUsed,
+  }: {
+    featureVector: Record<string, string | number | boolean | null>;
+    scoringSignalsUsed: string[];
+  }) {
+    const missingSignalCount = Object.values(featureVector).filter(
+      (value) => value === null,
+    ).length;
+
+    return {
+      featureSetVersion: 'iqmeridian-feature-set.0.1.0',
+      signalCount: scoringSignalsUsed.length,
+      signalGroups: [
+        'accuracy',
+        'domain_performance',
+        'calibration',
+        'timing',
+        'omission',
+        'validity',
+        'confidence',
+        'reliability',
+        'leaderboard_governance',
+        'ml_readiness',
+      ],
+      deterministicSignalsUsed: 12,
+      calibrationSignalsUsed: 5,
+      behaviouralSignalsUsed: 7,
+      validitySignalsUsed: 6,
+      missingSignalCount,
+      mlReady: true,
     };
   }
 }

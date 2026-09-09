@@ -10,8 +10,47 @@ import { PrismaService } from '../prisma/prisma.service';
 type RequestUser = {
   id: string;
   role: string;
+  roles?: string[];
   organisationId?: string | null;
+  organisationMemberships?: {
+    organisationId: string;
+    role: string;
+    status: string;
+  }[];
 };
+
+function hasRole(user: RequestUser, role: UserRole) {
+  return user.role === role || user.roles?.includes(role) === true;
+}
+
+function hasActiveOrganisationRole(
+  user: RequestUser,
+  organisationId: string,
+  role: UserRole,
+) {
+  return (
+    user.organisationMemberships?.some(
+      (membership) =>
+        membership.organisationId === organisationId &&
+        membership.role === role &&
+        membership.status === 'ACTIVE',
+    ) === true
+  );
+}
+
+function getPrimaryEmployerOrganisationId(user: RequestUser) {
+  if (user.role === UserRole.EMPLOYER_ADMIN && user.organisationId) {
+    return user.organisationId;
+  }
+
+  return (
+    user.organisationMemberships?.find(
+      (membership) =>
+        membership.role === UserRole.EMPLOYER_ADMIN &&
+        membership.status === 'ACTIVE',
+    )?.organisationId ?? null
+  );
+}
 
 @Injectable()
 export class OrganisationParticipantsService {
@@ -21,12 +60,11 @@ export class OrganisationParticipantsService {
   ) {}
 
   async listParticipants(user: RequestUser) {
-    const where =
-      user.role === UserRole.PLATFORM_ADMIN
-        ? {}
-        : {
-            organisationId: this.requireEmployerOrganisationId(user),
-          };
+    const where = hasRole(user, UserRole.PLATFORM_ADMIN)
+      ? {}
+      : {
+          organisationId: this.requireEmployerOrganisationId(user),
+        };
 
     return this.prisma.organisationParticipant.findMany({
       where,
@@ -150,24 +188,32 @@ export class OrganisationParticipantsService {
   }
 
   private requireEmployerOrganisationId(user: RequestUser) {
-    if (!user.organisationId) {
+    const organisationId = getPrimaryEmployerOrganisationId(user);
+
+    if (!organisationId) {
       throw new ForbiddenException('User is not attached to an organisation');
     }
 
-    return user.organisationId;
+    return organisationId;
   }
 
   private assertCanManageOrganisation(
     user: RequestUser,
     organisationId: string,
   ) {
-    if (user.role === UserRole.PLATFORM_ADMIN) {
+    if (hasRole(user, UserRole.PLATFORM_ADMIN)) {
       return;
     }
 
     if (
       user.role === UserRole.EMPLOYER_ADMIN &&
       user.organisationId === organisationId
+    ) {
+      return;
+    }
+
+    if (
+      hasActiveOrganisationRole(user, organisationId, UserRole.EMPLOYER_ADMIN)
     ) {
       return;
     }

@@ -13,13 +13,13 @@ import {
   ItemStatus,
   Prisma,
   SessionStatus,
-    UserRole,
+  UserRole,
   CandidateAccessMode,
   CandidateResultVisibility,
   OrganisationParticipantStatus,
   OrganisationParticipantType,
   VerificationTokenPurpose,
-
+  SessionItemStatus,
 } from '@prisma/client';
 import { EmailService } from '../email/email.service';
 import { VerificationTokensService } from '../verification-tokens/verification-tokens.service';
@@ -42,8 +42,21 @@ type SessionActor = {
 type CandidateItemOption = {
   optionId: string;
   label: string;
-  text?: string;
+  text: string;
   imageUrl?: string;
+};
+
+type CandidateStimulusKind =
+  | 'text'
+  | 'image'
+  | 'table'
+  | 'sequence'
+  | 'pattern';
+
+type CandidateItemStimulus = {
+  kind: CandidateStimulusKind;
+  content: string;
+  altText?: string;
 };
 
 type CandidateSafeAssessmentItem = {
@@ -54,12 +67,14 @@ type CandidateSafeAssessmentItem = {
     | 'numerical_reasoning'
     | 'abstract_reasoning'
     | 'logical_reasoning'
-    | 'analytical_problem_solving';
+    | 'analytical_problem_solving'
+    | 'spatial_reasoning';
   position: number;
   stem: string;
-  prompt?: string;
+  prompt: string;
   options: CandidateItemOption[];
-  timeLimitSeconds?: number;
+  timeLimitSeconds: number;
+  stimulus?: CandidateItemStimulus;
 };
 
 type CandidateAssessmentSection = {
@@ -68,7 +83,7 @@ type CandidateAssessmentSection = {
   instructions: string;
   position: number;
   itemCount: number;
-  timeLimitSeconds?: number;
+  timeLimitSeconds: number;
   items: CandidateSafeAssessmentItem[];
 };
 
@@ -77,16 +92,7 @@ type CandidateAssessmentSessionPayload = {
   assessmentId: string;
   assessmentTitle: string;
   candidateName?: string;
-  status:
-    | 'not_started'
-    | 'ready'
-    | 'active'
-    | 'paused'
-    | 'section_ended'
-    | 'submitted'
-    | 'completed'
-    | 'expired'
-    | 'cancelled';
+  status: 'not_started' | 'active' | 'completed' | 'expired' | 'cancelled';
   startedAt?: string;
   expiresAt?: string;
   serverNow: string;
@@ -101,6 +107,7 @@ type CandidateAssessmentSessionPayload = {
   currentItemId?: string;
   sections: CandidateAssessmentSection[];
 };
+
 type CandidateResultSummaryAudience = 'employer-invited' | 'consumer';
 type CandidateResultSummaryVisibility = 'summary' | 'hidden';
 
@@ -108,14 +115,28 @@ type CandidateResultSummaryPayload = {
   visibility: CandidateResultSummaryVisibility;
   audience: CandidateResultSummaryAudience;
   reason?: 'not_completed' | 'policy_hidden' | 'not_scored';
+  iqScore?: number | null;
+  iqPercentile?: number | null;
+  iqConfidenceInterval90?: {
+    lower: number | null;
+    upper: number | null;
+  };
   overallBand?: string | null;
   abstractReasoningBand?: string | null;
   numericalReasoningBand?: string | null;
+  scoringStatus?: string | null;
+  scoringEngineVersion?: string | null;
+  scoringModelVersion?: string | null;
+  featureSetVersion?: string | null;
+  signalCount?: number | null;
+  leaderboardEligible?: boolean | null;
+  validityFlagCount?: number;
+  generatedAt?: string | null;
 };
 
 @Injectable()
 export class SessionsService {
-    constructor(
+  constructor(
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
     private readonly psychometricsService: PsychometricsService,
@@ -165,8 +186,7 @@ export class SessionsService {
     return session.psychometricScoreResult;
   }
 
-
-    async getCandidateResultSummary(
+  async getCandidateResultSummary(
     sessionId: string,
     userId: string,
   ): Promise<CandidateResultSummaryPayload> {
@@ -208,6 +228,9 @@ export class SessionsService {
           include: {
             domainScores: {
               orderBy: { domain: 'asc' },
+            },
+            validityFlags: {
+              orderBy: [{ severity: 'desc' }, { code: 'asc' }],
             },
           },
         },
@@ -264,15 +287,29 @@ export class SessionsService {
     return {
       visibility: 'summary',
       audience,
+      iqScore: score.overallIqScore ?? score.overallStandardScore,
+      iqPercentile: score.overallIqPercentile ?? score.overallPercentile,
+      iqConfidenceInterval90: {
+        lower: score.overallIqCi90Lower,
+        upper: score.overallIqCi90Upper,
+      },
       overallBand: score.overallScoreBand,
       abstractReasoningBand: getDomainBand(AssessmentDomain.ABSTRACT_REASONING),
       numericalReasoningBand: getDomainBand(
         AssessmentDomain.NUMERICAL_REASONING,
       ),
+      scoringStatus: score.scoringStatus,
+      scoringEngineVersion: score.scoringEngineVersion,
+      scoringModelVersion: score.scoringModelVersion,
+      featureSetVersion: score.featureSetVersion,
+      signalCount: this.getPsychometricSignalCount(score),
+      leaderboardEligible: score.leaderboardEligible,
+      validityFlagCount: score.validityFlags.length,
+      generatedAt: score.generatedAt.toISOString(),
     };
   }
 
-    async exchangeCandidateResultAccessToken(rawToken: string) {
+  async exchangeCandidateResultAccessToken(rawToken: string) {
     const verificationToken =
       await this.verificationTokensService.findUsableToken({
         rawToken,
@@ -331,8 +368,7 @@ export class SessionsService {
     await this.prisma.session.update({
       where: { id: session.id },
       data: {
-        sessionAccessTokenHash:
-          this.hashSessionAccessToken(sessionAccessToken),
+        sessionAccessTokenHash: this.hashSessionAccessToken(sessionAccessToken),
       },
     });
 
@@ -720,8 +756,7 @@ export class SessionsService {
         sessionAccessToken,
         candidateAccessPolicy: {
           accessMode: participant?.accessMode ?? CandidateAccessMode.ONE_OFF,
-          resultVisibility:
-            invitation.campaign.candidateResultVisibility,
+          resultVisibility: invitation.campaign.candidateResultVisibility,
           historyVisibility:
             invitation.campaign.organisation.candidateHistoryVisibility,
           reassessmentMode: invitation.campaign.organisation.reassessmentMode,
@@ -848,8 +883,7 @@ export class SessionsService {
         reportVersion: session.reportVersion,
         candidateAccessPolicy: {
           accessMode: participant?.accessMode ?? CandidateAccessMode.ONE_OFF,
-          resultVisibility:
-            invitation.campaign.candidateResultVisibility,
+          resultVisibility: invitation.campaign.candidateResultVisibility,
           historyVisibility:
             invitation.campaign.organisation.candidateHistoryVisibility,
           reassessmentMode: invitation.campaign.organisation.reassessmentMode,
@@ -864,8 +898,7 @@ export class SessionsService {
       sessionAccessToken,
       candidateAccessPolicy: {
         accessMode: participant?.accessMode ?? CandidateAccessMode.ONE_OFF,
-        resultVisibility:
-          invitation.campaign.candidateResultVisibility,
+        resultVisibility: invitation.campaign.candidateResultVisibility,
         historyVisibility:
           invitation.campaign.organisation.candidateHistoryVisibility,
         reassessmentMode: invitation.campaign.organisation.reassessmentMode,
@@ -917,10 +950,16 @@ export class SessionsService {
       throw new BadRequestException('Only not-started sessions can be started');
     }
 
-    const firstSection = await this.prisma.assessmentSection.findFirst({
-      where: { formId: session.assessmentFormId },
-      orderBy: { orderIndex: 'asc' },
-    });
+    const selectedSessionItems = await this.ensureSessionItemsSelected(session);
+
+    const firstSelectedSessionItem = selectedSessionItems[0];
+
+    const firstSection =
+      firstSelectedSessionItem?.section ??
+      (await this.prisma.assessmentSection.findFirst({
+        where: { formId: session.assessmentFormId },
+        orderBy: { orderIndex: 'asc' },
+      }));
 
     if (!firstSection) {
       throw new BadRequestException('Assessment form has no sections');
@@ -1066,7 +1105,7 @@ export class SessionsService {
       },
     });
 
-        const psychometricScoring = await this.scoreCompletedSessionBestEffort(
+    const psychometricScoring = await this.scoreCompletedSessionBestEffort(
       finalisedSession.id,
       finalisedSession.userId,
       isTimeoutFinalisation ? 'TIMEOUT_AUTO_FINALISED' : 'USER_SUBMITTED',
@@ -1165,16 +1204,14 @@ export class SessionsService {
       },
     });
 
-    const mappings = await this.prisma.formItemMapping.findMany({
+    await this.ensureSessionItemsSelected(session);
+
+    const selectedSessionItems = await this.prisma.sessionItem.findMany({
       where: {
-        formId: session.assessmentFormId,
-        status: FormItemMappingStatus.ACTIVE,
-        item: {
-          status: ItemStatus.ACTIVE,
-        },
+        sessionId: session.id,
       },
       orderBy: {
-        orderIndex: 'asc',
+        position: 'asc',
       },
       include: {
         item: true,
@@ -1183,19 +1220,23 @@ export class SessionsService {
 
     const candidateSections: CandidateAssessmentSection[] = sections.map(
       (section, sectionIndex) => {
-        const sectionMappings = mappings.filter(
-          (mapping) => mapping.sectionId === section.id,
-        );
+        const sectionSessionItems = selectedSessionItems
+          .filter((sessionItem) => sessionItem.sectionId === section.id)
+          .sort(
+            (leftItem, rightItem) =>
+              leftItem.sectionPosition - rightItem.sectionPosition,
+          );
 
-        const items: CandidateSafeAssessmentItem[] = sectionMappings.map(
-          (mapping, itemIndex) => ({
-            itemId: mapping.itemId,
+        const items: CandidateSafeAssessmentItem[] = sectionSessionItems.map(
+          (sessionItem) => ({
+            itemId: sessionItem.itemId,
             sectionId: section.id,
-            itemType: this.toCandidateItemType(mapping.item.domain),
-            position: itemIndex + 1,
-            stem: mapping.item.prompt,
-            prompt: mapping.item.prompt,
-            options: this.toCandidateOptions(mapping.item.options),
+            itemType: this.toCandidateItemType(sessionItem.item.domain),
+            position: sessionItem.sectionPosition,
+            stem: sessionItem.item.prompt,
+            prompt: sessionItem.item.prompt,
+            stimulus: this.toCandidateStimulus(sessionItem.item.stimulus),
+            options: this.toCandidateOptions(sessionItem.item.options),
             timeLimitSeconds: section.timeLimitSec,
           }),
         );
@@ -1256,6 +1297,412 @@ export class SessionsService {
       currentSectionId: session.currentSectionId ?? currentSection?.id,
       currentItemId,
       sections: candidateSections,
+    };
+  }
+  private async ensureSessionItemsSelected(session: {
+    id: string;
+    assessmentFormId: string;
+  }) {
+    const existingSessionItems = await this.prisma.sessionItem.findMany({
+      where: {
+        sessionId: session.id,
+      },
+      orderBy: {
+        position: 'asc',
+      },
+      include: {
+        section: true,
+      },
+    });
+
+    if (existingSessionItems.length > 0) {
+      return existingSessionItems;
+    }
+
+    const form = await this.prisma.assessmentForm.findUnique({
+      where: {
+        id: session.assessmentFormId,
+      },
+      select: {
+        id: true,
+        deliveryItemCount: true,
+        randomizeItems: true,
+        sections: {
+          orderBy: {
+            orderIndex: 'asc',
+          },
+          select: {
+            id: true,
+            title: true,
+            orderIndex: true,
+            deliveryItemCount: true,
+            timeLimitSec: true,
+          },
+        },
+        items: {
+          where: {
+            status: FormItemMappingStatus.ACTIVE,
+            sectionId: {
+              not: null,
+            },
+            item: {
+              status: ItemStatus.ACTIVE,
+            },
+          },
+          orderBy: {
+            orderIndex: 'asc',
+          },
+          select: {
+            id: true,
+            formId: true,
+            sectionId: true,
+            itemId: true,
+            orderIndex: true,
+            section: {
+              select: {
+                id: true,
+                title: true,
+                orderIndex: true,
+                deliveryItemCount: true,
+                timeLimitSec: true,
+              },
+            },
+            item: {
+              select: {
+                id: true,
+                intendedDifficulty: true,
+                difficultyBand: true,
+                difficulty: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!form) {
+      throw new NotFoundException('Assessment form not found');
+    }
+
+    const sectionOrderById = new Map(
+      form.sections.map((section) => [section.id, section.orderIndex]),
+    );
+
+    const eligibleMappings = form.items
+      .filter((mapping) => mapping.sectionId && mapping.section)
+      .map((mapping) => ({
+        ...mapping,
+        sectionId: mapping.sectionId as string,
+        section: mapping.section,
+      }))
+      .sort((leftMapping, rightMapping) => {
+        const leftSectionOrder =
+          sectionOrderById.get(leftMapping.sectionId) ?? 0;
+        const rightSectionOrder =
+          sectionOrderById.get(rightMapping.sectionId) ?? 0;
+
+        if (leftSectionOrder !== rightSectionOrder) {
+          return leftSectionOrder - rightSectionOrder;
+        }
+
+        return leftMapping.orderIndex - rightMapping.orderIndex;
+      });
+
+    const randomizationSeed = `${session.id}-${randomBytes(8).toString('hex')}`;
+    const hasSectionDeliveryQuotas = form.sections.some(
+      (section) => section.deliveryItemCount > 0,
+    );
+
+    let requestedItemCount = form.deliveryItemCount;
+    let selectedMappings: typeof eligibleMappings = [];
+
+    if (hasSectionDeliveryQuotas) {
+      requestedItemCount = 0;
+
+      for (const section of form.sections) {
+        const sectionMappings = eligibleMappings.filter(
+          (mapping) => mapping.sectionId === section.id,
+        );
+
+        const sectionRequestedItemCount =
+          section.deliveryItemCount > 0
+            ? section.deliveryItemCount
+            : sectionMappings.length;
+
+        requestedItemCount += sectionRequestedItemCount;
+
+        selectedMappings.push(
+          ...this.selectMappingsForDelivery({
+            mappings: sectionMappings,
+            requestedItemCount: sectionRequestedItemCount,
+            randomizationSeed: `${randomizationSeed}-${section.id}`,
+            randomizeItems: form.randomizeItems,
+          }),
+        );
+      }
+    } else {
+      requestedItemCount =
+        form.deliveryItemCount > 0
+          ? form.deliveryItemCount
+          : eligibleMappings.length;
+
+      selectedMappings = this.selectMappingsForDelivery({
+        mappings: eligibleMappings,
+        requestedItemCount,
+        randomizationSeed,
+        randomizeItems: form.randomizeItems,
+      });
+    }
+
+    if (form.randomizeItems) {
+      selectedMappings = this.shuffleForSession(
+        selectedMappings,
+        `${randomizationSeed}-final-order`,
+      );
+    }
+
+    const sectionPositions = new Map<string, number>();
+
+    const sessionItemData = selectedMappings.map((mapping, index) => {
+      const currentSectionPosition =
+        sectionPositions.get(mapping.sectionId) ?? 0;
+      const nextSectionPosition = currentSectionPosition + 1;
+
+      sectionPositions.set(mapping.sectionId, nextSectionPosition);
+
+      return {
+        sessionId: session.id,
+        formId: form.id,
+        sectionId: mapping.sectionId,
+        mappingId: mapping.id,
+        itemId: mapping.itemId,
+        position: index + 1,
+        sectionPosition: nextSectionPosition,
+        status: SessionItemStatus.SELECTED,
+      };
+    });
+
+    await this.prisma.$transaction([
+      this.prisma.sessionItem.createMany({
+        data: sessionItemData,
+        skipDuplicates: true,
+      }),
+      this.prisma.session.update({
+        where: {
+          id: session.id,
+        },
+        data: {
+          requestedItemCount,
+          selectedItemCount: sessionItemData.length,
+          isReducedLength: sessionItemData.length < requestedItemCount,
+          randomizationSeed,
+          itemSelectionSnapshot: JSON.parse(
+            JSON.stringify({
+              requestedItemCount,
+              selectedItemCount: sessionItemData.length,
+              isReducedLength: sessionItemData.length < requestedItemCount,
+              selectedAt: new Date().toISOString(),
+              sectionCounts: Array.from(sectionPositions.entries()).map(
+                ([sectionId, selectedItemCount]) => ({
+                  sectionId,
+                  selectedItemCount,
+                }),
+              ),
+            }),
+          ) as Prisma.InputJsonValue,
+        },
+      }),
+    ]);
+
+    return this.prisma.sessionItem.findMany({
+      where: {
+        sessionId: session.id,
+      },
+      orderBy: {
+        position: 'asc',
+      },
+      include: {
+        section: true,
+      },
+    });
+  }
+
+  private selectMappingsForDelivery<
+    T extends {
+      item: {
+        intendedDifficulty?: unknown;
+        difficultyBand?: unknown;
+        difficulty?: string | null;
+      };
+    },
+  >(input: {
+    mappings: T[];
+    requestedItemCount: number;
+    randomizationSeed: string;
+    randomizeItems: boolean;
+  }) {
+    if (input.requestedItemCount <= 0) {
+      return [];
+    }
+
+    if (!input.randomizeItems) {
+      return input.mappings.slice(0, input.requestedItemCount);
+    }
+
+    if (input.mappings.length <= input.requestedItemCount) {
+      return this.shuffleForSession(input.mappings, input.randomizationSeed);
+    }
+
+    const groupedMappings = new Map<string, T[]>();
+
+    for (const mapping of input.mappings) {
+      const difficultyKey = this.getItemDifficultyKey(mapping.item);
+      const group = groupedMappings.get(difficultyKey) ?? [];
+
+      group.push(mapping);
+      groupedMappings.set(difficultyKey, group);
+    }
+
+    for (const [difficultyKey, mappings] of groupedMappings.entries()) {
+      groupedMappings.set(
+        difficultyKey,
+        this.shuffleForSession(
+          mappings,
+          `${input.randomizationSeed}-${difficultyKey}`,
+        ),
+      );
+    }
+
+    const difficultyOrder = [
+      'EASY',
+      'MODERATE',
+      'HARD',
+      'VERY_HARD',
+      'UNSPECIFIED',
+    ];
+
+    const remainingKeys = Array.from(groupedMappings.keys()).sort(
+      (leftKey, rightKey) => {
+        const leftIndex = difficultyOrder.indexOf(leftKey);
+        const rightIndex = difficultyOrder.indexOf(rightKey);
+
+        return (
+          (leftIndex === -1 ? Number.MAX_SAFE_INTEGER : leftIndex) -
+          (rightIndex === -1 ? Number.MAX_SAFE_INTEGER : rightIndex)
+        );
+      },
+    );
+
+    const selectedMappings: T[] = [];
+
+    while (
+      selectedMappings.length < input.requestedItemCount &&
+      remainingKeys.length > 0
+    ) {
+      for (const difficultyKey of [...remainingKeys]) {
+        const group = groupedMappings.get(difficultyKey) ?? [];
+        const nextMapping = group.shift();
+
+        if (!nextMapping) {
+          const keyIndex = remainingKeys.indexOf(difficultyKey);
+
+          if (keyIndex >= 0) {
+            remainingKeys.splice(keyIndex, 1);
+          }
+
+          continue;
+        }
+
+        selectedMappings.push(nextMapping);
+
+        if (selectedMappings.length >= input.requestedItemCount) {
+          break;
+        }
+      }
+    }
+
+    return selectedMappings;
+  }
+
+  private getItemDifficultyKey(item: {
+    intendedDifficulty?: unknown;
+    difficultyBand?: unknown;
+    difficulty?: string | null;
+  }) {
+    return String(
+      item.intendedDifficulty ??
+        item.difficultyBand ??
+        item.difficulty ??
+        'UNSPECIFIED',
+    ).toUpperCase();
+  }
+
+  private shuffleForSession<T>(items: T[], seed: string) {
+    const shuffledItems = [...items];
+    const random = this.createSeededRandom(seed);
+
+    for (let index = shuffledItems.length - 1; index > 0; index -= 1) {
+      const swapIndex = Math.floor(random() * (index + 1));
+      const currentItem = shuffledItems[index];
+      const swapItem = shuffledItems[swapIndex];
+
+      if (currentItem === undefined || swapItem === undefined) {
+        continue;
+      }
+
+      shuffledItems[index] = swapItem;
+      shuffledItems[swapIndex] = currentItem;
+    }
+
+    return shuffledItems;
+  }
+
+  private createSeededRandom(seed: string) {
+    let state = 0;
+
+    for (let index = 0; index < seed.length; index += 1) {
+      state = (state * 31 + seed.charCodeAt(index)) >>> 0;
+    }
+
+    return () => {
+      state = (state * 1664525 + 1013904223) >>> 0;
+
+      return state / 0x100000000;
+    };
+  }
+
+  private toCandidateStimulus(
+    stimulus: unknown,
+  ): CandidateItemStimulus | undefined {
+    if (!this.isRecord(stimulus)) {
+      return undefined;
+    }
+
+    const rawKind = this.getStringValue(stimulus.kind) ?? 'text';
+    const content =
+      this.getStringValue(stimulus.content) ??
+      this.getStringValue(stimulus.imageUrl);
+
+    if (!content) {
+      return undefined;
+    }
+
+    const allowedKinds: CandidateStimulusKind[] = [
+      'text',
+      'image',
+      'table',
+      'sequence',
+      'pattern',
+    ];
+
+    const kind = allowedKinds.includes(rawKind as CandidateStimulusKind)
+      ? (rawKind as CandidateStimulusKind)
+      : 'text';
+
+    return {
+      kind,
+      content,
+      altText: this.getStringValue(stimulus.altText),
     };
   }
 
@@ -1320,6 +1767,9 @@ export class SessionsService {
 
       case AssessmentDomain.ANALYTICAL_PROBLEM_SOLVING:
         return 'analytical_problem_solving';
+
+      case AssessmentDomain.SPATIAL_REASONING:
+        return 'spatial_reasoning';
 
       default:
         return 'abstract_reasoning';
@@ -1555,7 +2005,7 @@ export class SessionsService {
         finalisationMode: 'TIMEOUT_AUTO_FINALISED',
       },
     });
-        await this.scoreCompletedSessionBestEffort(
+    await this.scoreCompletedSessionBestEffort(
       updatedSession.id,
       updatedSession.userId,
       'TIMEOUT_AUTO_FINALISED',
@@ -1689,8 +2139,7 @@ export class SessionsService {
     return false;
   }
 
-
-    private async sendCandidateResultNotificationBestEffort(sessionId: string) {
+  private async sendCandidateResultNotificationBestEffort(sessionId: string) {
     try {
       await this.sendCandidateResultNotification(sessionId);
     } catch (error) {
@@ -1832,15 +2281,32 @@ export class SessionsService {
     }
   }
 
+  private getPsychometricSignalCount(score: {
+    scoringFeatureSummary?: Prisma.JsonValue | null;
+    scoringSignalsUsed?: Prisma.JsonValue | null;
+  }) {
+    if (this.isRecord(score.scoringFeatureSummary)) {
+      const signalCount = score.scoringFeatureSummary.signalCount;
+
+      if (typeof signalCount === 'number') {
+        return signalCount;
+      }
+    }
+
+    if (Array.isArray(score.scoringSignalsUsed)) {
+      return score.scoringSignalsUsed.length;
+    }
+
+    return null;
+  }
+
   private getSessionIdFromVerificationTokenMetadata(metadata: unknown) {
     if (
       typeof metadata !== 'object' ||
       metadata === null ||
       !('sessionId' in metadata)
     ) {
-      throw new BadRequestException(
-        'Result access token metadata is invalid.',
-      );
+      throw new BadRequestException('Result access token metadata is invalid.');
     }
 
     const sessionId = (metadata as { sessionId?: unknown }).sessionId;
@@ -1862,7 +2328,7 @@ export class SessionsService {
       'http://localhost:3000'
     ).replace(/\/$/, '');
   }
-  
+
   private generateSessionAccessToken() {
     return randomBytes(32).toString('hex');
   }

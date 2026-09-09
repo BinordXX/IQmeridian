@@ -5,7 +5,18 @@ export type PsychometricScoringMode =
   | 'IRT_2PL_PROVISIONAL'
   | 'IRT_3PL_PROVISIONAL'
   | 'MULTIDIMENSIONAL_PROVISIONAL'
-  | 'HYBRID_RESEARCH';
+  | 'HYBRID_RESEARCH'
+  | 'HYBRID_PSYCHOMETRIC_IQ'
+  | 'ML_VALIDITY_ASSISTED_EXPERIMENTAL'
+  | 'ML_ABILITY_ESTIMATION_EXPERIMENTAL';
+
+export type PsychometricScoringModelFamily =
+  | 'CLASSICAL'
+  | 'IRT'
+  | 'MULTIDIMENSIONAL'
+  | 'HYBRID_PSYCHOMETRIC'
+  | 'ML_VALIDITY_ASSISTED'
+  | 'ML_ABILITY_ESTIMATION';
 
 export type PsychometricSessionSource =
   | 'CONSUMER_SELF_SERVICE'
@@ -157,6 +168,13 @@ export type PsychometricDomainScore = {
   theta: number | null;
   standardScore: number | null;
   percentile: number | null;
+  iqScore: number | null;
+  iqPercentile: number | null;
+  iqConfidenceInterval90: {
+    lower: number | null;
+    upper: number | null;
+  };
+  iqScale: PsychometricIqScale;
   scoreBand: PsychometricScoreBand;
   standardError: number | null;
   confidenceInterval90: {
@@ -166,6 +184,7 @@ export type PsychometricDomainScore = {
   testInformation: number | null;
   reliability: number | null;
   interpretation: string;
+  featureVector: PsychometricScoringFeatureVector;
 };
 
 export type PsychometricTimingProfile = {
@@ -185,6 +204,29 @@ export type PsychometricValidityFlag = {
   evidence: Record<string, string | number | boolean | null>;
 };
 
+export type PsychometricIqScale = {
+  mean: number;
+  standardDeviation: number;
+  label: 'IQMeridian IQ Score';
+};
+
+export type PsychometricFeatureSummary = {
+  featureSetVersion: string;
+  signalCount: number;
+  signalGroups: string[];
+  deterministicSignalsUsed: number;
+  calibrationSignalsUsed: number;
+  behaviouralSignalsUsed: number;
+  validitySignalsUsed: number;
+  missingSignalCount: number;
+  mlReady: boolean;
+};
+
+export type PsychometricScoringFeatureVector = Record<
+  string,
+  string | number | boolean | null
+>;
+
 export type PsychometricScoreAuditTrace = {
   modelVersion: string;
   contractVersion: string;
@@ -193,6 +235,16 @@ export type PsychometricScoreAuditTrace = {
   generatedAt: string;
   inputHash: string | null;
   warnings: string[];
+  scoringEngineVersion: string;
+  scoringModelFamily: PsychometricScoringModelFamily;
+  scoringModelVersion: string;
+  featureSetVersion: string;
+  scoringSignalsUsed: string[];
+  featureSummary: PsychometricFeatureSummary;
+  featureVector: PsychometricScoringFeatureVector;
+  validityAdjusted: boolean;
+  leaderboardEligible: boolean;
+  leaderboardIneligibilityReasons: string[];
 };
 
 export type PsychometricScoringResponse = {
@@ -206,6 +258,13 @@ export type PsychometricScoringResponse = {
     theta: number | null;
     standardScore: number | null;
     percentile: number | null;
+    iqScore: number | null;
+    iqPercentile: number | null;
+    iqConfidenceInterval90: {
+      lower: number | null;
+      upper: number | null;
+    };
+    iqScale: PsychometricIqScale;
     scoreBand: PsychometricScoreBand;
     standardError: number | null;
     confidenceInterval90: {

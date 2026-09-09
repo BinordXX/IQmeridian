@@ -23,29 +23,18 @@ const statusOptions = [
 type BadgeTone = 'neutral' | 'success' | 'warning' | 'danger' | 'dark';
 
 const badgeToneClasses: Record<BadgeTone, string> = {
-  neutral: 'border-slate-300 bg-white text-slate-700',
-  success: 'border-emerald-200 bg-emerald-50 text-emerald-800',
-  warning: 'border-amber-200 bg-amber-50 text-amber-800',
-  danger: 'border-red-200 bg-red-50 text-red-800',
-  dark: 'border-slate-900 bg-slate-950 text-white',
+  neutral: 'border-white/10 bg-[#020817]/70 text-slate-300',
+  success: 'border-emerald-300/20 bg-emerald-400/10 text-emerald-100',
+  warning: 'border-amber-300/20 bg-amber-400/10 text-amber-100',
+  danger: 'border-red-300/20 bg-red-400/10 text-red-100',
+  dark: 'border-cyan-300/20 bg-cyan-400/10 text-cyan-100',
 };
 
 function getPilotStatusTone(status: string): BadgeTone {
-  if (status === 'ACTIVE_PILOT') {
-    return 'success';
-  }
-
-  if (status === 'LOCKED_FOR_PILOT') {
-    return 'dark';
-  }
-
-  if (status === 'READY_FOR_REVIEW') {
-    return 'warning';
-  }
-
-  if (status === 'CLOSED' || status === 'ARCHIVED') {
-    return 'neutral';
-  }
+  if (status === 'ACTIVE_PILOT') return 'success';
+  if (status === 'LOCKED_FOR_PILOT') return 'dark';
+  if (status === 'READY_FOR_REVIEW') return 'warning';
+  if (status === 'CLOSED' || status === 'ARCHIVED') return 'neutral';
 
   return 'neutral';
 }
@@ -53,7 +42,7 @@ function getPilotStatusTone(status: string): BadgeTone {
 function StatusBadge({ status }: { status: string }) {
   return (
     <span
-      className={`inline-flex w-fit rounded-full border px-3 py-1 text-xs font-semibold ${
+      className={`inline-flex w-fit rounded-full border px-3 py-1 text-xs font-black ${
         badgeToneClasses[getPilotStatusTone(status)]
       }`}
     >
@@ -69,7 +58,7 @@ function ValidationBadge({
 }) {
   return (
     <span
-      className={`inline-flex w-fit rounded-full border px-3 py-1 text-xs font-semibold ${
+      className={`inline-flex w-fit rounded-full border px-3 py-1 text-xs font-black ${
         validation.isValid ? badgeToneClasses.success : badgeToneClasses.danger
       }`}
     >
@@ -94,9 +83,9 @@ function BlueprintTable({
   const rows = Object.entries(validation.expectedBlueprint);
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-slate-200">
+    <div className="overflow-x-auto rounded-2xl border border-white/10">
       <table className="w-full min-w-[620px] text-left text-sm">
-        <thead className="bg-slate-100 text-xs uppercase tracking-wide text-slate-600">
+        <thead className="bg-[#020817]/80 text-xs font-black uppercase tracking-[0.16em] text-slate-500">
           <tr>
             <th className="px-4 py-3">Domain</th>
             <th className="px-4 py-3">Expected</th>
@@ -104,21 +93,25 @@ function BlueprintTable({
             <th className="px-4 py-3">Gap</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-200 bg-white">
+
+        <tbody className="divide-y divide-white/10 bg-[#020817]/45">
           {rows.map(([domain, expected]) => {
             const actual = validation.actualBlueprint[domain] ?? 0;
             const gap = actual - expected;
 
             return (
               <tr key={domain}>
-                <td className="px-4 py-3 font-medium text-slate-950">
+                <td className="px-4 py-3 font-black text-white">
                   {itemDomainLabels[domain] ?? domain}
                 </td>
-                <td className="px-4 py-3 text-slate-700">{expected}</td>
-                <td className="px-4 py-3 text-slate-700">{actual}</td>
+
+                <td className="px-4 py-3 text-slate-300">{expected}</td>
+
+                <td className="px-4 py-3 text-slate-300">{actual}</td>
+
                 <td
-                  className={`px-4 py-3 font-semibold ${
-                    gap === 0 ? 'text-emerald-700' : 'text-red-700'
+                  className={`px-4 py-3 font-black ${
+                    gap === 0 ? 'text-emerald-100' : 'text-red-100'
                   }`}
                 >
                   {gap === 0 ? 'OK' : gap > 0 ? `+${gap}` : `${gap}`}
@@ -237,11 +230,14 @@ export function PilotFormManagementClient({
 
   return (
     <section className="space-y-6">
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="rounded-[2rem] border border-white/10 bg-[#07142f]/90 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.24)]">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <h2 className="text-xl font-semibold">Pilot form governance</h2>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+            <h2 className="text-xl font-black text-white">
+              Pilot form governance
+            </h2>
+
+            <p className="mt-2 max-w-3xl text-sm leading-7 text-slate-400">
               Manage the named IQMeridian pilot form, inspect domain blueprint
               readiness, and control pilot status transitions. Backend rules
               still decide whether lock or activation is allowed.
@@ -252,31 +248,31 @@ export function PilotFormManagementClient({
             type="button"
             onClick={() => void handleCreateFormalPilotForm()}
             disabled={isCreating}
-            className="w-fit rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-400"
+            className="w-fit rounded-full border border-cyan-300/25 bg-cyan-400/15 px-4 py-2 text-sm font-black text-cyan-50 transition hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isCreating ? 'Creating...' : 'Create/fetch formal pilot form'}
           </button>
         </div>
 
         {message ? (
-          <div className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          <div className="mt-5 rounded-2xl border border-emerald-300/20 bg-emerald-400/10 px-4 py-3 text-sm font-bold text-emerald-100">
             {message}
           </div>
         ) : null}
 
         {errorMessage ? (
-          <div className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm leading-6 text-red-800">
+          <div className="mt-5 rounded-2xl border border-red-300/20 bg-red-400/10 px-4 py-3 text-sm font-bold leading-7 text-red-100">
             {errorMessage}
           </div>
         ) : null}
 
         <div className="mt-6 grid gap-4 lg:grid-cols-[1fr_0.8fr]">
-          <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
+          <label className="flex flex-col gap-2 text-sm font-bold text-slate-300">
             Select pilot form
             <select
               value={selectedFormId}
               onChange={(event) => handleSelectedFormChange(event.target.value)}
-              className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-950"
+              className="min-h-12 rounded-2xl border border-white/10 bg-[#020817] px-4 text-sm font-bold text-white outline-none transition focus:border-cyan-300/50"
             >
               <option value="">No pilot form selected</option>
               {forms.map((form) => (
@@ -289,15 +285,16 @@ export function PilotFormManagementClient({
           </label>
 
           {selectedForm ? (
-            <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+            <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-white/10 bg-[#020817]/70 px-4 py-3">
               <StatusBadge status={selectedForm.pilotStatus} />
               <ValidationBadge validation={selectedForm.blueprintValidation} />
+
               {selectedForm.isLocked ? (
-                <span className="rounded-full border border-slate-900 bg-slate-950 px-3 py-1 text-xs font-semibold text-white">
+                <span className="rounded-full border border-cyan-300/20 bg-cyan-400/10 px-3 py-1 text-xs font-black text-cyan-100">
                   Locked
                 </span>
               ) : (
-                <span className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
+                <span className="rounded-full border border-white/10 bg-[#07142f]/80 px-3 py-1 text-xs font-black text-slate-300">
                   Unlocked
                 </span>
               )}
@@ -309,11 +306,11 @@ export function PilotFormManagementClient({
       {selectedForm ? (
         <>
           <div className="grid gap-6 lg:grid-cols-4">
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <p className="text-xs uppercase tracking-wide text-slate-500">
+            <div className="rounded-[1.5rem] border border-white/10 bg-[#07142f]/90 p-5 shadow-[0_24px_70px_rgba(0,0,0,0.24)]">
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
                 Form version
               </p>
-              <p className="mt-2 text-2xl font-semibold">
+              <p className="mt-2 text-2xl font-black text-white">
                 {selectedForm.versionLabel ?? `v${selectedForm.version}`}
               </p>
               <p className="mt-1 text-sm text-slate-500">
@@ -321,11 +318,11 @@ export function PilotFormManagementClient({
               </p>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <p className="text-xs uppercase tracking-wide text-slate-500">
+            <div className="rounded-[1.5rem] border border-white/10 bg-[#07142f]/90 p-5 shadow-[0_24px_70px_rgba(0,0,0,0.24)]">
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
                 Items
               </p>
-              <p className="mt-2 text-2xl font-semibold">
+              <p className="mt-2 text-2xl font-black text-white">
                 {selectedForm.blueprintValidation.totalActualItems}/
                 {selectedForm.blueprintValidation.totalExpectedItems}
               </p>
@@ -334,11 +331,11 @@ export function PilotFormManagementClient({
               </p>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <p className="text-xs uppercase tracking-wide text-slate-500">
+            <div className="rounded-[1.5rem] border border-white/10 bg-[#07142f]/90 p-5 shadow-[0_24px_70px_rgba(0,0,0,0.24)]">
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
                 Scoring version
               </p>
-              <p className="mt-2 text-2xl font-semibold">
+              <p className="mt-2 text-2xl font-black text-white">
                 {selectedForm.scoringVersion}
               </p>
               <p className="mt-1 text-sm text-slate-500">
@@ -346,11 +343,11 @@ export function PilotFormManagementClient({
               </p>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <p className="text-xs uppercase tracking-wide text-slate-500">
+            <div className="rounded-[1.5rem] border border-white/10 bg-[#07142f]/90 p-5 shadow-[0_24px_70px_rgba(0,0,0,0.24)]">
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
                 Report version
               </p>
-              <p className="mt-2 text-2xl font-semibold">
+              <p className="mt-2 text-2xl font-black text-white">
                 {selectedForm.reportVersion}
               </p>
               <p className="mt-1 text-sm text-slate-500">
@@ -360,17 +357,19 @@ export function PilotFormManagementClient({
           </div>
 
           <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="rounded-[2rem] border border-white/10 bg-[#07142f]/90 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.24)]">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <h3 className="text-lg font-semibold">
+                  <h3 className="text-lg font-black text-white">
                     Blueprint validation
                   </h3>
-                  <p className="mt-1 text-sm leading-6 text-slate-600">
+
+                  <p className="mt-1 text-sm leading-7 text-slate-400">
                     First pilot blueprint: verbal 8, numerical 8, abstract 10,
                     logical 8, analytical problem-solving 6.
                   </p>
                 </div>
+
                 <ValidationBadge
                   validation={selectedForm.blueprintValidation}
                 />
@@ -381,9 +380,9 @@ export function PilotFormManagementClient({
               </div>
 
               {selectedForm.blueprintValidation.errors.length > 0 ? (
-                <div className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
-                  <p className="text-sm font-semibold text-red-800">Errors</p>
-                  <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-6 text-red-800">
+                <div className="mt-5 rounded-2xl border border-red-300/20 bg-red-400/10 px-4 py-3">
+                  <p className="text-sm font-black text-red-100">Errors</p>
+                  <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-7 text-red-100">
                     {selectedForm.blueprintValidation.errors.map((error) => (
                       <li key={error}>{error}</li>
                     ))}
@@ -392,11 +391,9 @@ export function PilotFormManagementClient({
               ) : null}
 
               {selectedForm.blueprintValidation.warnings.length > 0 ? (
-                <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-                  <p className="text-sm font-semibold text-amber-800">
-                    Warnings
-                  </p>
-                  <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-6 text-amber-800">
+                <div className="mt-5 rounded-2xl border border-amber-300/20 bg-amber-400/10 px-4 py-3">
+                  <p className="text-sm font-black text-amber-100">Warnings</p>
+                  <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-7 text-amber-100">
                     {selectedForm.blueprintValidation.warnings.map(
                       (warning) => (
                         <li key={warning}>{warning}</li>
@@ -408,23 +405,26 @@ export function PilotFormManagementClient({
             </div>
 
             <div className="space-y-6">
-              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <h3 className="text-lg font-semibold">Status control</h3>
-                <p className="mt-2 text-sm leading-6 text-slate-600">
+              <div className="rounded-[2rem] border border-white/10 bg-[#07142f]/90 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.24)]">
+                <h3 className="text-lg font-black text-white">
+                  Status control
+                </h3>
+
+                <p className="mt-2 text-sm leading-7 text-slate-400">
                   Locking or activating a pilot form will fail unless backend
                   blueprint validation passes. Locked-form overrides require
                   platform-admin authority and an override reason.
                 </p>
 
                 <div className="mt-5 space-y-4">
-                  <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
+                  <label className="flex flex-col gap-2 text-sm font-bold text-slate-300">
                     Target status
                     <select
                       value={selectedStatus}
                       onChange={(event) =>
                         setSelectedStatus(event.target.value)
                       }
-                      className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-950"
+                      className="min-h-12 rounded-2xl border border-white/10 bg-[#020817] px-4 text-sm font-bold text-white outline-none transition focus:border-cyan-300/50"
                     >
                       {statusOptions.map((status) => (
                         <option key={status} value={status}>
@@ -434,7 +434,7 @@ export function PilotFormManagementClient({
                     </select>
                   </label>
 
-                  <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
+                  <label className="flex flex-col gap-2 text-sm font-bold text-slate-300">
                     Override reason
                     <textarea
                       value={overrideReason}
@@ -443,7 +443,7 @@ export function PilotFormManagementClient({
                       }
                       rows={4}
                       placeholder="Required only for locked-form override actions."
-                      className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-950"
+                      className="rounded-2xl border border-white/10 bg-[#020817] px-4 py-3 text-sm font-bold text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-300/50"
                     />
                   </label>
 
@@ -451,43 +451,50 @@ export function PilotFormManagementClient({
                     type="button"
                     onClick={() => void handleStatusUpdate()}
                     disabled={isUpdatingStatus}
-                    className="rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-400"
+                    className="rounded-full border border-cyan-300/25 bg-cyan-400/15 px-4 py-2 text-sm font-black text-cyan-50 transition hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {isUpdatingStatus ? 'Updating...' : 'Update status'}
                   </button>
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <h3 className="text-lg font-semibold">Governance metadata</h3>
+              <div className="rounded-[2rem] border border-white/10 bg-[#07142f]/90 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.24)]">
+                <h3 className="text-lg font-black text-white">
+                  Governance metadata
+                </h3>
+
                 <dl className="mt-4 space-y-3 text-sm">
-                  <div>
+                  <div className="rounded-2xl border border-white/10 bg-[#020817]/70 px-4 py-3">
                     <dt className="text-slate-500">Form ID</dt>
-                    <dd className="break-all font-medium text-slate-950">
+                    <dd className="mt-1 break-all font-black text-white">
                       {selectedForm.id}
                     </dd>
                   </div>
-                  <div>
+
+                  <div className="rounded-2xl border border-white/10 bg-[#020817]/70 px-4 py-3">
                     <dt className="text-slate-500">Locked at</dt>
-                    <dd className="font-medium text-slate-950">
+                    <dd className="mt-1 font-black text-white">
                       {selectedForm.lockedAt ?? 'Not locked'}
                     </dd>
                   </div>
-                  <div>
+
+                  <div className="rounded-2xl border border-white/10 bg-[#020817]/70 px-4 py-3">
                     <dt className="text-slate-500">Locked by</dt>
-                    <dd className="font-medium text-slate-950">
+                    <dd className="mt-1 font-black text-white">
                       {selectedForm.lockedBy ?? 'Not locked'}
                     </dd>
                   </div>
-                  <div>
+
+                  <div className="rounded-2xl border border-white/10 bg-[#020817]/70 px-4 py-3">
                     <dt className="text-slate-500">Sections</dt>
-                    <dd className="font-medium text-slate-950">
+                    <dd className="mt-1 font-black text-white">
                       {selectedForm.sectionCount}
                     </dd>
                   </div>
-                  <div>
+
+                  <div className="rounded-2xl border border-white/10 bg-[#020817]/70 px-4 py-3">
                     <dt className="text-slate-500">Active item mappings</dt>
-                    <dd className="font-medium text-slate-950">
+                    <dd className="mt-1 font-black text-white">
                       {selectedForm.activeItemCount}
                     </dd>
                   </div>
@@ -496,26 +503,28 @@ export function PilotFormManagementClient({
             </div>
           </div>
 
-          <details className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <summary className="cursor-pointer text-sm font-semibold text-slate-800">
+          <details className="rounded-[2rem] border border-white/10 bg-[#07142f]/90 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.24)]">
+            <summary className="cursor-pointer text-sm font-black text-slate-200">
               Show stored blueprint and timing JSON
             </summary>
 
             <div className="mt-5 grid gap-5 lg:grid-cols-2">
               <div>
-                <p className="text-sm font-semibold text-slate-700">
+                <p className="text-sm font-black text-slate-300">
                   Domain blueprint
                 </p>
-                <pre className="mt-2 overflow-x-auto rounded-xl bg-slate-950 p-4 text-xs leading-6 text-white">
+
+                <pre className="mt-2 overflow-x-auto rounded-2xl border border-white/10 bg-[#020817] p-4 text-xs leading-6 text-cyan-50">
                   {formatJson(selectedForm.domainBlueprint)}
                 </pre>
               </div>
 
               <div>
-                <p className="text-sm font-semibold text-slate-700">
+                <p className="text-sm font-black text-slate-300">
                   Timing rules
                 </p>
-                <pre className="mt-2 overflow-x-auto rounded-xl bg-slate-950 p-4 text-xs leading-6 text-white">
+
+                <pre className="mt-2 overflow-x-auto rounded-2xl border border-white/10 bg-[#020817] p-4 text-xs leading-6 text-cyan-50">
                   {formatJson(selectedForm.timingRules)}
                 </pre>
               </div>
@@ -523,9 +532,9 @@ export function PilotFormManagementClient({
           </details>
         </>
       ) : (
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-600 shadow-sm">
+        <div className="rounded-[2rem] border border-white/10 bg-[#07142f]/90 p-6 text-sm text-slate-400 shadow-[0_24px_70px_rgba(0,0,0,0.24)]">
           No pilot form exists yet. Use “Create/fetch formal pilot form” to
-          initialise IQMeridian General Cognitive Ability Pilot Form v0.1.
+          create or retrieve the governed IQMeridian pilot form.
         </div>
       )}
     </section>

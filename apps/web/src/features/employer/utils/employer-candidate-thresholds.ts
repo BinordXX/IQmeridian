@@ -41,7 +41,7 @@ const getBandRank = (band?: string | null) => {
 
 const bandMeetsMinimum = (
   actualBand?: string | null,
-  minimumBand?: PsychometricScoreBand | null,
+  minimumBand?: PsychometricScoreBand | null
 ) => {
   if (!minimumBand) {
     return true;
@@ -54,7 +54,7 @@ const bandMeetsMinimum = (
 };
 
 export const normaliseCandidateResultThresholdConfig = (
-  value?: CandidateResultThresholdConfig | null,
+  value?: CandidateResultThresholdConfig | null
 ): CandidateResultThresholdConfig => {
   if (!value) {
     return defaultCandidateResultThresholdConfig;
@@ -82,7 +82,7 @@ export const normaliseCandidateResultThresholdConfig = (
 
 const getDomainScoreBand = (
   session: EmployerSessionSummary,
-  domain: 'ABSTRACT_REASONING' | 'NUMERICAL_REASONING',
+  domain: 'ABSTRACT_REASONING' | 'NUMERICAL_REASONING'
 ) => {
   return (
     session.psychometricScoreResult?.domainScores?.find((domainScore) => {
@@ -95,13 +95,13 @@ const hasHighSeverityValidityFlag = (session: EmployerSessionSummary) => {
   return Boolean(
     session.psychometricScoreResult?.validityFlags?.some((flag) => {
       return flag.severity === 'HIGH' || flag.severity === 'CRITICAL';
-    }),
+    })
   );
 };
 
 export const classifyEmployerSessionByThresholds = (
   session: EmployerSessionSummary,
-  thresholdConfig?: CandidateResultThresholdConfig | null,
+  thresholdConfig?: CandidateResultThresholdConfig | null
 ): CandidateThresholdClassification => {
   const config = normaliseCandidateResultThresholdConfig(thresholdConfig);
 
@@ -126,17 +126,17 @@ export const classifyEmployerSessionByThresholds = (
 
   const meetsOverall = bandMeetsMinimum(
     session.psychometricScoreResult.overallScoreBand,
-    config.minimumOverallBand,
+    config.minimumOverallBand
   );
 
   const meetsAbstract = bandMeetsMinimum(
     getDomainScoreBand(session, 'ABSTRACT_REASONING'),
-    config.minimumAbstractReasoningBand,
+    config.minimumAbstractReasoningBand
   );
 
   const meetsNumerical = bandMeetsMinimum(
     getDomainScoreBand(session, 'NUMERICAL_REASONING'),
-    config.minimumNumericalReasoningBand,
+    config.minimumNumericalReasoningBand
   );
 
   if (!meetsOverall || !meetsAbstract || !meetsNumerical) {
@@ -147,7 +147,7 @@ export const classifyEmployerSessionByThresholds = (
 };
 
 export const getCandidateThresholdClassificationLabel = (
-  classification: CandidateThresholdClassification,
+  classification: CandidateThresholdClassification
 ) => {
   switch (classification) {
     case 'meets_filter':

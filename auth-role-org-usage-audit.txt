@@ -1,0 +1,326 @@
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\account\account.service.ts:29: | 'organisationId'
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\account\account.service.ts:417: role: user.role,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\account\account.service.ts:419: organisationId: user.organisationId,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\assessments\assessments.controller.ts:31: organisationId?: string | null;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\assessments\assessments.controller.ts:39: @Roles('PLATFORM_ADMIN', 'RESEARCHER')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\assessments\assessments.controller.ts:48: @Roles('PLATFORM_ADMIN', 'RESEARCHER', 'EMPLOYER_ADMIN')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\assessments\assessments.controller.ts:54: @Roles('PLATFORM_ADMIN', 'RESEARCHER', 'EMPLOYER_ADMIN')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\assessments\assessments.controller.ts:60: @Roles('PLATFORM_ADMIN', 'RESEARCHER')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\assessments\assessments.controller.ts:74: @Roles('PLATFORM_ADMIN', 'RESEARCHER')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\assessments\assessments.controller.ts:83: @Roles('PLATFORM_ADMIN', 'RESEARCHER')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\assessments\assessments.controller.ts:97: @Roles('PLATFORM_ADMIN', 'RESEARCHER', 'EMPLOYER_ADMIN')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\assessments\assessments.controller.ts:103: @Roles('PLATFORM_ADMIN', 'RESEARCHER')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\assessments\assessments.controller.ts:119: @Roles('PLATFORM_ADMIN', 'RESEARCHER')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\audit\audit.controller.ts:11: organisationId?: string | null;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\audit\audit.controller.ts:19: @Roles('PLATFORM_ADMIN', 'RESEARCHER')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\audit\audit.service.ts:8: organisationId?: string | null;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\audit\audit.service.ts:89: if (user.role === 'PLATFORM_ADMIN' || user.role === 'RESEARCHER') {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\auth\auth.service.ts:55: organisationId: string | null;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\auth\auth.service.ts:161: organisationId: expiredInvitation.organisationId,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\auth\auth.service.ts:258: organisationId: expiredInvitation.organisationId,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\auth\auth.service.ts:311: role: UserRole.EMPLOYER_ADMIN,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\auth\auth.service.ts:312: organisationId: invitation.organisationId,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\auth\auth.service.ts:360: organisationId: invitation.organisationId,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\auth\auth.service.ts:361: role: result.user.role,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\auth\auth.service.ts:454: role: user.role,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\auth\auth.service.ts:468: role: user.role,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\auth\auth.service.ts:637: role: user.role,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\auth\auth.service.ts:734: role: user.role,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\auth\auth.service.ts:1081: role: result.user.role,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\auth\auth.service.ts:1604: const organisation = user.organisationId
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\auth\auth.service.ts:1607: id: user.organisationId,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\auth\auth.service.ts:1620: role: user.role,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\auth\auth.service.ts:1622: organisationId: user.organisationId,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\auth\dev-auth.guard.ts:11: role: 'PLATFORM_ADMIN' | 'EMPLOYER_ADMIN' | 'CANDIDATE' | 'CONSUMER';
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\auth\dev-auth.guard.ts:12: organisationId: string | null;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\auth\dev-auth.guard.ts:26: organisationId: null,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\auth\dev-auth.guard.ts:31: role: 'EMPLOYER_ADMIN',
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\auth\dev-auth.guard.ts:32: organisationId: 'dev-employer-org',
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\auth\dev-auth.guard.ts:38: organisationId: null,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\auth\dev-auth.guard.ts:44: organisationId: null,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\auth\jwt-auth.guard.ts:67: role: authSession.user.role,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\auth\jwt-auth.guard.ts:69: organisationId: authSession.user.organisationId,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\auth\request-user.type.ts:12: organisationId: string | null;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\auth\roles.guard.ts:27: return !!user && requiredRoles.includes(user.role);
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\auth\token.service.ts:11: organisationId: string | null;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\auth\token.service.ts:14: type TokenUser = Pick<User, 'id' | 'email' | 'role' | 'organisationId'>;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\auth\token.service.ts:27: role: input.user.role,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\auth\token.service.ts:28: organisationId: input.user.organisationId,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\auth\token.service.ts:60: organisationId:
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\auth\token.service.ts:61: typeof payload.organisationId === 'string'
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\auth\token.service.ts:62: ? payload.organisationId
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\dto\create-campaign.dto.ts:10: organisationId!: string;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\dto\list-campaigns-query.dto.ts:12: organisationId?: string;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\campaigns.controller.ts:26: organisationId?: string | null;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\campaigns.controller.ts:34: @Roles('PLATFORM_ADMIN', 'EMPLOYER_ADMIN')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\campaigns.controller.ts:46: @Roles('PLATFORM_ADMIN', 'EMPLOYER_ADMIN')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\campaigns.controller.ts:55: @Roles('PLATFORM_ADMIN', 'EMPLOYER_ADMIN')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\campaigns.controller.ts:64: @Roles('PLATFORM_ADMIN', 'EMPLOYER_ADMIN')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\campaigns.controller.ts:77: @Roles('PLATFORM_ADMIN', 'EMPLOYER_ADMIN')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\campaigns.controller.ts:90: @Roles('PLATFORM_ADMIN', 'EMPLOYER_ADMIN')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\campaigns.service.ts:22: organisationId?: string | null;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\campaigns.service.ts:55: organisationId: string;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\campaigns.service.ts:60: const organisationId =
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\campaigns.service.ts:61: input.requestingUser.role === UserRole.PLATFORM_ADMIN
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\campaigns.service.ts:62: ? input.organisationId
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\campaigns.service.ts:63: : input.requestingUser.organisationId;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\campaigns.service.ts:65: if (!organisationId) {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\campaigns.service.ts:69: this.assertCanManageOrganisation(input.requestingUser, organisationId);
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\campaigns.service.ts:86: input.requestingUser.role === UserRole.PLATFORM_ADMIN
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\campaigns.service.ts:93: organisationId,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\campaigns.service.ts:114: organisationId: campaign.organisationId,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\campaigns.service.ts:130: organisationId?: string;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\campaigns.service.ts:139: let organisationId = filters.organisationId;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\campaigns.service.ts:141: if (user.role !== UserRole.PLATFORM_ADMIN) {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\campaigns.service.ts:142: if (!user.organisationId) {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\campaigns.service.ts:146: organisationId = user.organisationId;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\campaigns.service.ts:150: ...(organisationId ? { organisationId } : {}),
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\campaigns.service.ts:173: organisationId: true,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\campaigns.service.ts:203: organisationId: true,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\campaigns.service.ts:223: organisationId: true,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\campaigns.service.ts:244: this.assertCanManageOrganisation(user, campaign.organisationId);
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\campaigns.service.ts:262: this.assertCanManageOrganisation(user, campaign.organisationId);
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\campaigns.service.ts:278: organisationId: updatedCampaign.organisationId,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\campaigns.service.ts:308: this.assertCanManageOrganisation(user, campaign.organisationId);
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\campaigns.service.ts:323: organisationId: true,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\campaigns.service.ts:340: organisationId: updatedCampaign.organisationId,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\campaigns.service.ts:361: this.assertCanManageOrganisation(user, campaign.organisationId);
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\campaigns.service.ts:404: organisationId: true,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\campaigns.service.ts:419: organisationId: updatedCampaign.organisationId,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\campaigns.service.ts:457: organisationId: string,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\campaigns.service.ts:459: if (user.role === UserRole.PLATFORM_ADMIN) {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\campaigns.service.ts:464: user.role === UserRole.EMPLOYER_ADMIN &&
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\campaigns.service.ts:465: user.organisationId === organisationId
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\common\filters\http-exception.filter.ts:28: organisationId?: string | null;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\common\filters\http-exception.filter.ts:120: organisationId: request.user?.organisationId ?? null,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\consumer-assessments\consumer-assessments.controller.ts:22: @Roles('CONSUMER', 'PLATFORM_ADMIN')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\consumer-assessments\consumer-assessments.controller.ts:28: @Roles('PLATFORM_ADMIN', 'RESEARCHER')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\consumer-assessments\consumer-assessments.controller.ts:34: @Roles('PLATFORM_ADMIN')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\contact\contact.service.ts:85: senderRole: String(user.role),
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\contact\contact.service.ts:87: source: this.getSourceForUserRole(user.role),
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\contact\contact.service.ts:241: if (user.role !== UserRole.PLATFORM_ADMIN) {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\contact\contact.service.ts:253: if (role === UserRole.EMPLOYER_ADMIN) {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\internal-tooling\internal-tooling.controller.ts:39: @Roles('PLATFORM_ADMIN', 'RESEARCHER')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\internal-tooling\internal-tooling.controller.ts:46: return user.role as InternalApiRole;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\internal-tooling\internal-tooling.controller.ts:151: @Roles('PLATFORM_ADMIN')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\internal-tooling\internal-tooling.controller.ts:215: @Roles('PLATFORM_ADMIN')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\internal-tooling\internal-tooling.controller.ts:221: @Roles('PLATFORM_ADMIN')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\internal-tooling\internal-tooling.controller.ts:227: @Roles('PLATFORM_ADMIN')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\internal-tooling\internal-tooling.controller.ts:249: @Roles('PLATFORM_ADMIN')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\internal-tooling\internal-tooling.controller.ts:261: @Roles('PLATFORM_ADMIN')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\internal-tooling\internal-tooling.controller.ts:291: @Roles('PLATFORM_ADMIN')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\internal-tooling\internal-tooling.controller.ts:305: @Roles('PLATFORM_ADMIN')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\internal-tooling\internal-tooling.controller.ts:326: @Roles('PLATFORM_ADMIN')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\internal-tooling\internal-tooling.service.ts:2823: organisationId: campaign.organisationId,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\internal-tooling\internal-tooling.service.ts:3744: [groupedUser.role]: groupedUser._count._all,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\invitations\invitations.controller.ts:26: organisationId?: string | null;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\invitations\invitations.controller.ts:33: @Roles('PLATFORM_ADMIN', 'EMPLOYER_ADMIN')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\invitations\invitations.controller.ts:46: @Roles('PLATFORM_ADMIN', 'EMPLOYER_ADMIN')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\invitations\invitations.controller.ts:56: @Roles('PLATFORM_ADMIN', 'EMPLOYER_ADMIN')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\invitations\invitations.controller.ts:66: @Roles('PLATFORM_ADMIN', 'EMPLOYER_ADMIN')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\invitations\invitations.controller.ts:77: @Roles('CANDIDATE')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\invitations\invitations.service.ts:27: organisationId?: string | null;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\invitations\invitations.service.ts:69: this.assertCanManageCampaign(input.requestingUser, campaign.organisationId);
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\invitations\invitations.service.ts:106: organisationId: campaign.organisationId,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\invitations\invitations.service.ts:760: this.assertCanManageCampaign(user, invitation.campaign.organisationId);
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\invitations\invitations.service.ts:786: organisationId: string;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\invitations\invitations.service.ts:793: organisationId_userId: {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\invitations\invitations.service.ts:794: organisationId: input.organisationId,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\invitations\invitations.service.ts:820: organisationId: input.organisationId,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\invitations\invitations.service.ts:829: private assertCanManageCampaign(user: RequestUser, organisationId: string) {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\invitations\invitations.service.ts:830: if (user.role === UserRole.PLATFORM_ADMIN) {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\invitations\invitations.service.ts:835: user.role === UserRole.EMPLOYER_ADMIN &&
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\invitations\invitations.service.ts:836: user.organisationId === organisationId
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\item-bank\item-bank.controller.ts:24: organisationId?: string | null;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\item-bank\item-bank.controller.ts:32: @Roles('PLATFORM_ADMIN', 'RESEARCHER')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\item-bank\item-bank.controller.ts:38: @Roles('PLATFORM_ADMIN', 'RESEARCHER')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\item-bank\item-bank.controller.ts:44: @Roles('PLATFORM_ADMIN', 'RESEARCHER')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\item-bank\item-bank.controller.ts:50: @Roles('PLATFORM_ADMIN', 'RESEARCHER')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\item-bank\item-bank.controller.ts:60: @Roles('PLATFORM_ADMIN', 'RESEARCHER')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\item-bank\item-bank.controller.ts:69: @Roles('PLATFORM_ADMIN', 'RESEARCHER')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisation-access-requests\organisation-access-requests.controller.ts:25: organisationId?: string | null;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisation-access-requests\organisation-access-requests.controller.ts:45: @Roles(UserRole.PLATFORM_ADMIN)
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisation-access-requests\organisation-access-requests.controller.ts:52: @Roles(UserRole.PLATFORM_ADMIN)
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisation-access-requests\organisation-access-requests.controller.ts:59: @Roles(UserRole.PLATFORM_ADMIN)
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisation-access-requests\organisation-access-requests.controller.ts:73: @Roles(UserRole.PLATFORM_ADMIN)
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisation-access-requests\organisation-access-requests.controller.ts:85: @Roles(UserRole.PLATFORM_ADMIN)
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisation-access-requests\organisation-access-requests.service.ts:27: organisationId?: string | null;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisation-access-requests\organisation-access-requests.service.ts:288: organisationId: organisation.id,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisation-access-requests\organisation-access-requests.service.ts:292: role: UserRole.EMPLOYER_ADMIN,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisation-access-requests\organisation-access-requests.service.ts:306: convertedOrganisationId: organisation.id,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisation-access-requests\organisation-access-requests.service.ts:348: organisationId: result.organisation.id,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisation-access-requests\organisation-access-requests.service.ts:406: organisationId: result.organisation.id,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisation-access-requests\organisation-access-requests.service.ts:498: organisationId: updatedInvitation.organisationId,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisation-access-requests\organisation-access-requests.service.ts:557: organisationId: updatedInvitation.organisationId,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisation-participants\organisation-participants.controller.ts:20: organisationId?: string | null;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisation-participants\organisation-participants.controller.ts:30: @Roles('PLATFORM_ADMIN', 'EMPLOYER_ADMIN')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisation-participants\organisation-participants.controller.ts:36: @Roles('PLATFORM_ADMIN', 'EMPLOYER_ADMIN')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisation-participants\organisation-participants.service.ts:13: organisationId?: string | null;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisation-participants\organisation-participants.service.ts:25: user.role === UserRole.PLATFORM_ADMIN
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisation-participants\organisation-participants.service.ts:28: organisationId: this.requireEmployerOrganisationId(user),
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisation-participants\organisation-participants.service.ts:93: this.assertCanManageOrganisation(user, participant.organisationId);
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisation-participants\organisation-participants.service.ts:141: organisationId: updatedParticipant.organisationId,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisation-participants\organisation-participants.service.ts:152: private requireEmployerOrganisationId(user: RequestUser) {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisation-participants\organisation-participants.service.ts:153: if (!user.organisationId) {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisation-participants\organisation-participants.service.ts:157: return user.organisationId;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisation-participants\organisation-participants.service.ts:162: organisationId: string,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisation-participants\organisation-participants.service.ts:164: if (user.role === UserRole.PLATFORM_ADMIN) {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisation-participants\organisation-participants.service.ts:169: user.role === UserRole.EMPLOYER_ADMIN &&
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisation-participants\organisation-participants.service.ts:170: user.organisationId === organisationId
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisations\dto\organisation-route-params.dto.ts:3: export class OrganisationIdParamDto {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisations\organisations.controller.ts:17: import { OrganisationIdParamDto } from './dto/organisation-route-params.dto';
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisations\organisations.controller.ts:26: @Roles('PLATFORM_ADMIN')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisations\organisations.controller.ts:35: @Roles('PLATFORM_ADMIN')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisations\organisations.controller.ts:41: @Roles('PLATFORM_ADMIN', 'EMPLOYER_ADMIN')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisations\organisations.controller.ts:44: @Param() params: OrganisationIdParamDto,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisations\organisations.controller.ts:50: @Roles('PLATFORM_ADMIN')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisations\organisations.controller.ts:53: @Param() params: OrganisationIdParamDto,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisations\organisations.controller.ts:64: @Roles('PLATFORM_ADMIN')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisations\organisations.controller.ts:67: @Param() params: OrganisationIdParamDto,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisations\organisations.service.ts:48: organisationId: true,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisations\organisations.service.ts:73: organisationId: true,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisations\organisations.service.ts:98: organisationId: null,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisations\organisations.service.ts:121: organisationId: string,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisations\organisations.service.ts:125: await this.findOrganisationById(organisationId, {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisations\organisations.service.ts:131: organisationId: null,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisations\organisations.service.ts:150: if (targetUser.role === UserRole.PLATFORM_ADMIN) {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisations\organisations.service.ts:157: targetUser.role !== UserRole.CONSUMER &&
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisations\organisations.service.ts:158: targetUser.role !== UserRole.EMPLOYER_ADMIN
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisations\organisations.service.ts:174: organisationId,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisations\organisations.service.ts:175: role: UserRole.EMPLOYER_ADMIN,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisations\organisations.service.ts:183: organisationId: true,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisations\organisations.service.ts:193: action: 'EMPLOYER_ADMIN_ATTACHED',
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisations\organisations.service.ts:198: organisationId,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisations\organisations.service.ts:199: assignedRole: UserRole.EMPLOYER_ADMIN,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisations\organisations.service.ts:206: private assertCanReadOrganisation(user: RequestUser, organisationId: string) {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisations\organisations.service.ts:207: if (user.role === UserRole.PLATFORM_ADMIN) {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisations\organisations.service.ts:212: user.role === UserRole.EMPLOYER_ADMIN &&
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\organisations\organisations.service.ts:213: user.organisationId === organisationId
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\psychometrics\psychometric-scoring-contract.types.ts:49: organisationId: string | null;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\psychometrics\psychometric-scoring-request-builder.service.ts:100: organisationId: session.campaign?.organisationId ?? null,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\psychometrics\psychometric-scoring-request-builder.service.ts:127: organisationId: true,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\psychometrics\psychometrics.controller.ts:10: @Roles('PLATFORM_ADMIN', 'RESEARCHER')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\reports\reports.controller.ts:25: organisationId?: string | null;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\reports\reports.controller.ts:33: @Roles('CANDIDATE', 'CONSUMER', 'PLATFORM_ADMIN')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\reports\reports.controller.ts:46: @Roles('EMPLOYER_ADMIN', 'PLATFORM_ADMIN')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\reports\reports.controller.ts:59: @Roles(
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\reports\reports.controller.ts:62: 'EMPLOYER_ADMIN',
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\reports\reports.controller.ts:74: @Roles(
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\reports\reports.controller.ts:77: 'EMPLOYER_ADMIN',
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\reports\reports.controller.ts:89: @Roles(
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\reports\reports.controller.ts:92: 'EMPLOYER_ADMIN',
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\reports\reports.service.ts:14: organisationId?: string | null;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\reports\reports.service.ts:139: if (user.role === 'CANDIDATE' || user.role === 'CONSUMER') {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\reports\reports.service.ts:145: if (user.role === 'EMPLOYER_ADMIN') {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\reports\reports.service.ts:146: if (!user.organisationId) {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\reports\reports.service.ts:153: organisationId: user.organisationId,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\reports\reports.service.ts:158: if (user.role === 'RESEARCHER') {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\reports\reports.service.ts:328: organisationId: session.campaign.organisationId,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\reports\reports.service.ts:360: campaign?: { organisationId: string } | null;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\reports\reports.service.ts:365: if (user.role === 'PLATFORM_ADMIN') {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\reports\reports.service.ts:371: (user.role === 'CANDIDATE' || user.role === 'CONSUMER') &&
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\reports\reports.service.ts:379: user.role === 'EMPLOYER_ADMIN' &&
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\reports\reports.service.ts:380: session.campaign?.organisationId === user.organisationId
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\reports\reports.service.ts:394: campaign?: { organisationId: string } | null;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\reports\reports.service.ts:399: if (user.role === 'PLATFORM_ADMIN') {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\reports\reports.service.ts:405: user.role === 'CANDIDATE' &&
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\reports\reports.service.ts:413: user.role === 'CONSUMER' &&
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\reports\reports.service.ts:421: user.role === 'EMPLOYER_ADMIN' &&
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\reports\reports.service.ts:422: report.session.campaign?.organisationId === user.organisationId
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\reports\reports.service.ts:428: user.role === 'RESEARCHER' &&
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\responses\responses.controller.ts:25: organisationId?: string | null;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\responses\responses.controller.ts:69: @Roles('CANDIDATE', 'CONSUMER', 'PLATFORM_ADMIN')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\responses\responses.controller.ts:85: @Roles('CANDIDATE', 'CONSUMER', 'EMPLOYER_ADMIN', 'PLATFORM_ADMIN')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\responses\responses.controller.ts:98: @Roles('CANDIDATE', 'CONSUMER', 'PLATFORM_ADMIN')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\responses\responses.service.ts:15: organisationId?: string | null;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\responses\responses.service.ts:219: if (user.role === 'PLATFORM_ADMIN') {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\responses\responses.service.ts:233: campaign?: { organisationId: string } | null;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\responses\responses.service.ts:237: if (user.role === 'PLATFORM_ADMIN') {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\responses\responses.service.ts:242: (user.role === 'CANDIDATE' || user.role === 'CONSUMER') &&
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\responses\responses.service.ts:249: user.role === 'EMPLOYER_ADMIN' &&
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\responses\responses.service.ts:250: session.campaign?.organisationId === user.organisationId
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\scoring\scoring.controller.ts:11: organisationId?: string | null;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\scoring\scoring.controller.ts:19: @Roles('CANDIDATE', 'CONSUMER', 'EMPLOYER_ADMIN', 'PLATFORM_ADMIN')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\scoring\scoring.controller.ts:31: @Roles('CANDIDATE', 'CONSUMER', 'EMPLOYER_ADMIN', 'PLATFORM_ADMIN')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\scoring\scoring.service.ts:19: organisationId?: string | null;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\scoring\scoring.service.ts:276: campaign?: { organisationId: string } | null;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\scoring\scoring.service.ts:280: if (user.role === 'PLATFORM_ADMIN') {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\scoring\scoring.service.ts:285: (user.role === 'CANDIDATE' || user.role === 'CONSUMER') &&
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\scoring\scoring.service.ts:292: user.role === 'EMPLOYER_ADMIN' &&
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\scoring\scoring.service.ts:293: session.campaign?.organisationId === user.organisationId
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\sessions\sessions.controller.ts:26: organisationId?: string | null;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\sessions\sessions.controller.ts:33: @Roles('CANDIDATE', 'CONSUMER', 'EMPLOYER_ADMIN', 'PLATFORM_ADMIN')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\sessions\sessions.controller.ts:43: @Roles('CONSUMER', 'PLATFORM_ADMIN')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\sessions\sessions.controller.ts:114: @Roles('CANDIDATE', 'CONSUMER', 'PLATFORM_ADMIN')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\sessions\sessions.controller.ts:124: @Roles('CANDIDATE', 'CONSUMER', 'PLATFORM_ADMIN')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\sessions\sessions.controller.ts:134: @Roles('CANDIDATE', 'CONSUMER', 'PLATFORM_ADMIN')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\sessions\sessions.controller.ts:144: @Roles('CANDIDATE', 'CONSUMER', 'PLATFORM_ADMIN')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\sessions\sessions.controller.ts:157: @Roles('CANDIDATE', 'CONSUMER', 'PLATFORM_ADMIN', 'RESEARCHER')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\sessions\sessions.service.ts:34: organisationId?: string | null;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\sessions\sessions.service.ts:131: organisationId?: string | null;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\sessions\sessions.service.ts:141: organisationId: true,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\sessions\sessions.service.ts:384: if (user.role === UserRole.CANDIDATE || user.role === UserRole.CONSUMER) {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\sessions\sessions.service.ts:388: if (user.role === UserRole.EMPLOYER_ADMIN) {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\sessions\sessions.service.ts:389: if (!user.organisationId) {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\sessions\sessions.service.ts:396: organisationId: user.organisationId,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\sessions\sessions.service.ts:662: organisationId: invitation.campaign.organisationId,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\sessions\sessions.service.ts:1086: organisationId: string;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\sessions\sessions.service.ts:1093: organisationId_userId: {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\sessions\sessions.service.ts:1094: organisationId: input.organisationId,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\sessions\sessions.service.ts:1120: organisationId: input.organisationId,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\sessions\sessions.service.ts:1661: organisationId: string | null;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\sessions\sessions.service.ts:1667: organisationId?: string | null;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\sessions\sessions.service.ts:1670: if (user.role === 'PLATFORM_ADMIN' || user.role === 'RESEARCHER') {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\sessions\sessions.service.ts:1675: (user.role === 'CONSUMER' || user.role === 'CANDIDATE') &&
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\sessions\sessions.service.ts:1682: user.role === 'EMPLOYER_ADMIN' &&
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\sessions\sessions.service.ts:1683: session.campaign?.organisationId &&
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\sessions\sessions.service.ts:1684: user.organisationId === session.campaign.organisationId
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\sessions\sessions.service.ts:1772: organisationId: session.campaign.organisationId,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\users\dto\create-managed-user.dto.ts:28: organisationId?: string | null;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\users\dto\list-users-query.dto.ts:16: organisationId?: string;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\users\dto\update-user-organisation.dto.ts:6: organisationId?: string | null;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\users\dto\user-route-params.dto.ts:3: export class OrganisationIdParamDto {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\users\dto\user-route-params.dto.ts:6: organisationId!: string;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\users\users.controller.ts:24: OrganisationIdParamDto,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\users\users.controller.ts:44: @Roles('PLATFORM_ADMIN')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\users\users.controller.ts:50: @Roles('PLATFORM_ADMIN')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\users\users.controller.ts:62: @Roles('PLATFORM_ADMIN')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\users\users.controller.ts:63: @Get('organisation/:organisationId')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\users\users.controller.ts:65: @Param() params: OrganisationIdParamDto,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\users\users.controller.ts:69: params.organisationId,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\users\users.controller.ts:74: @Roles('PLATFORM_ADMIN')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\users\users.controller.ts:80: @Roles('PLATFORM_ADMIN')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\users\users.controller.ts:94: @Roles('PLATFORM_ADMIN')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\users\users.controller.ts:108: @Roles('PLATFORM_ADMIN')
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\users\users.controller.ts:118: organisationId: body.organisationId ?? null,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\users\users.service.ts:57: organisationId?: string;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\users\users.service.ts:67: ...(filters.organisationId
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\users\users.service.ts:68: ? { organisationId: filters.organisationId }
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\users\users.service.ts:124: const organisationId =
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\users\users.service.ts:125: input.input.organisationId && input.input.organisationId.trim().length > 0
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\users\users.service.ts:126: ? input.input.organisationId.trim()
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\users\users.service.ts:142: if (role === UserRole.EMPLOYER_ADMIN && !organisationId) {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\users\users.service.ts:148: if (organisationId) {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\users\users.service.ts:151: id: organisationId,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\users\users.service.ts:173: organisationId,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\users\users.service.ts:189: role: user.role,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\users\users.service.ts:191: organisationId: user.organisationId,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\users\users.service.ts:208: organisationId: string,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\users\users.service.ts:218: const where = { organisationId };
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\users\users.service.ts:271: if (input.role === UserRole.EMPLOYER_ADMIN && !targetUser.organisationId) {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\users\users.service.ts:277: if (targetUser.role === UserRole.PLATFORM_ADMIN) {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\users\users.service.ts:304: previousRole: targetUser.role,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\users\users.service.ts:305: nextRole: updatedUser.role,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\users\users.service.ts:328: if (targetUser.role === UserRole.PLATFORM_ADMIN) {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\users\users.service.ts:331: nextRole: targetUser.role,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\users\users.service.ts:380: organisationId: string | null;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\users\users.service.ts:383: const nextOrganisationId =
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\users\users.service.ts:384: input.organisationId && input.organisationId.trim().length > 0
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\users\users.service.ts:385: ? input.organisationId.trim()
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\users\users.service.ts:388: if (targetUser.role === UserRole.EMPLOYER_ADMIN && !nextOrganisationId) {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\users\users.service.ts:394: if (nextOrganisationId) {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\users\users.service.ts:397: id: nextOrganisationId,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\users\users.service.ts:414: organisationId: nextOrganisationId,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\users\users.service.ts:428: previousOrganisationId: targetUser.organisationId,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\users\users.service.ts:429: nextOrganisationId: updatedUser.organisationId,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\verification-tokens\verification-tokens.service.ts:110: organisationId: true,

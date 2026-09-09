@@ -50,8 +50,6 @@ type SubmissionConfirmationState = {
 
 type CandidateResultVisibility = 'summary' | 'hidden';
 
-
-
 const flattenItems = (
   session: AssessmentSessionPayload
 ): CandidateSafeAssessmentItem[] => {
@@ -124,28 +122,28 @@ export const LiveAssessmentShell = ({ session }: LiveAssessmentShellProps) => {
       trigger: 'timeout',
     });
 
-   void finaliseAssessmentSession(session.sessionId)
-  .then(async () => {
-    void trackAssessmentEvent('submission_completed', {
-      sessionId: session.sessionId,
-      assessmentId: session.assessmentId,
-      trigger: 'timeout',
-    });
+    void finaliseAssessmentSession(session.sessionId)
+      .then(async () => {
+        void trackAssessmentEvent('submission_completed', {
+          sessionId: session.sessionId,
+          assessmentId: session.assessmentId,
+          trigger: 'timeout',
+        });
 
-    const resultVisibility = await resolveCandidateResultVisibility(
-      session.sessionId
-    );
+        const resultVisibility = await resolveCandidateResultVisibility(
+          session.sessionId
+        );
 
-    dispatch({ type: 'COMPLETED' });
+        dispatch({ type: 'COMPLETED' });
 
-    const statusParams = new URLSearchParams({
-      reason: 'completed',
-      sessionId: session.sessionId,
-      resultVisibility,
-    });
+        const statusParams = new URLSearchParams({
+          reason: 'completed',
+          sessionId: session.sessionId,
+          resultVisibility,
+        });
 
-    router.replace(`/assessment/status?${statusParams.toString()}`);
-  })
+        router.replace(`/assessment/status?${statusParams.toString()}`);
+      })
       .catch(() => {
         dispatch({
           type: 'FAILED',
@@ -506,14 +504,14 @@ export const LiveAssessmentShell = ({ session }: LiveAssessmentShellProps) => {
 
     try {
       await finaliseAssessmentSession(session.sessionId);
-void trackAssessmentEvent('submission_completed', {
-  sessionId: session.sessionId,
-  assessmentId: session.assessmentId,
-});
+      void trackAssessmentEvent('submission_completed', {
+        sessionId: session.sessionId,
+        assessmentId: session.assessmentId,
+      });
 
-const resultVisibility = await resolveCandidateResultVisibility(
-  session.sessionId
-);
+      const resultVisibility = await resolveCandidateResultVisibility(
+        session.sessionId
+      );
 
       dispatch({ type: 'COMPLETED' });
 

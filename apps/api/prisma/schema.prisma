@@ -44,6 +44,7 @@ enum OrganisationParticipantStatus {
 }
 
 enum UserRole {
+  SUPER_ADMIN
   PLATFORM_ADMIN
   EMPLOYER_ADMIN
   CANDIDATE
@@ -56,7 +57,6 @@ enum UserStatus {
   ACTIVE
   SUSPENDED
   DISABLED
-  
 }
 
 enum AuthRateLimitAction {
@@ -74,7 +74,6 @@ enum VerificationTokenPurpose {
   CANDIDATE_INVITATION_NOTIFICATION
   CANDIDATE_RESULT_ACCESS
 }
-
 
 enum AuthProvider {
   LOCAL
@@ -147,6 +146,7 @@ enum AssessmentDomain {
   ABSTRACT_REASONING
   LOGICAL_REASONING
   ANALYTICAL_PROBLEM_SOLVING
+  SPATIAL_REASONING
 }
 
 enum AssessmentSectionType {
@@ -155,6 +155,7 @@ enum AssessmentSectionType {
   ABSTRACT
   LOGICAL
   ANALYTICAL
+  SPATIAL
 }
 
 enum ItemStatus {
@@ -173,7 +174,9 @@ enum ItemIntendedDifficulty {
 
 enum ItemReviewStatus {
   NOT_REVIEWED
+  SUBMITTED_FOR_REVIEW
   REVIEW_IN_PROGRESS
+  APPROVED
   APPROVED_FOR_PILOT
   NEEDS_REVISION
   REJECTED
@@ -182,8 +185,10 @@ enum ItemReviewStatus {
 enum PsychometricItemStatus {
   DRAFT
   CONTENT_REVIEWED
+  ASSESSMENT_READY
   PILOT_READY
   UNDER_REVIEW
+  FLAGGED_AFTER_PUBLIC_USE
   FLAGGED_AFTER_PILOT
   RETIRED
   CALIBRATED
@@ -196,6 +201,50 @@ enum PilotFormStatus {
   ACTIVE_PILOT
   CLOSED
   ARCHIVED
+}
+
+enum AssessmentFormStatus {
+  DRAFT
+  INTERNAL
+  PUBLIC
+  ARCHIVED
+}
+
+enum FormSectionAssignmentStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+enum ItemCalibrationStatus {
+  UNCALIBRATED
+  CALIBRATION_READY
+  CALIBRATED
+  NEEDS_REVIEW
+  RETIRED
+}
+
+enum ItemReviewEventAction {
+  CREATED
+  UPDATED
+  SUBMITTED_FOR_REVIEW
+  REVIEW_STARTED
+  CHANGES_REQUESTED
+  APPROVED
+  REJECTED
+  ACTIVATED
+  DEACTIVATED
+  RETIRED
+  ARCHIVED
+}
+
+enum SessionItemStatus {
+  SELECTED
+  PRESENTED
+  ANSWERED
+  SKIPPED
+  OMITTED
 }
 
 enum AnalyticsExportRequestStatus {
@@ -234,15 +283,28 @@ model User {
   lastLoginAt     DateTime?
   organisationId  String?
 
-  organisation        Organisation? @relation(fields: [organisationId], references: [id])
-  reviewedOrganisationAccessRequests OrganisationAccessRequest[] @relation("OrganisationAccessRequestReviewer")
-  sentOrganisationAdminInvitations OrganisationAdminInvitation[] @relation("OrganisationAdminInvitationInviter")
+  organisation                         Organisation?                 @relation(fields: [organisationId], references: [id])
+  organisationMemberships              OrganisationMembership[]
+  reviewedOrganisationAccessRequests   OrganisationAccessRequest[]   @relation("OrganisationAccessRequestReviewer")
+  sentOrganisationAdminInvitations     OrganisationAdminInvitation[] @relation("OrganisationAdminInvitationInviter")
   acceptedOrganisationAdminInvitations OrganisationAdminInvitation[] @relation("OrganisationAdminInvitationAcceptedBy")
-  verificationTokens VerificationToken[] @relation("VerificationTokenSubjectUser")
-  createdAt           DateTime      @default(now())
-  updatedAt           DateTime      @updatedAt
-  deletionRequestedAt DateTime?
-  deletedAt           DateTime?
+  verificationTokens                   VerificationToken[]           @relation("VerificationTokenSubjectUser")
+  createdAt                            DateTime                      @default(now())
+  updatedAt                            DateTime                      @updatedAt
+  deletionRequestedAt                  DateTime?
+  deletedAt                            DateTime?
+
+  leaderboardOptIn       Boolean @default(false)
+  leaderboardDisplayName String?
+
+  publicProfileEnabled    Boolean @default(false)
+  publicProfileSlug       String? @unique
+  publicProfileHeadline   String?
+  publicProfileBio        String?
+  publicProfileQuote      String?
+  publicProfileLocation   String?
+  publicProfileAvatarUrl  String?
+  publicProfileWebsiteUrl String?
 
   authAccounts             AuthAccount[]
   authSessions             AuthSession[]
@@ -257,9 +319,27 @@ model User {
   exportRequestsReviewed  AnalyticsExportRequest[] @relation("ExportRequestReviewer")
   exportRequestsRequested AnalyticsExportRequest[] @relation("ExportRequestRequester")
 
+  assessmentFormsCreated   AssessmentForm[] @relation("AssessmentFormCreatedByAdmin")
+  assessmentFormsPublished AssessmentForm[] @relation("AssessmentFormPublishedByAdmin")
+
+  formSectionAssignments         AssessmentFormSectionResearcherAssignment[] @relation("FormSectionAssignmentResearcher")
+  formSectionAssignmentsAssigned AssessmentFormSectionResearcherAssignment[] @relation("FormSectionAssignmentAssignedByAdmin")
+
+  itemsCreated   Item[] @relation("ItemCreatedByUser")
+  itemsSubmitted Item[] @relation("ItemSubmittedByUser")
+  itemsReviewed  Item[] @relation("ItemReviewedByUser")
+  itemsApproved  Item[] @relation("ItemApprovedByUser")
+  itemsActivated Item[] @relation("ItemActivatedByUser")
+  itemsRetired   Item[] @relation("ItemRetiredByUser")
+
+  formItemMappingsActivated FormItemMapping[] @relation("FormItemMappingActivatedByAdmin")
+  itemReviewEvents          ItemReviewEvent[] @relation("ItemReviewEventActor")
+
   @@index([role])
   @@index([status])
   @@index([organisationId])
+  @@index([leaderboardOptIn])
+  @@index([publicProfileEnabled])
 }
 
 model OrganisationAdminInvitation {
@@ -268,25 +348,25 @@ model OrganisationAdminInvitation {
   organisationId String
   organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
 
-  organisationAccessRequestId String? @unique
+  organisationAccessRequestId String?                    @unique
   organisationAccessRequest   OrganisationAccessRequest? @relation(fields: [organisationAccessRequestId], references: [id], onDelete: SetNull)
 
-  email String
-  token String @unique
-  role  UserRole @default(EMPLOYER_ADMIN)
+  email              String
+  token              String              @unique
+  role               UserRole            @default(EMPLOYER_ADMIN)
   verificationTokens VerificationToken[]
 
   status OrganisationAdminInvitationStatus @default(PENDING)
 
-    emailDeliveryStatus EmailDeliveryStatus @default(NOT_SENT)
+  emailDeliveryStatus EmailDeliveryStatus @default(NOT_SENT)
   lastEmailSentAt     DateTime?
   lastEmailFailure    String?
 
   invitedById String?
-  invitedBy   User? @relation("OrganisationAdminInvitationInviter", fields: [invitedById], references: [id], onDelete: SetNull)
+  invitedBy   User?   @relation("OrganisationAdminInvitationInviter", fields: [invitedById], references: [id], onDelete: SetNull)
 
   acceptedById String?
-  acceptedBy   User? @relation("OrganisationAdminInvitationAcceptedBy", fields: [acceptedById], references: [id], onDelete: SetNull)
+  acceptedBy   User?   @relation("OrganisationAdminInvitationAcceptedBy", fields: [acceptedById], references: [id], onDelete: SetNull)
 
   expiresAt DateTime
   usedAt    DateTime?
@@ -315,12 +395,11 @@ model AuthRateLimitEvent {
   @@index([createdAt])
 }
 
-
 model VerificationToken {
   id String @id @default(cuid())
 
-  purpose   VerificationTokenPurpose
-  tokenHash String                   @unique
+  purpose       VerificationTokenPurpose
+  tokenHash     String                   @unique
   tokenLastFour String?
 
   email String
@@ -354,7 +433,6 @@ model VerificationToken {
   @@index([usedAt])
   @@index([revokedAt])
 }
-
 
 model AuthAccount {
   id                String       @id @default(cuid())
@@ -412,24 +490,24 @@ model AccountNotificationPreference {
 }
 
 model OrganisationAccessRequest {
-  id             String                          @id @default(cuid())
-  organisationName String
-  website        String?
-  industry       String?
-  country        String?
-  contactName    String
-  contactEmail   String
-  contactPhone   String?
-  intendedUse    String
-  expectedVolume String?
-  status         OrganisationAccessRequestStatus @default(PENDING)
-  reviewedAt     DateTime?
-  reviewedById   String?
-  reviewNotes    String?
+  id                      String                          @id @default(cuid())
+  organisationName        String
+  website                 String?
+  industry                String?
+  country                 String?
+  contactName             String
+  contactEmail            String
+  contactPhone            String?
+  intendedUse             String
+  expectedVolume          String?
+  status                  OrganisationAccessRequestStatus @default(PENDING)
+  reviewedAt              DateTime?
+  reviewedById            String?
+  reviewNotes             String?
   convertedOrganisationId String?
-  createdAt      DateTime                        @default(now())
-  updatedAt      DateTime                        @updatedAt
-  adminInvitation OrganisationAdminInvitation?
+  createdAt               DateTime                        @default(now())
+  updatedAt               DateTime                        @updatedAt
+  adminInvitation         OrganisationAdminInvitation?
 
   reviewedBy User? @relation("OrganisationAccessRequestReviewer", fields: [reviewedById], references: [id])
 
@@ -450,13 +528,36 @@ model Organisation {
   reassessmentMode                ReassessmentMode           @default(MANUAL_INVITATION_ONLY)
   participantProfileRetentionDays Int?
 
-  users        User[]
-  campaigns    Campaign[]
-  participants OrganisationParticipant[]
+  users            User[]
+  memberships      OrganisationMembership[]
+  campaigns        Campaign[]
+  participants     OrganisationParticipant[]
   adminInvitations OrganisationAdminInvitation[]
 
   @@index([candidateAccessMode])
   @@index([reassessmentMode])
+}
+
+model OrganisationMembership {
+  id String @id @default(cuid())
+
+  organisationId String
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  role   UserRole
+  status OrganisationMembershipStatus @default(ACTIVE)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organisationId, userId])
+  @@index([organisationId])
+  @@index([userId])
+  @@index([role])
+  @@index([status])
 }
 
 model OrganisationParticipant {
@@ -492,19 +593,19 @@ model OrganisationParticipant {
 }
 
 model Campaign {
-  id               String          @id @default(cuid())
-  name             String
-  status           CampaignStatus  @default(DRAFT)
-  organisationId   String
-  organisation     Organisation    @relation(fields: [organisationId], references: [id])
-  ownerId          String?
-  owner            User?           @relation("CampaignOwner", fields: [ownerId], references: [id])
-  assessmentFormId           String?
-  assessmentForm             AssessmentForm?            @relation(fields: [assessmentFormId], references: [id])
-  candidateResultVisibility  CandidateResultVisibility  @default(SUMMARY_ONLY)
+  id                             String                    @id @default(cuid())
+  name                           String
+  status                         CampaignStatus            @default(DRAFT)
+  organisationId                 String
+  organisation                   Organisation              @relation(fields: [organisationId], references: [id])
+  ownerId                        String?
+  owner                          User?                     @relation("CampaignOwner", fields: [ownerId], references: [id])
+  assessmentFormId               String?
+  assessmentForm                 AssessmentForm?           @relation(fields: [assessmentFormId], references: [id])
+  candidateResultVisibility      CandidateResultVisibility @default(SUMMARY_ONLY)
   candidateResultThresholdConfig Json?
-  createdAt                  DateTime                   @default(now())
-  updatedAt        DateTime        @updatedAt
+  createdAt                      DateTime                  @default(now())
+  updatedAt                      DateTime                  @updatedAt
 
   invitations Invitation[]
   sessions    Session[]
@@ -525,18 +626,32 @@ model ConsumerAssessmentDefault {
 }
 
 model AssessmentForm {
-  id           String          @id @default(cuid())
+  id           String               @id @default(cuid())
   name         String
-  version      Int             @default(1)
-  versionLabel String?         @default("v0.1")
-  isActive     Boolean         @default(false)
-  pilotStatus  PilotFormStatus @default(DRAFT)
-  isLocked     Boolean         @default(false)
+  version      Int                  @default(1)
+  versionLabel String?              @default("v0.1")
+  isActive     Boolean              @default(false)
+  formStatus   AssessmentFormStatus @default(DRAFT)
+  pilotStatus  PilotFormStatus      @default(DRAFT)
+  isLocked     Boolean              @default(false)
 
   domainBlueprint Json?
   timingRules     Json?
   scoringVersion  Int   @default(1)
   reportVersion   Int   @default(1)
+
+  targetBankItemCount Int     @default(0)
+  deliveryItemCount   Int     @default(30)
+  randomizeItems      Boolean @default(true)
+  randomizeOptions    Boolean @default(true)
+
+  createdByAdminId String?
+  createdByAdmin   User?   @relation("AssessmentFormCreatedByAdmin", fields: [createdByAdminId], references: [id], onDelete: SetNull)
+
+  publishedByAdminId String?
+  publishedByAdmin   User?     @relation("AssessmentFormPublishedByAdmin", fields: [publishedByAdminId], references: [id], onDelete: SetNull)
+  publishedAt        DateTime?
+  archivedAt         DateTime?
 
   lockedAt DateTime?
   lockedBy String?
@@ -545,14 +660,21 @@ model AssessmentForm {
   updatedAt DateTime @updatedAt
 
   sections                   AssessmentSection[]
+  sectionAssignments         AssessmentFormSectionResearcherAssignment[]
+  assignedItems              Item[]                                      @relation("ItemAssignedForm")
   items                      FormItemMapping[]
   campaigns                  Campaign[]
   sessions                   Session[]
+  sessionItems               SessionItem[]
   psychometricAnalysisRuns   PsychometricAnalysisRun[]
   consumerAssessmentDefaults ConsumerAssessmentDefault[]
 
+  @@index([formStatus])
   @@index([pilotStatus])
+  @@index([isActive])
   @@index([isLocked])
+  @@index([createdByAdminId])
+  @@index([publishedByAdminId])
   @@index([name, version])
 }
 
@@ -566,14 +688,62 @@ model AssessmentSection {
   timeLimitSec Int
   orderIndex   Int
 
+  targetBankItemCount Int   @default(0)
+  deliveryItemCount   Int   @default(0)
+  difficultyMix       Json?
+
   items          FormItemMapping[]
-  activeSessions Session[]         @relation("CurrentSessionSection")
+  assignments    AssessmentFormSectionResearcherAssignment[]
+  assignedItems  Item[]                                      @relation("ItemAssignedSection")
+  sessionItems   SessionItem[]
+  activeSessions Session[]                                   @relation("CurrentSessionSection")
+
+  @@index([formId])
+  @@index([domain])
+  @@index([type])
+}
+
+model AssessmentFormSectionResearcherAssignment {
+  id String @id @default(cuid())
+
+  formId String
+  form   AssessmentForm @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  sectionId String
+  section   AssessmentSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+
+  researcherId String
+  researcher   User   @relation("FormSectionAssignmentResearcher", fields: [researcherId], references: [id], onDelete: Restrict)
+
+  assignedByAdminId String?
+  assignedByAdmin   User?   @relation("FormSectionAssignmentAssignedByAdmin", fields: [assignedByAdminId], references: [id], onDelete: SetNull)
+
+  targetItemCount Int                         @default(0)
+  status          FormSectionAssignmentStatus @default(ACTIVE)
+  notes           String?
+  dueAt           DateTime?
+  assignedAt      DateTime                    @default(now())
+  completedAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items            Item[]
+  reviewEvents     ItemReviewEvent[]
+  formItemMappings FormItemMapping[]
+
+  @@index([formId])
+  @@index([sectionId])
+  @@index([researcherId])
+  @@index([assignedByAdminId])
+  @@index([status])
 }
 
 model Item {
   id            String           @id @default(cuid())
   domain        AssessmentDomain
   prompt        String
+  stimulus      Json?
   itemType      String
   options       Json?
   correctAnswer Json?
@@ -592,17 +762,109 @@ model Item {
   distractorRationale      Json?
   reviewStatus             ItemReviewStatus        @default(NOT_REVIEWED)
   psychometricStatus       PsychometricItemStatus  @default(DRAFT)
+  calibrationStatus        ItemCalibrationStatus   @default(UNCALIBRATED)
   lastReviewedAt           DateTime?
+
+  difficultyEstimate     Float?
+  difficultyBand         ItemIntendedDifficulty?
+  discriminationEstimate Float?
+  guessingEstimate       Float?
+  exposureCount          Int                     @default(0)
+  responseCount          Int                     @default(0)
+  correctRate            Float?
+  averageResponseTimeMs  Int?
+  rapidGuessingRate      Float?
+  omissionRate           Float?
+  calibratedAt           DateTime?
+
+  createdByUserId String?
+  createdByUser   User?   @relation("ItemCreatedByUser", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  assignedFormId String?
+  assignedForm   AssessmentForm? @relation("ItemAssignedForm", fields: [assignedFormId], references: [id], onDelete: SetNull)
+
+  assignedSectionId String?
+  assignedSection   AssessmentSection? @relation("ItemAssignedSection", fields: [assignedSectionId], references: [id], onDelete: SetNull)
+
+  sourceAssignmentId String?
+  sourceAssignment   AssessmentFormSectionResearcherAssignment? @relation(fields: [sourceAssignmentId], references: [id], onDelete: SetNull)
+
+  submittedByUserId String?
+  submittedByUser   User?     @relation("ItemSubmittedByUser", fields: [submittedByUserId], references: [id], onDelete: SetNull)
+  submittedAt       DateTime?
+
+  reviewedByUserId String?
+  reviewedByUser   User?     @relation("ItemReviewedByUser", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+  reviewedAt       DateTime?
+
+  approvedByUserId String?
+  approvedByUser   User?     @relation("ItemApprovedByUser", fields: [approvedByUserId], references: [id], onDelete: SetNull)
+  approvedAt       DateTime?
+
+  activatedByUserId String?
+  activatedByUser   User?     @relation("ItemActivatedByUser", fields: [activatedByUserId], references: [id], onDelete: SetNull)
+  activatedAt       DateTime?
+
+  retiredByUserId String?
+  retiredByUser   User?     @relation("ItemRetiredByUser", fields: [retiredByUserId], references: [id], onDelete: SetNull)
+  retiredAt       DateTime?
+
+  reviewNotes           String?
+  rejectionReason       String?
+  revisionRequestReason String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   formMappings FormItemMapping[]
   responses    Response[]
+  sessionItems SessionItem[]
+
+  reviewEvents ItemReviewEvent[]
 
   psychometricMetrics ItemPsychometricMetric[]
   distractorMetrics   DistractorPsychometricMetric[]
   psychometricFlags   PsychometricFlag[]
+
+  @@index([domain])
+  @@index([status])
+  @@index([reviewStatus])
+  @@index([psychometricStatus])
+  @@index([calibrationStatus])
+  @@index([intendedDifficulty])
+  @@index([difficultyBand])
+  @@index([createdByUserId])
+  @@index([assignedFormId])
+  @@index([assignedSectionId])
+  @@index([sourceAssignmentId])
+  @@index([approvedByUserId])
+}
+
+model ItemReviewEvent {
+  id String @id @default(cuid())
+
+  itemId String
+  item   Item   @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  actorId String?
+  actor   User?   @relation("ItemReviewEventActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  assignmentId String?
+  assignment   AssessmentFormSectionResearcherAssignment? @relation(fields: [assignmentId], references: [id], onDelete: SetNull)
+
+  action     ItemReviewEventAction
+  fromStatus String?
+  toStatus   String?
+  notes      String?
+  metadata   Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([itemId])
+  @@index([actorId])
+  @@index([assignmentId])
+  @@index([action])
+  @@index([createdAt])
 }
 
 model FormItemMapping {
@@ -615,31 +877,49 @@ model FormItemMapping {
   item       Item                  @relation(fields: [itemId], references: [id])
   orderIndex Int
   status     FormItemMappingStatus @default(ACTIVE)
-  createdAt  DateTime              @default(now())
-  updatedAt  DateTime              @updatedAt
+
+  sourceAssignmentId String?
+  sourceAssignment   AssessmentFormSectionResearcherAssignment? @relation(fields: [sourceAssignmentId], references: [id], onDelete: SetNull)
+
+  activatedByAdminId String?
+  activatedByAdmin   User?     @relation("FormItemMappingActivatedByAdmin", fields: [activatedByAdminId], references: [id], onDelete: SetNull)
+  activatedAt        DateTime?
+  deactivatedAt      DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sessionItems SessionItem[]
 
   @@unique([formId, itemId])
+  @@index([formId])
+  @@index([sectionId])
+  @@index([itemId])
+  @@index([sourceAssignmentId])
+  @@index([activatedByAdminId])
+  @@index([status])
 }
 
 model Invitation {
-  id              String                   @id @default(cuid())
-  campaignId      String
-  campaign        Campaign                 @relation(fields: [campaignId], references: [id])
-  email           String
-  token           String                   @unique
-  status          InvitationStatus         @default(PENDING)
-  candidateUserId String?
-  candidateUser   User?                    @relation("InvitationCandidate", fields: [candidateUserId], references: [id])
-  participantId   String?
-  participant     OrganisationParticipant? @relation(fields: [participantId], references: [id], onDelete: SetNull)
-  createdAt       DateTime                 @default(now())
-  expiresAt       DateTime?
-  usedAt          DateTime?
-  emailDeliveryStatus EmailDeliveryStatus @default(NOT_SENT)
+  id                  String                   @id @default(cuid())
+  campaignId          String
+  campaign            Campaign                 @relation(fields: [campaignId], references: [id])
+  email               String
+  token               String                   @unique
+  status              InvitationStatus         @default(PENDING)
+  candidateUserId     String?
+  candidateUser       User?                    @relation("InvitationCandidate", fields: [candidateUserId], references: [id])
+  participantId       String?
+  participant         OrganisationParticipant? @relation(fields: [participantId], references: [id], onDelete: SetNull)
+  createdAt           DateTime                 @default(now())
+  expiresAt           DateTime?
+  usedAt              DateTime?
+  emailDeliveryStatus EmailDeliveryStatus      @default(NOT_SENT)
   lastEmailSentAt     DateTime?
   lastEmailFailure    String?
-  sessions Session[]
-  verificationTokens VerificationToken[]
+  sessions            Session[]
+  verificationTokens  VerificationToken[]
+
   @@index([participantId])
 }
 
@@ -672,16 +952,65 @@ model Session {
   currentSectionOrder        Int?
   sectionStartedAt           DateTime?
   sectionEndsAt              DateTime?
-  createdAt                  DateTime                 @default(now())
-  updatedAt                  DateTime                 @updatedAt
+
+  requestedItemCount    Int?
+  selectedItemCount     Int?
+  isReducedLength       Boolean @default(false)
+  randomizationSeed     String?
+  itemSelectionSnapshot Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   responses               Response[]
+  selectedItems           SessionItem[]
   score                   Score?
   psychometricScoreResult PsychometricScoreResult?
   report                  Report[]
 
   @@index([participantId])
   @@index([applicantEmail])
+  @@index([assessmentFormId])
+  @@index([status])
+}
+
+model SessionItem {
+  id String @id @default(cuid())
+
+  sessionId String
+  session   Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  formId String
+  form   AssessmentForm @relation(fields: [formId], references: [id], onDelete: Restrict)
+
+  sectionId String
+  section   AssessmentSection @relation(fields: [sectionId], references: [id], onDelete: Restrict)
+
+  mappingId String?
+  mapping   FormItemMapping? @relation(fields: [mappingId], references: [id], onDelete: SetNull)
+
+  itemId String
+  item   Item   @relation(fields: [itemId], references: [id], onDelete: Restrict)
+
+  position        Int
+  sectionPosition Int
+  status          SessionItemStatus @default(SELECTED)
+
+  selectedAt  DateTime  @default(now())
+  presentedAt DateTime?
+  answeredAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([sessionId, itemId])
+  @@unique([sessionId, position])
+  @@index([sessionId])
+  @@index([formId])
+  @@index([sectionId])
+  @@index([mappingId])
+  @@index([itemId])
+  @@index([status])
 }
 
 model Response {
@@ -1003,6 +1332,12 @@ enum OrganisationAdminInvitationStatus {
   CANCELLED
 }
 
+enum OrganisationMembershipStatus {
+  ACTIVE
+  SUSPENDED
+  REVOKED
+}
+
 enum InvitationStatus {
   PENDING
   ACCEPTED
@@ -1047,6 +1382,9 @@ enum PsychometricScoringMode {
   IRT_3PL_PROVISIONAL
   MULTIDIMENSIONAL_PROVISIONAL
   HYBRID_RESEARCH
+  HYBRID_PSYCHOMETRIC_IQ
+  ML_VALIDITY_ASSISTED_EXPERIMENTAL
+  ML_ABILITY_ESTIMATION_EXPERIMENTAL
 }
 
 model PsychometricScoreResult {
@@ -1063,6 +1401,12 @@ model PsychometricScoreResult {
   overallTheta           Float?
   overallStandardScore   Float?
   overallPercentile      Float?
+  overallIqScore         Float?
+  overallIqPercentile    Float?
+  overallIqCi90Lower     Float?
+  overallIqCi90Upper     Float?
+  overallIqScaleMean     Float                 @default(100)
+  overallIqScaleSd       Float                 @default(15)
   overallScoreBand       PsychometricScoreBand
   overallStandardError   Float?
   overallCi90Lower       Float?
@@ -1085,6 +1429,19 @@ model PsychometricScoreResult {
   inputHash          String?
   warnings           Json
 
+  scoringEngineVersion String @default("iqmeridian-cognitive-intelligence-engine.0.1.0")
+  scoringModelFamily   String @default("HYBRID_PSYCHOMETRIC")
+  scoringModelVersion  String @default("hybrid-psychometric-iq.0.1.0")
+  featureSetVersion    String @default("iqmeridian-feature-set.0.1.0")
+
+  scoringSignalsUsed    Json?
+  scoringFeatureVector  Json?
+  scoringFeatureSummary Json?
+
+  validityAdjusted                Boolean @default(false)
+  leaderboardEligible             Boolean @default(false)
+  leaderboardIneligibilityReasons Json?
+
   domainScores  PsychometricDomainScore[]
   validityFlags PsychometricValidityFlag[]
 
@@ -1093,7 +1450,12 @@ model PsychometricScoreResult {
 
   @@index([scoringStatus])
   @@index([overallScoreBand])
+  @@index([overallIqScore])
+  @@index([leaderboardEligible])
   @@index([modelVersion])
+  @@index([scoringModelFamily])
+  @@index([scoringModelVersion])
+  @@index([featureSetVersion])
   @@index([generatedAt])
 }
 
@@ -1111,6 +1473,12 @@ model PsychometricDomainScore {
   theta           Float?
   standardScore   Float?
   percentile      Float?
+  iqScore         Float?
+  iqPercentile    Float?
+  iqCi90Lower     Float?
+  iqCi90Upper     Float?
+  iqScaleMean     Float                 @default(100)
+  iqScaleSd       Float                 @default(15)
   scoreBand       PsychometricScoreBand
   standardError   Float?
   ci90Lower       Float?
@@ -1118,12 +1486,14 @@ model PsychometricDomainScore {
   testInformation Float?
   reliability     Float?
   interpretation  String
+  featureVector   Json?
 
   createdAt DateTime @default(now())
 
   @@unique([resultId, domain])
   @@index([domain])
   @@index([scoreBand])
+  @@index([iqScore])
 }
 
 model PsychometricValidityFlag {

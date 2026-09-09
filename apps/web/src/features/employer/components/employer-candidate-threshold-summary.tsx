@@ -21,14 +21,16 @@ const classificationOrder: CandidateThresholdClassification[] = [
   'not_completed',
 ];
 
-const classificationClassName: Record<CandidateThresholdClassification, string> =
-  {
-    meets_filter: 'border-emerald-300/20 bg-emerald-400/10 text-emerald-100',
-    below_filter: 'border-amber-300/20 bg-amber-400/10 text-amber-100',
-    review_required: 'border-red-300/20 bg-red-400/10 text-red-100',
-    not_scored: 'border-slate-300/15 bg-white/[0.04] text-slate-300',
-    not_completed: 'border-blue-300/20 bg-blue-400/10 text-blue-100',
-  };
+const classificationClassName: Record<
+  CandidateThresholdClassification,
+  string
+> = {
+  meets_filter: 'border-emerald-300/20 bg-emerald-400/10 text-emerald-100',
+  below_filter: 'border-amber-300/20 bg-amber-400/10 text-amber-100',
+  review_required: 'border-red-300/20 bg-red-400/10 text-red-100',
+  not_scored: 'border-slate-300/15 bg-white/[0.04] text-slate-300',
+  not_completed: 'border-blue-300/20 bg-blue-400/10 text-blue-100',
+};
 
 const getCandidateName = (session: EmployerSessionSummary) => {
   return (
@@ -58,13 +60,13 @@ export const EmployerCandidateThresholdSummary = ({
       review_required: 0,
       not_scored: 0,
       not_completed: 0,
-    },
+    }
   );
 
   const classifiedSessions = sessions.map((session) => {
     const classification = classifyEmployerSessionByThresholds(
       session,
-      thresholdConfig,
+      thresholdConfig
     );
 
     counts[classification] += 1;
@@ -148,9 +150,7 @@ export const EmployerCandidateThresholdSummary = ({
                     <span
                       className={`inline-flex rounded-full border px-3 py-1 text-xs font-black ${classificationClassName[classification]}`}
                     >
-                      {getCandidateThresholdClassificationLabel(
-                        classification,
-                      )}
+                      {getCandidateThresholdClassificationLabel(classification)}
                     </span>
                   </td>
                 </tr>

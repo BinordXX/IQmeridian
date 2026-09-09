@@ -1,0 +1,172 @@
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\api\assessment\[...path]\route.ts:18: '/sessions/result-access',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\assessment\result\[token]\page.tsx:1: import { CandidateResultAccessLoader } from '@/features/assessment/components/candidate-result-access-loader';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\assessment\status\page.tsx:2: import { CompletedResultAccess } from '@/features/assessment/components/completed-result-access';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\_components\dashboard-sidebar-shell.tsx:56: label: 'Results',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\_components\dashboard-sidebar-shell.tsx:235: Manage your IQMeridian assessment activity and results.
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\consumer-dashboard-api.ts:36: psychometricScore?: ConsumerPsychometricScoreResult | null;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\consumer-dashboard-api.ts:37: psychometricScoreResult?: ConsumerPsychometricScoreResult | null;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\consumer-dashboard-api.ts:48: standardScore: number | null;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\consumer-dashboard-api.ts:49: percentile: number | null;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\consumer-dashboard-api.ts:50: scoreBand: string;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\consumer-dashboard-api.ts:68: export type ConsumerPsychometricScoreResult = {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\consumer-dashboard-api.ts:77: overallStandardScore: number | null;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\consumer-dashboard-api.ts:78: overallPercentile: number | null;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\consumer-dashboard-api.ts:79: overallScoreBand: string;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\consumer-dashboard-api.ts:99: validityFlags: ConsumerPsychometricValidityFlag[];
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\consumer-dashboard-api.ts:183: session.psychometricScore ?? session.psychometricScoreResult ?? null,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\consumer-dashboard-api.ts:225: return requestApi<ConsumerPsychometricScoreResult | null>(
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:74: const formatScoreBand = (value?: string | null) => {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:95: const formatPercentile = (value?: number | null) => {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:98: return `${Math.round(value)}th percentile`;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:115: const formatStandardScoreInterval = (
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:123: const lowerStandardScore =
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:125: const upperStandardScore =
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:127: const rawIntervalWidth = upperStandardScore - lowerStandardScore;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:131: lowerStandardScore < STANDARD_SCORE_MIN ||
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:132: upperStandardScore > STANDARD_SCORE_MAX
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:139: Math.min(STANDARD_SCORE_MAX, lowerStandardScore)
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:144: Math.min(STANDARD_SCORE_MAX, upperStandardScore)
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:157: validityFlags:
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:164: if (!validityFlags?.length) {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:168: return validityFlags.reduce<string | null>((highest, flag) => {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:181: validityFlags:
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:188: const highestSeverity = getHighestValiditySeverity(validityFlags);
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:198: validityFlags:
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:205: const highestSeverity = getHighestValiditySeverity(validityFlags);
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:223: validityFlags:
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:230: const highestSeverity = getHighestValiditySeverity(validityFlags);
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:277: (left, right) => (right.standardScore ?? 0) - (left.standardScore ?? 0)
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:540: ? formatScoreBand(currentProfileScore.overallScoreBand)
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:563: {formatWholeNumber(currentProfileScore?.overallStandardScore)}
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:569: Percentile
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:572: {formatPercentile(currentProfileScore?.overallPercentile)}
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:600: ? currentProfileScore.validityFlags.length
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:609: currentProfileScore.validityFlags
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:613: {getAttemptQualityLabel(currentProfileScore.validityFlags)}
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:617: currentProfileScore.validityFlags
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:914: {formatScoreBand(
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:916: .overallScoreBand
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:940: .overallStandardScore
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:947: Percentile
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:950: {formatPercentile(
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:952: .overallPercentile
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:974: {formatStandardScoreInterval(
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:986: assessmentSession.psychometricScore.validityFlags
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:991: assessmentSession.psychometricScore.validityFlags
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:996: assessmentSession.psychometricScore.validityFlags
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\employer\results\page.tsx:4: export default function EmployerResultsPage() {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\employer\results\page.tsx:16: Results
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\employer\results\page.tsx:34: Review campaign results
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\employer\results\page.tsx:46: Results are accessed from the campaign workspace where invitations,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\employer\_components\employer-sidebar-shell.tsx:62: label: 'Results',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\employer\_components\employer-sidebar-shell.tsx:64: href: '/employer/results',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_data\internal-tooling-data.ts:495: export type InternalScoreBand =
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_data\internal-tooling-data.ts:546: overallBand: InternalScoreBand | null;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\research-governance\page.tsx:20: 'Standard score, percentile, and score interval outputs require norming before certified IQ interpretation.',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\resources\page.tsx:18: 'How percentiles should be interpreted',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\terms\page.tsx:14: 'IQMeridian’s current assessment and scoring outputs are provisional and should not be treated as certified IQ results.',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\_components\public-homepage-effects.tsx:230: value: 'standard score + percentile + interval',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\page.tsx:62: 'Present standard score, percentile, strongest domains, score band, attempt quality, and score interval language in one dashboard.',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\page.tsx:152: 'The scoring pipeline generates raw, domain, validity, percentile, and standard-score outputs.',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\page.tsx:654: ['Percentile', '48th'],
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\api\assessment-api.ts:14: type CandidateResultSummaryResult,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\api\assessment-api.ts:96: standardScore: number | null;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\api\assessment-api.ts:97: percentile: number | null;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\api\assessment-api.ts:98: scoreBand: string;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\api\assessment-api.ts:116: export type AssessmentPsychometricScoreResult = {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\api\assessment-api.ts:125: overallStandardScore: number | null;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\api\assessment-api.ts:126: overallPercentile: number | null;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\api\assessment-api.ts:127: overallScoreBand: string;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\api\assessment-api.ts:147: validityFlags: AssessmentPsychometricValidityFlag[];
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\api\assessment-api.ts:198: resultAccess: '/sessions/result-access',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\api\assessment-api.ts:244: candidateResultSummary: (sessionId: string, hasSessionAccessToken = false) =>
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\api\assessment-api.ts:567: export const getCandidateResultSummary = async (
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\api\assessment-api.ts:570: ): Promise<CandidateResultSummaryResult> => {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\api\assessment-api.ts:573: return assessmentRequest<CandidateResultSummaryResult>(
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\api\assessment-api.ts:574: assessmentEndpoints.candidateResultSummary(
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\api\assessment-api.ts:588: ): Promise<AssessmentPsychometricScoreResult | null> => {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\api\assessment-api.ts:589: return assessmentRequest<AssessmentPsychometricScoreResult | null>(
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\components\candidate-report-loader.tsx:8: getCandidateResultSummary,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\components\candidate-report-loader.tsx:10: import type { CandidateResultSummaryResult } from '../contracts/assessment-contracts';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\components\candidate-report-loader.tsx:11: import { CandidateResultSummary } from './candidate-result-summary';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\components\candidate-report-loader.tsx:18: reason?: CandidateResultSummaryResult['reason'],
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\components\candidate-report-loader.tsx:19: audience?: CandidateResultSummaryResult['audience']
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\components\candidate-report-loader.tsx:43: : 'Candidate results are hidden',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\components\candidate-report-loader.tsx:105: const [summary, setSummary] = useState<CandidateResultSummaryResult | null>(
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\components\candidate-report-loader.tsx:119: const result = await getCandidateResultSummary(
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\components\candidate-report-loader.tsx:197: <CandidateResultSummary
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\components\candidate-result-access-loader.tsx:20: return 'This result link could not be validated because the result-access endpoint is being treated as a protected route.';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\components\candidate-result-access-loader.tsx:28: return 'Candidate-facing results are not currently available for this assessment. The employer or assessment administrator may have changed the result visibility setting.';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\components\candidate-result-summary.tsx:3: type CandidateResultSummaryProps = {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\components\candidate-result-summary.tsx:14: export const CandidateResultSummary = ({
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\components\candidate-result-summary.tsx:19: }: CandidateResultSummaryProps) => {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\components\completed-result-access.tsx:8: getCandidateResultSummary,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\components\completed-result-access.tsx:10: import type { CandidateResultSummaryResult } from '../contracts/assessment-contracts';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\components\completed-result-access.tsx:18: reason?: CandidateResultSummaryResult['reason'],
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\components\completed-result-access.tsx:37: return 'Immediate candidate results are not enabled for this employer-invited assessment. If results or feedback are released, they will be communicated through the process defined by the assessment administrator.';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\components\completed-result-access.tsx:44: const [summary, setSummary] = useState<CandidateResultSummaryResult | null>(
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\components\completed-result-access.tsx:62: const result = await getCandidateResultSummary(
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\components\live-assessment-shell.tsx:17: getCandidateResultSummary,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\components\live-assessment-shell.tsx:89: const summary = await getCandidateResultSummary(sessionId);
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\contracts\assessment-contracts.ts:198: export type CandidateResultSummaryAudience = 'employer-invited' | 'consumer';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\contracts\assessment-contracts.ts:200: export type CandidateResultSummaryResult = {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\contracts\assessment-contracts.ts:202: audience?: CandidateResultSummaryAudience;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\api\employer-dashboard-api.ts:17: export type PsychometricScoreBand =
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\api\employer-dashboard-api.ts:26: export const psychometricScoreBandOptions: Array<{
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\api\employer-dashboard-api.ts:27: value: PsychometricScoreBand;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\api\employer-dashboard-api.ts:41: minimumOverallBand: PsychometricScoreBand | null;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\api\employer-dashboard-api.ts:42: minimumAbstractReasoningBand: PsychometricScoreBand | null;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\api\employer-dashboard-api.ts:43: minimumNumericalReasoningBand: PsychometricScoreBand | null;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\api\employer-dashboard-api.ts:45: requireNoHighSeverityValidityFlags: boolean;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\api\employer-dashboard-api.ts:126: scoreBand?: PsychometricScoreBand | string;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\api\employer-dashboard-api.ts:127: standardScore?: number | null;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\api\employer-dashboard-api.ts:128: percentile?: number | null;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\api\employer-dashboard-api.ts:132: export type EmployerPsychometricValidityFlagSummary = {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\api\employer-dashboard-api.ts:140: export type EmployerPsychometricScoreResultSummary = {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\api\employer-dashboard-api.ts:144: overallScoreBand: PsychometricScoreBand | string;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\api\employer-dashboard-api.ts:145: overallStandardScore?: number | null;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\api\employer-dashboard-api.ts:146: overallPercentile?: number | null;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\api\employer-dashboard-api.ts:150: validityFlags?: EmployerPsychometricValidityFlagSummary[];
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\api\employer-dashboard-api.ts:186: psychometricScoreResult?: EmployerPsychometricScoreResultSummary | null;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\api\employer-dashboard-api.ts:199: reportReadyResults: number;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\api\employer-dashboard-api.ts:385: const reportReadyResults = sessions.filter((session) => {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\api\employer-dashboard-api.ts:386: return Boolean(session.psychometricScoreResult ?? session.score);
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\api\employer-dashboard-api.ts:404: reportReadyResults,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-campaign-detail.tsx:336: These results provide structured evidence from this assessment only.
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-campaign-list.tsx:54: psychometric results.
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-campaign-result-overview.tsx:67: No scored results are available yet for this campaign.
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-candidate-report.tsx:237: Use these results alongside interviews, role-relevant work evidence,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-candidate-threshold-summary.tsx:142: {session.psychometricScoreResult?.overallScoreBand ??
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-dashboard-overview.tsx:169: label="Report-ready results"
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-dashboard-overview.tsx:170: value={data.metrics.reportReadyResults}
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-result-threshold-control.tsx:8: PsychometricScoreBand,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-result-threshold-control.tsx:10: import { psychometricScoreBandOptions } from '../api/employer-dashboard-api';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-result-threshold-control.tsx:19: const nullableBand = (value: string): PsychometricScoreBand | null => {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-result-threshold-control.tsx:20: return value ? (value as PsychometricScoreBand) : null;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-result-threshold-control.tsx:170: {psychometricScoreBandOptions.map((option) => (
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-result-threshold-control.tsx:193: {psychometricScoreBandOptions.map((option) => (
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-result-threshold-control.tsx:216: {psychometricScoreBandOptions.map((option) => (
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-result-threshold-control.tsx:253: checked={formState.requireNoHighSeverityValidityFlags}
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-result-threshold-control.tsx:256: 'requireNoHighSeverityValidityFlags',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-result-visibility-control.tsx:29: title: 'Candidate results hidden',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-result-visibility-control.tsx:30: body: 'Candidates see submission confirmation only. Employer-facing reports and scored campaign results remain available to authorised employer users.',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-result-visibility-control.tsx:125: Employer-facing results remain available to authorised employer users.
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-result-visibility-control.tsx:150: Hide candidate results after completion
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\utils\employer-candidate-thresholds.ts:4: PsychometricScoreBand,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\utils\employer-candidate-thresholds.ts:21: requireNoHighSeverityValidityFlags: false,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\utils\employer-candidate-thresholds.ts:24: const scoreBandOrder: PsychometricScoreBand[] = [
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\utils\employer-candidate-thresholds.ts:39: return scoreBandOrder.indexOf(band as PsychometricScoreBand);
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\utils\employer-candidate-thresholds.ts:44: minimumBand?: PsychometricScoreBand | null,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\utils\employer-candidate-thresholds.ts:77: requireNoHighSeverityValidityFlags:
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\utils\employer-candidate-thresholds.ts:78: value.requireNoHighSeverityValidityFlags ??
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\utils\employer-candidate-thresholds.ts:79: defaultCandidateResultThresholdConfig.requireNoHighSeverityValidityFlags,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\utils\employer-candidate-thresholds.ts:83: const getDomainScoreBand = (
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\utils\employer-candidate-thresholds.ts:88: session.psychometricScoreResult?.domainScores?.find((domainScore) => {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\utils\employer-candidate-thresholds.ts:90: })?.scoreBand ?? null
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\utils\employer-candidate-thresholds.ts:96: session.psychometricScoreResult?.validityFlags?.some((flag) => {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\utils\employer-candidate-thresholds.ts:112: if (!session.psychometricScoreResult) {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\utils\employer-candidate-thresholds.ts:121: config.requireNoHighSeverityValidityFlags &&
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\utils\employer-candidate-thresholds.ts:128: session.psychometricScoreResult.overallScoreBand,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\utils\employer-candidate-thresholds.ts:133: getDomainScoreBand(session, 'ABSTRACT_REASONING'),
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\utils\employer-candidate-thresholds.ts:138: getDomainScoreBand(session, 'NUMERICAL_REASONING'),
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\lib\public-seo.ts:23: 'percentile profile',

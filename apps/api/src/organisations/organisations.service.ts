@@ -4,10 +4,48 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { UserRole } from '@prisma/client';
-import { RequestUser } from '../auth/request-user.type';
+import {
+  OrganisationMembershipStatus,
+  UserRole,
+  UserStatus,
+} from '@prisma/client';
+
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
+type RequestUser = {
+  id: string;
+  email: string;
+  name: string | null;
+  role: string;
+  roles?: string[];
+  status: string;
+  organisationId?: string | null;
+  organisationMemberships?: {
+    organisationId: string;
+    role: string;
+    status: string;
+  }[];
+  authSessionId: string;
+};
+
+function hasRole(user: RequestUser, role: UserRole) {
+  return user.role === role || user.roles?.includes(role) === true;
+}
+
+function hasActiveOrganisationRole(
+  user: RequestUser,
+  organisationId: string,
+  role: UserRole,
+) {
+  return (
+    user.organisationMemberships?.some(
+      (membership) =>
+        membership.organisationId === organisationId &&
+        membership.role === role &&
+        membership.status === 'ACTIVE',
+    ) === true
+  );
+}
 
 @Injectable()
 export class OrganisationsService {
@@ -56,6 +94,26 @@ export class OrganisationsService {
       },
     });
   }
+  private assertCanReadOrganisation(user: RequestUser, organisationId: string) {
+    if (hasRole(user, UserRole.PLATFORM_ADMIN)) {
+      return;
+    }
+
+    if (
+      user.role === UserRole.EMPLOYER_ADMIN &&
+      user.organisationId === organisationId
+    ) {
+      return;
+    }
+
+    if (
+      hasActiveOrganisationRole(user, organisationId, UserRole.EMPLOYER_ADMIN)
+    ) {
+      return;
+    }
+
+    throw new ForbiddenException('Not authorised for this organisation');
+  }
 
   async findOrganisationById(id: string, user: RequestUser) {
     this.assertCanReadOrganisation(user, id);
@@ -94,8 +152,10 @@ export class OrganisationsService {
       email: '',
       name: null,
       role: UserRole.PLATFORM_ADMIN,
-      status: 'ACTIVE',
+      roles: [UserRole.PLATFORM_ADMIN],
+      status: UserStatus.ACTIVE,
       organisationId: null,
+      organisationMemberships: [],
       authSessionId: '',
     });
 
@@ -127,8 +187,10 @@ export class OrganisationsService {
       email: '',
       name: null,
       role: UserRole.PLATFORM_ADMIN,
-      status: 'ACTIVE',
+      roles: [UserRole.PLATFORM_ADMIN],
+      status: UserStatus.ACTIVE,
       organisationId: null,
+      organisationMemberships: [],
       authSessionId: '',
     });
 
@@ -140,6 +202,7 @@ export class OrganisationsService {
         id: true,
         role: true,
         status: true,
+        organisationId: true,
       },
     });
 
@@ -162,17 +225,38 @@ export class OrganisationsService {
       );
     }
 
-    if (targetUser.status !== 'ACTIVE') {
+    if (targetUser.status !== UserStatus.ACTIVE) {
       throw new BadRequestException(
         'Only active users can be attached as employer admins.',
       );
     }
 
+    await this.prisma.organisationMembership.upsert({
+      where: {
+        organisationId_userId: {
+          organisationId,
+          userId,
+        },
+      },
+      create: {
+        organisationId,
+        userId,
+        role: UserRole.EMPLOYER_ADMIN,
+        status: OrganisationMembershipStatus.ACTIVE,
+      },
+      update: {
+        role: UserRole.EMPLOYER_ADMIN,
+        status: OrganisationMembershipStatus.ACTIVE,
+      },
+    });
+
     const user = await this.prisma.user.update({
       where: { id: userId },
       data: {
-        organisationId,
-        role: UserRole.EMPLOYER_ADMIN,
+        ...(targetUser.organisationId ? {} : { organisationId }),
+        ...(targetUser.role === UserRole.EMPLOYER_ADMIN
+          ? {}
+          : { role: targetUser.role }),
       },
       select: {
         id: true,
@@ -186,6 +270,14 @@ export class OrganisationsService {
         createdAt: true,
         updatedAt: true,
         organisation: true,
+        organisationMemberships: {
+          where: {
+            status: OrganisationMembershipStatus.ACTIVE,
+          },
+          include: {
+            organisation: true,
+          },
+        },
       },
     });
 
@@ -197,24 +289,10 @@ export class OrganisationsService {
       metadata: {
         organisationId,
         assignedRole: UserRole.EMPLOYER_ADMIN,
+        accessModel: 'organisation_membership',
       },
     });
 
     return user;
-  }
-
-  private assertCanReadOrganisation(user: RequestUser, organisationId: string) {
-    if (user.role === UserRole.PLATFORM_ADMIN) {
-      return;
-    }
-
-    if (
-      user.role === UserRole.EMPLOYER_ADMIN &&
-      user.organisationId === organisationId
-    ) {
-      return;
-    }
-
-    throw new ForbiddenException('Not authorised for this organisation');
   }
 }

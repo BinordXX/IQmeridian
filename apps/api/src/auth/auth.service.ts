@@ -19,6 +19,7 @@ import {
   UserStatus,
   OrganisationAdminInvitationStatus,
   VerificationTokenPurpose,
+  OrganisationMembershipStatus,
 } from '@prisma/client';
 
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
@@ -46,14 +47,24 @@ type RequestMetadata = {
   userAgent?: string;
 };
 
+type SafeUserOrganisationMembership = {
+  id: string;
+  organisationId: string;
+  organisationName: string | null;
+  role: UserRole;
+  status: OrganisationMembershipStatus;
+};
+
 type SafeUser = {
   id: string;
   email: string;
   name: string | null;
   role: UserRole;
+  roles: UserRole[];
   status: UserStatus;
   organisationId: string | null;
   organisationName: string | null;
+  organisationMemberships: SafeUserOrganisationMembership[];
   emailVerifiedAt: Date | null;
   lastLoginAt: Date | null;
   createdAt: Date;
@@ -269,12 +280,13 @@ export class AuthService {
         },
         select: {
           id: true,
+          role: true,
         },
       });
 
       if (existingUser) {
         throw new ConflictException(
-          'An account with this email already exists. Sign in or contact platform support before using this invitation.',
+          'This email is already registered on IQMeridian. Employer-admin invitations must be accepted with a separate organisation/work email that is not already used for a consumer, candidate, researcher, or platform-admin account.',
         );
       }
 
@@ -282,6 +294,7 @@ export class AuthService {
         dto.password,
       );
       const name = dto.name?.trim() || null;
+      const now = new Date();
 
       const result = await this.prisma.$transaction(async (tx) => {
         const tokenClaim = await tx.verificationToken.updateMany({
@@ -290,11 +303,11 @@ export class AuthService {
             usedAt: null,
             revokedAt: null,
             expiresAt: {
-              gt: new Date(),
+              gt: now,
             },
           },
           data: {
-            usedAt: new Date(),
+            usedAt: now,
           },
         });
 
@@ -312,6 +325,7 @@ export class AuthService {
             organisationId: invitation.organisationId,
             passwordHash,
             status: UserStatus.ACTIVE,
+            emailVerifiedAt: now,
           },
         });
 
@@ -321,6 +335,7 @@ export class AuthService {
             provider: AuthProvider.LOCAL,
             providerAccountId: email,
             email,
+            emailVerifiedAt: now,
           },
         });
 
@@ -334,7 +349,7 @@ export class AuthService {
             data: {
               status: OrganisationAdminInvitationStatus.ACCEPTED,
               acceptedById: user.id,
-              usedAt: new Date(),
+              usedAt: now,
             },
           },
         );
@@ -359,6 +374,7 @@ export class AuthService {
           invitationId: invitation.id,
           organisationId: invitation.organisationId,
           role: result.user.role,
+          accountSeparation: 'strict',
         },
       );
 
@@ -1601,26 +1617,62 @@ export class AuthService {
   }
 
   private async toSafeUser(user: User): Promise<SafeUser> {
-    const organisation = user.organisationId
-      ? await this.prisma.organisation.findUnique({
-          where: {
-            id: user.organisationId,
+    const [organisation, organisationMemberships] = await Promise.all([
+      user.organisationId
+        ? this.prisma.organisation.findUnique({
+            where: {
+              id: user.organisationId,
+            },
+            select: {
+              id: true,
+              name: true,
+            },
+          })
+        : Promise.resolve(null),
+      this.prisma.organisationMembership.findMany({
+        where: {
+          userId: user.id,
+          status: OrganisationMembershipStatus.ACTIVE,
+        },
+        include: {
+          organisation: {
+            select: {
+              id: true,
+              name: true,
+            },
           },
-          select: {
-            id: true,
-            name: true,
-          },
-        })
-      : null;
+        },
+        orderBy: {
+          createdAt: 'asc',
+        },
+      }),
+    ]);
+
+    const safeMemberships = organisationMemberships.map((membership) => ({
+      id: membership.id,
+      organisationId: membership.organisationId,
+      organisationName: membership.organisation.name,
+      role: membership.role,
+      status: membership.status,
+    }));
+
+    const roles = Array.from(
+      new Set<UserRole>([
+        user.role,
+        ...safeMemberships.map((membership) => membership.role),
+      ]),
+    );
 
     return {
       id: user.id,
       email: user.email,
       name: user.name,
       role: user.role,
+      roles,
       status: user.status,
       organisationId: user.organisationId,
       organisationName: organisation?.name ?? null,
+      organisationMemberships: safeMemberships,
       emailVerifiedAt: user.emailVerifiedAt,
       lastLoginAt: user.lastLoginAt,
       createdAt: user.createdAt,

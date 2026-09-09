@@ -74,7 +74,7 @@ export class CampaignsController {
       req.user,
     );
   }
-    @Roles('PLATFORM_ADMIN', 'EMPLOYER_ADMIN')
+  @Roles('PLATFORM_ADMIN', 'EMPLOYER_ADMIN')
   @Patch(':id/candidate-result-visibility')
   updateCandidateResultVisibility(
     @Param() params: CampaignIdParamDto,
@@ -87,7 +87,7 @@ export class CampaignsController {
       req.user,
     );
   }
-    @Roles('PLATFORM_ADMIN', 'EMPLOYER_ADMIN')
+  @Roles('PLATFORM_ADMIN', 'EMPLOYER_ADMIN')
   @Patch(':id/candidate-result-thresholds')
   updateCandidateResultThresholds(
     @Param() params: CampaignIdParamDto,

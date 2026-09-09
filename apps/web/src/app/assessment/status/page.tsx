@@ -15,7 +15,6 @@ type AssessmentStatusReason =
   | 'submit-failed'
   | 'error';
 
-
 type CandidateAudience = 'employer-invited' | 'consumer';
 
 type AssessmentStatusPageProps = {
@@ -47,8 +46,6 @@ const normaliseReason = (reason?: string): AssessmentStatusReason => {
       return 'error';
   }
 };
-
-
 
 const normaliseAudience = (audience?: string): CandidateAudience => {
   return audience === 'consumer' ? 'consumer' : 'employer-invited';
@@ -195,8 +192,6 @@ export default async function AssessmentStatusPage({
   const audience = normaliseAudience(params.audience);
   const copy = getStatusCopy(reason);
 
-
-
   return (
     <main className="min-h-screen bg-[#020817] px-4 py-6 text-white sm:px-6 sm:py-12">
       <section className="mx-auto w-full max-w-3xl rounded-[1.5rem] border border-cyan-300/15 bg-[#07142f]/95 p-5 shadow-[0_24px_90px_rgba(0,0,0,0.36)] sm:rounded-[2rem] sm:p-8">
@@ -226,7 +221,7 @@ export default async function AssessmentStatusPage({
           </div>
         ) : null}
 
-               {reason === 'completed' ? (
+        {reason === 'completed' ? (
           <CompletedResultAccess
             sessionId={params.sessionId}
             audience={audience}

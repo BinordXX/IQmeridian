@@ -5,9 +5,13 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { AuthSessionStatus, UserStatus } from '@prisma/client';
+import {
+  AuthSessionStatus,
+  OrganisationMembershipStatus,
+  UserStatus,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { RequestUser } from './request-user.type';
+import { RequestUser, RoleName } from './request-user.type';
 import { TokenService } from './token.service';
 
 type RequestWithAuth = {
@@ -48,7 +52,23 @@ export class JwtAuthGuard implements CanActivate {
         },
       },
       include: {
-        user: true,
+        user: {
+          include: {
+            organisationMemberships: {
+              where: {
+                status: OrganisationMembershipStatus.ACTIVE,
+              },
+              include: {
+                organisation: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+        },
       },
     });
 
@@ -60,13 +80,31 @@ export class JwtAuthGuard implements CanActivate {
       throw new ForbiddenException('This account is not active.');
     }
 
+    const organisationMemberships =
+      authSession.user.organisationMemberships.map((membership) => ({
+        id: membership.id,
+        organisationId: membership.organisationId,
+        organisationName: membership.organisation.name,
+        role: membership.role,
+        status: membership.status,
+      }));
+
+    const roles = Array.from(
+      new Set<RoleName>([
+        authSession.user.role,
+        ...organisationMemberships.map((membership) => membership.role),
+      ]),
+    );
+
     request.user = {
       id: authSession.user.id,
       email: authSession.user.email,
       name: authSession.user.name,
       role: authSession.user.role,
+      roles,
       status: authSession.user.status,
       organisationId: authSession.user.organisationId,
+      organisationMemberships,
       authSessionId: authSession.id,
     };
 

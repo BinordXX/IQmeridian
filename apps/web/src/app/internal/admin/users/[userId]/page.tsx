@@ -43,6 +43,47 @@ const formatDate = (value?: string | null) => {
   }).format(new Date(value));
 };
 
+function DetailField({
+  label,
+  value,
+  mono = false,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+}) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-[#020817]/70 px-4 py-3">
+      <dt className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">
+        {label}
+      </dt>
+      <dd
+        className={[
+          'mt-2 break-all font-bold text-white',
+          mono ? 'font-mono text-xs' : 'text-sm',
+        ].join(' ')}
+      >
+        {value}
+      </dd>
+    </div>
+  );
+}
+
+function AdminFormCard({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <article className="rounded-[2rem] border border-white/10 bg-[#07142f]/90 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.24)]">
+      <h2 className="text-lg font-black text-white">{title}</h2>
+      {children}
+    </article>
+  );
+}
+
 export default async function InternalAdminUserDetailPage({
   params,
   searchParams,
@@ -63,93 +104,67 @@ export default async function InternalAdminUserDetailPage({
     <section className="space-y-6">
       <div>
         <Link
-          className="text-sm font-semibold text-slate-600 underline-offset-4 hover:text-slate-950 hover:underline"
+          className="text-sm font-bold text-slate-500 underline-offset-4 transition hover:text-cyan-300 hover:underline"
           href="/internal/admin/users"
         >
           ← Back to users
         </Link>
 
-        <p className="mt-6 text-sm font-semibold uppercase tracking-wide text-slate-500">
+        <p className="mt-6 text-xs font-black uppercase tracking-[0.24em] text-cyan-300">
           User profile
         </p>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight">
+
+        <h1 className="mt-3 text-3xl font-black tracking-tight text-white">
           {user.name ?? user.email}
         </h1>
-        <p className="mt-2 text-sm text-slate-600">{user.email}</p>
+
+        <p className="mt-2 break-all text-sm text-slate-500">{user.email}</p>
       </div>
 
       {resolvedSearchParams?.updated ? (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-medium text-emerald-700">
+        <div className="rounded-2xl border border-emerald-300/20 bg-emerald-400/10 p-4 text-sm font-bold text-emerald-100">
           User updated successfully.
         </div>
       ) : null}
 
       {resolvedSearchParams?.error ? (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
+        <div className="rounded-2xl border border-red-300/20 bg-red-400/10 p-4 text-sm font-bold text-red-100">
           User update failed.
         </div>
       ) : null}
 
-      <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-xl font-bold">Account details</h2>
+      <article className="rounded-[2rem] border border-white/10 bg-[#07142f]/90 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.24)]">
+        <h2 className="text-xl font-black text-white">Account details</h2>
 
-        <dl className="mt-5 grid gap-5 text-sm md:grid-cols-2">
-          <div>
-            <dt className="font-medium text-slate-500">User ID</dt>
-            <dd className="mt-1 break-all font-mono text-xs">{user.id}</dd>
-          </div>
-
-          <div>
-            <dt className="font-medium text-slate-500">Email</dt>
-            <dd className="mt-1 font-semibold">{user.email}</dd>
-          </div>
-
-          <div>
-            <dt className="font-medium text-slate-500">Name</dt>
-            <dd className="mt-1 font-semibold">{user.name ?? 'Not set'}</dd>
-          </div>
-
-          <div>
-            <dt className="font-medium text-slate-500">Role</dt>
-            <dd className="mt-1 font-semibold">
-              {internalUserRoleLabels[user.role] ?? user.role}
-            </dd>
-          </div>
-
-          <div>
-            <dt className="font-medium text-slate-500">Status</dt>
-            <dd className="mt-1 font-semibold">
-              {internalUserStatusLabels[user.status] ?? user.status}
-            </dd>
-          </div>
-
-          <div>
-            <dt className="font-medium text-slate-500">Organisation</dt>
-            <dd className="mt-1 font-semibold">
-              {user.organisation?.name ?? user.organisationId ?? 'None'}
-            </dd>
-          </div>
-
-          <div>
-            <dt className="font-medium text-slate-500">Last login</dt>
-            <dd className="mt-1 font-semibold">
-              {formatDate(user.lastLoginAt)}
-            </dd>
-          </div>
-
-          <div>
-            <dt className="font-medium text-slate-500">Created</dt>
-            <dd className="mt-1 font-semibold">{formatDate(user.createdAt)}</dd>
-          </div>
+        <dl className="mt-5 grid gap-4 text-sm md:grid-cols-2">
+          <DetailField label="User ID" value={user.id} mono />
+          <DetailField label="Email" value={user.email} />
+          <DetailField label="Name" value={user.name ?? 'Not set'} />
+          <DetailField
+            label="Role"
+            value={internalUserRoleLabels[user.role] ?? user.role}
+          />
+          <DetailField
+            label="Status"
+            value={internalUserStatusLabels[user.status] ?? user.status}
+          />
+          <DetailField
+            label="Organisation"
+            value={user.organisation?.name ?? user.organisationId ?? 'None'}
+          />
+          <DetailField
+            label="Last login"
+            value={formatDate(user.lastLoginAt)}
+          />
+          <DetailField label="Created" value={formatDate(user.createdAt)} />
         </dl>
       </article>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-bold">Change role</h2>
+        <AdminFormCard title="Change role">
           <form action={updateRole} className="mt-5 space-y-4">
             <select
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              className="min-h-12 w-full rounded-2xl border border-white/10 bg-[#020817] px-4 text-sm font-bold text-white outline-none transition focus:border-cyan-300/50"
               defaultValue={user.role}
               name="role"
               required
@@ -162,19 +177,18 @@ export default async function InternalAdminUserDetailPage({
             </select>
 
             <button
-              className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white"
+              className="rounded-full border border-cyan-300/25 bg-cyan-400/15 px-4 py-2 text-sm font-black text-cyan-50 transition hover:bg-cyan-400/20"
               type="submit"
             >
               Save role
             </button>
           </form>
-        </article>
+        </AdminFormCard>
 
-        <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-bold">Change status</h2>
+        <AdminFormCard title="Change status">
           <form action={updateStatus} className="mt-5 space-y-4">
             <select
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              className="min-h-12 w-full rounded-2xl border border-white/10 bg-[#020817] px-4 text-sm font-bold text-white outline-none transition focus:border-cyan-300/50"
               defaultValue={user.status}
               name="status"
               required
@@ -187,19 +201,18 @@ export default async function InternalAdminUserDetailPage({
             </select>
 
             <button
-              className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white"
+              className="rounded-full border border-cyan-300/25 bg-cyan-400/15 px-4 py-2 text-sm font-black text-cyan-50 transition hover:bg-cyan-400/20"
               type="submit"
             >
               Save status
             </button>
           </form>
-        </article>
+        </AdminFormCard>
 
-        <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-bold">Assign organisation</h2>
+        <AdminFormCard title="Assign organisation">
           <form action={updateOrganisation} className="mt-5 space-y-4">
             <select
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              className="min-h-12 w-full rounded-2xl border border-white/10 bg-[#020817] px-4 text-sm font-bold text-white outline-none transition focus:border-cyan-300/50"
               defaultValue={user.organisationId ?? ''}
               name="organisationId"
             >
@@ -212,13 +225,13 @@ export default async function InternalAdminUserDetailPage({
             </select>
 
             <button
-              className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white"
+              className="rounded-full border border-cyan-300/25 bg-cyan-400/15 px-4 py-2 text-sm font-black text-cyan-50 transition hover:bg-cyan-400/20"
               type="submit"
             >
               Save organisation
             </button>
           </form>
-        </article>
+        </AdminFormCard>
       </div>
     </section>
   );

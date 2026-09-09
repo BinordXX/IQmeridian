@@ -1,0 +1,225 @@
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\api\employer\campaigns\[campaignId]\status\route.ts:4: } from '@/lib/employer-api-proxy';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\api\employer\campaigns\route.ts:4: } from '@/lib/employer-api-proxy';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\api\employer\invitations\[invitationId]\cancel\route.ts:1: import { proxyEmployerApi } from '@/lib/employer-api-proxy';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\api\employer\invitations\[invitationId]\extend\route.ts:4: } from '@/lib/employer-api-proxy';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\api\employer\invitations\[invitationId]\resend\route.ts:1: import { proxyEmployerApi } from '@/lib/employer-api-proxy';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\api\employer\invitations\route.ts:4: } from '@/lib/employer-api-proxy';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\api\employer\participants\[participantId]\status\route.ts:4: } from '@/lib/employer-api-proxy';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\api\employer\participants\route.ts:1: import { proxyEmployerApi } from '@/lib/employer-api-proxy';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\assessment\instructions\page.tsx:3: import { startConsumerAssessmentAction } from '../../dashboard/actions';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\assessment\invitation\[token]\instructions\page.tsx:19: redirect(guard.redirectTo);
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\assessment\session\[sessionId]\instructions\page.tsx:19: redirect(guard.redirectTo);
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\assessment\session\[sessionId]\review\page.tsx:14: redirect(
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\assessment\status\page.tsx:253: href="/dashboard"
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\auth\redirect\page.tsx:16: redirect('/login');
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\auth\redirect\page.tsx:21: redirect(getPostLoginRedirectPath(role));
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\settings\_components\account-settings-client.tsx:25: | 'EMPLOYER_ADMIN'
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\settings\_components\account-settings-client.tsx:264: const displayRole = accountUser?.role || initialUser.role || 'CONSUMER';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\settings\page.tsx:9: redirect('/login?callbackUrl=/dashboard/settings');
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\settings\page.tsx:17: role: session.user.role,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\_components\dashboard-sidebar-shell.tsx:43: href: '/dashboard',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\_components\dashboard-sidebar-shell.tsx:51: href: '/dashboard#assessment',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\_components\dashboard-sidebar-shell.tsx:58: href: '/dashboard#history',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\_components\dashboard-sidebar-shell.tsx:65: href: '/dashboard/settings',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\_components\dashboard-sidebar-shell.tsx:137: <Link href="/dashboard" className="block">
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\actions.ts:17: redirect(
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\actions.ts:18: `/dashboard?startError=${encodeURIComponent(message.slice(0, 180))}`
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\actions.ts:22: redirect(`/assessment/session/${sessionId}/instructions`);
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\layout.tsx:5: import { DashboardSidebarShell } from './_components/dashboard-sidebar-shell';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\layout.tsx:14: const session = await requireAnyRole(['CONSUMER', 'CANDIDATE'], '/dashboard');
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\layout.tsx:15: const role = session.user.role;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\layout.tsx:18: redirect('/signin');
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\layout.tsx:31: </DashboardSidebarShell>
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:334: redirect('/login?callbackUrl=/dashboard');
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:338: redirect(getDefaultDashboardForRole(role));
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:1053: href="/dashboard/settings"
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\employer\campaigns\new\page.tsx:1: import { getActiveAssessmentForms } from '@/features/employer/api/employer-dashboard-api';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\employer\campaigns\new\page.tsx:2: import { EmployerCampaignCreateForm } from '@/features/employer/components/employer-campaign-create-form';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\employer\campaigns\[campaignId]\candidates\[candidateId]\report\page.tsx:6: } from '@/features/employer/api/employer-dashboard-api';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\employer\campaigns\[campaignId]\candidates\[candidateId]\report\page.tsx:7: import { EmployerCandidateReport } from '@/features/employer/components/employer-candidate-report';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\employer\campaigns\[campaignId]\candidates\[candidateId]\report\page.tsx:8: import type { EmployerCampaignDetail } from '@/features/employer/api/employer-dashboard-api';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\employer\campaigns\[campaignId]\candidates\[candidateId]\page.tsx:3: import { getEmployerCampaignById } from '@/features/employer/api/employer-dashboard-api';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\employer\campaigns\[campaignId]\candidates\[candidateId]\page.tsx:4: import { EmployerCandidateDetail } from '@/features/employer/components/employer-candidate-detail';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\employer\campaigns\[campaignId]\candidates\[candidateId]\page.tsx:5: import type { EmployerCampaignDetail } from '@/features/employer/api/employer-dashboard-api';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\employer\campaigns\[campaignId]\edit\page.tsx:3: import { getEmployerCampaignById } from '@/features/employer/api/employer-dashboard-api';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\employer\campaigns\[campaignId]\edit\page.tsx:4: import { EmployerCampaignStatusForm } from '@/features/employer/components/employer-campaign-status-form';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\employer\campaigns\[campaignId]\edit\page.tsx:5: import type { EmployerCampaignSummary } from '@/features/employer/api/employer-dashboard-api';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\employer\campaigns\[campaignId]\page.tsx:3: import { getEmployerCampaignById } from '@/features/employer/api/employer-dashboard-api';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\employer\campaigns\[campaignId]\page.tsx:4: import { EmployerCampaignDetail } from '@/features/employer/components/employer-campaign-detail';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\employer\campaigns\[campaignId]\page.tsx:5: import type { EmployerCampaignDetail as EmployerCampaignDetailData } from '@/features/employer/api/employer-dashboard-api';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\employer\campaigns\page.tsx:3: import { getEmployerDashboardData } from '@/features/employer/api/employer-dashboard-api';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\employer\campaigns\page.tsx:4: import { EmployerCampaignList } from '@/features/employer/components/employer-campaign-list';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\employer\campaigns\page.tsx:46: href="/employer/campaigns/new"
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\employer\candidates\page.tsx:4: redirect('/employer/participants');
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\employer\dashboard\page.tsx:3: import { EmployerDashboardOverview } from '@/features/employer/components/employer-dashboard-overview';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\employer\dashboard\page.tsx:4: import { guardEmployerWorkspaceRoute } from '@/features/employer/guards/employer-route-guards';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\employer\dashboard\page.tsx:10: redirect('/employer/access-denied');
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\employer\exports\page.tsx:31: href="/employer/campaigns"
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\employer\participants\page.tsx:2: import { EmployerParticipantsTable } from '@/features/employer/components/employer-participants-table';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\employer\participants\page.tsx:3: import { listEmployerParticipants } from '@/features/employer/api/employer-participants-api';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\employer\participants\page.tsx:48: href="/employer"
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\employer\participants\page.tsx:55: href="/employer/campaigns"
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\employer\results\page.tsx:31: href="/employer/campaigns"
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\employer\_components\employer-sidebar-shell.tsx:42: href: '/employer/dashboard',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\employer\_components\employer-sidebar-shell.tsx:50: href: '/employer/campaigns',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\employer\_components\employer-sidebar-shell.tsx:57: href: '/employer/participants',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\employer\_components\employer-sidebar-shell.tsx:64: href: '/employer/results',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\employer\_components\employer-sidebar-shell.tsx:71: href: '/employer/exports',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\employer\_components\employer-sidebar-shell.tsx:96: if (item.href === '/employer/participants') {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\employer\_components\employer-sidebar-shell.tsx:100: pathname === '/employer/candidates'
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\employer\_components\employer-sidebar-shell.tsx:114: const role = user.role ?? 'EMPLOYER_ADMIN';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\employer\_components\employer-sidebar-shell.tsx:130: <Link href="/employer/dashboard" className="block">
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\employer\layout.tsx:4: import { EmployerSidebarShell } from './_components/employer-sidebar-shell';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\employer\layout.tsx:13: await requireEmployerAdmin('/employer/dashboard');
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\employer\layout.tsx:15: const session = await requireAnyRole(['EMPLOYER_ADMIN'], '/employer');
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\employer\layout.tsx:23: role: session.user.role,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\employer\layout.tsx:35: </EmployerSidebarShell>
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\employer\page.tsx:4: redirect('/employer/dashboard');
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\employer-admin-invitations\[token]\employer-admin-invitation-acceptance-form.tsx:74: `/api/employer-admin-invitations/${encodeURIComponent(token)}/accept`,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\employer-admin-invitations\[token]\page.tsx:6: import { EmployerAdminInvitationAcceptanceForm } from './employer-admin-invitation-acceptance-form';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\admin\consumer-assessment\actions.ts:24: redirect('/internal/admin/consumer-assessment?error=missing-form');
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\admin\consumer-assessment\actions.ts:45: redirect('/internal/admin/consumer-assessment?error=update-failed');
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\admin\consumer-assessment\actions.ts:49: revalidatePath('/dashboard');
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\admin\consumer-assessment\actions.ts:51: redirect('/internal/admin/consumer-assessment?updated=true');
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\admin\consumer-assessment\page.tsx:36: if (session?.user.role !== 'PLATFORM_ADMIN') {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\admin\consumer-assessment\page.tsx:37: redirect('/internal');
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\admin\consumer-assessment\page.tsx:41: redirect('/staff/login?callbackUrl=/internal/admin/consumer-assessment');
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\admin\contact-messages\page.tsx:19: redirect('/login?callbackUrl=/internal/admin/contact-messages');
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\admin\contact-messages\page.tsx:23: redirect(getPostLoginRedirectPath(role));
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\admin\organisations\new\actions.ts:8: redirect(
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\admin\organisations\new\actions.ts:37: redirect(`/internal/admin/organisations/${organisationId}?updated=created`);
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\admin\organisations\[organisationId]\actions.ts:16: redirect(`${detailPath(organisationId)}?error=${encodeURIComponent(reason)}`);
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\admin\organisations\[organisationId]\actions.ts:45: redirect(`${detailPath(organisationId)}?updated=organisation`);
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\admin\organisations\[organisationId]\actions.ts:75: redirect(`${detailPath(organisationId)}?updated=employer-admin`);
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\admin\organisations\[organisationId]\page.tsx:45: (user) => user.role === 'EMPLOYER_ADMIN'
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\admin\organisations\[organisationId]\page.tsx:49: if (user.role === 'PLATFORM_ADMIN') return false;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\admin\organisations\[organisationId]\page.tsx:50: if (user.role === 'RESEARCHER') return false;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\admin\organisations\[organisationId]\page.tsx:51: if (user.role === 'CANDIDATE') return false;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\admin\organisations\[organisationId]\page.tsx:160: {user.email} — {internalUserRoleLabels[user.role]}
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\admin\organisations\[organisationId]\page.tsx:201: {internalUserRoleLabels[user.role] ?? user.role}
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\admin\organisations\page.tsx:75: (user) => user.role === 'EMPLOYER_ADMIN',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\admin\users\new\actions.ts:15: 'EMPLOYER_ADMIN',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\admin\users\new\actions.ts:22: redirect(`/internal/admin/users/new?error=${encodeURIComponent(reason)}`);
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\admin\users\new\actions.ts:49: if (role === 'EMPLOYER_ADMIN' && !organisationId) {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\admin\users\new\actions.ts:78: redirect(`/internal/admin/users/${createdUserId}?updated=created`);
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\admin\users\new\page.tsx:22: 'EMPLOYER_ADMIN',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\admin\users\[userId]\actions.ts:18: 'EMPLOYER_ADMIN',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\admin\users\[userId]\actions.ts:28: redirect(`/internal/admin/users/${userId}?error=invalid-role`);
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\admin\users\[userId]\actions.ts:41: redirect(`/internal/admin/users/${userId}?updated=role`);
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\admin\users\[userId]\actions.ts:51: redirect(`/internal/admin/users/${userId}?error=invalid-status`);
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\admin\users\[userId]\actions.ts:64: redirect(`/internal/admin/users/${userId}?updated=status`);
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\admin\users\[userId]\actions.ts:84: redirect(`/internal/admin/users/${userId}?updated=organisation`);
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\admin\users\[userId]\page.tsx:31: 'EMPLOYER_ADMIN',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\admin\users\[userId]\page.tsx:115: {internalUserRoleLabels[user.role] ?? user.role}
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\admin\users\[userId]\page.tsx:153: defaultValue={user.role}
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\admin\users\page.tsx:23: 'EMPLOYER_ADMIN',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\admin\users\page.tsx:192: {internalUserRoleLabels[user.role] ?? user.role}
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_lib\internal-api.ts:365: | 'EMPLOYER_ADMIN'
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_lib\internal-api.ts:453: EMPLOYER_ADMIN: 'Employer admin',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_lib\internal-api.ts:947: path: '/internal/researcher/dashboard',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_lib\internal-api.ts:1225: )}/employer-admins`,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\layout.tsx:17: redirect('/dashboard');
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\login\_components\login-form.tsx:108: router.push(nextUrl);
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\login\page.tsx:28: redirect(getPostLoginRedirectPath(role));
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\register\_components\register-form.tsx:134: router.push(
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\register\_components\register-form.tsx:144: router.push(`/verify-email?email=${encodeURIComponent(normalisedEmail)}`);
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\register\page.tsx:15: redirect('/dashboard');
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\signin\page.tsx:4: redirect('/login');
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\term\page.tsx:4: redirect('/terms');
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\_components\public-page-shell.tsx:113: <Link className="hover:text-cyan-300" href="/employers/apply">
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\_components\public-site-nav.tsx:84: href: '/employers/apply',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\page.tsx:592: href="/employers/apply"
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\page.tsx:1059: href="/employers/apply"
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\robots.ts:25: '/dashboard/',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\robots.ts:28: '/employer/',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\components\auth\role-aware-login-form.tsx:90: resolvePostLoginRedirect({
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\components\candidate-result-summary.tsx:82: href="/dashboard"
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\api\employer-dashboard-api.ts:522: )}/employer`,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\api\employer-dashboard-api.ts:550: )}/EMPLOYER`,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-campaign-create-form.tsx:5: import type { EmployerAssessmentFormSummary } from '../api/employer-dashboard-api';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-campaign-create-form.tsx:23: const response = await fetch('/api/employer/campaigns', {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-campaign-create-form.tsx:106: router.push('/employer/campaigns');
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-campaign-create-form.tsx:249: onClick={() => router.push('/employer/campaigns')}
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-campaign-csv-export.tsx:6: } from '../api/employer-dashboard-api';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-campaign-detail.tsx:6: } from '../api/employer-dashboard-api';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-campaign-detail.tsx:7: import { EmployerResultThresholdControl } from './employer-result-threshold-control';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-campaign-detail.tsx:8: import { EmployerCandidateThresholdSummary } from './employer-candidate-threshold-summary';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-campaign-detail.tsx:9: import { EmployerInvitationControls } from './employer-invitation-controls';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-campaign-detail.tsx:10: import { EmployerResultVisibilityControl } from './employer-result-visibility-control';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-campaign-detail.tsx:11: import { EmployerCampaignCsvExport } from './employer-campaign-csv-export';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-campaign-detail.tsx:12: import { EmployerCampaignResultOverview } from './employer-campaign-result-overview';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-campaign-detail.tsx:13: import { EmployerCampaignSummaryCards } from './employer-campaign-summary-cards';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-campaign-detail.tsx:14: import { EmployerCandidateComparisonTable } from './employer-candidate-comparison-table';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-campaign-detail.tsx:15: import { EmployerCandidateStatusTable } from './employer-candidate-status-table';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-campaign-detail.tsx:16: import { EmployerInvitationCreateForm } from './employer-invitation-create-form';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-campaign-detail.tsx:17: import { EmployerCampaignPdfExport } from './employer-campaign-pdf-export';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-campaign-detail.tsx:98: href={`/employer/campaigns/${encodeURIComponent(campaign.id)}/edit`}
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-campaign-detail.tsx:105: href="/employer/campaigns"
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-campaign-list.tsx:6: } from '../api/employer-dashboard-api';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-campaign-list.tsx:138: href={`/employer/campaigns/${encodeURIComponent(
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-campaign-result-overview.tsx:1: import type { EmployerSessionSummary } from '../api/employer-dashboard-api';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-campaign-status-form.tsx:5: import type { EmployerCampaignSummary } from '../api/employer-dashboard-api';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-campaign-status-form.tsx:20: `/api/employer/campaigns/${encodeURIComponent(campaignId)}/status`,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-campaign-status-form.tsx:99: router.push('/employer/campaigns');
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-campaign-status-form.tsx:216: onClick={() => router.push('/employer/campaigns')}
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-campaign-summary-cards.tsx:4: } from '../api/employer-dashboard-api';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-candidate-comparison-table.tsx:3: import type { EmployerSessionSummary } from '../api/employer-dashboard-api';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-candidate-comparison-table.tsx:110: href={`/employer/campaigns/${encodeURIComponent(
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-candidate-detail.tsx:7: } from '../api/employer-dashboard-api';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-candidate-detail.tsx:8: import { EmployerReportActions } from './employer-report-actions';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-candidate-detail.tsx:97: href={`/employer/campaigns/${encodeURIComponent(campaign.id)}`}
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-candidate-report.tsx:2: import { EmployerStatePanel } from './employer-state-panel';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-candidate-report.tsx:8: } from '../api/employer-dashboard-api';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-candidate-report.tsx:9: import { EmployerReportActions } from './employer-report-actions';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-candidate-report.tsx:10: import { EmployerReportPrintButton } from './employer-report-print-button';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-candidate-report.tsx:89: href={`/employer/campaigns/${encodeURIComponent(
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-candidate-status-table.tsx:9: } from '../api/employer-dashboard-api';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-candidate-status-table.tsx:274: href={`/employer/campaigns/${encodeURIComponent(
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-candidate-threshold-summary.tsx:4: } from '../api/employer-dashboard-api';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-candidate-threshold-summary.tsx:9: } from '../utils/employer-candidate-thresholds';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-dashboard-overview.tsx:5: } from '../api/employer-dashboard-api';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-invitation-controls.tsx:86: `/api/employer/invitations/${encodeURIComponent(invitationId)}/resend`,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-invitation-controls.tsx:129: `/api/employer/invitations/${encodeURIComponent(invitationId)}/cancel`,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-invitation-controls.tsx:178: `/api/employer/invitations/${encodeURIComponent(invitationId)}/extend`,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-invitation-create-form.tsx:20: const response = await fetch('/api/employer/invitations', {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-participants-table.tsx:5: import type { EmployerParticipantSummary } from '../api/employer-participants-api';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-participants-table.tsx:99: `/api/employer/participants/${encodeURIComponent(participant.id)}/status`,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-report-actions.tsx:7: import { generateEmployerReport } from '../api/employer-dashboard-api';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-report-actions.tsx:26: const reportHref = `/employer/campaigns/${encodeURIComponent(
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-report-actions.tsx:40: router.push(reportHref);
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-result-threshold-control.tsx:9: } from '../api/employer-dashboard-api';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-result-threshold-control.tsx:10: import { psychometricScoreBandOptions } from '../api/employer-dashboard-api';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-result-threshold-control.tsx:11: import { normaliseCandidateResultThresholdConfig } from '../utils/employer-candidate-thresholds';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-result-threshold-control.tsx:65: `/api/employer/campaigns/${encodeURIComponent(
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-result-visibility-control.tsx:67: `/api/employer/campaigns/${encodeURIComponent(
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\guards\employer-route-guards.ts:6: } from '../api/employer-dashboard-api';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\utils\employer-candidate-thresholds.ts:5: } from '../api/employer-dashboard-api';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\lib\post-login-redirect.ts:4: CANDIDATE: '/dashboard',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\lib\post-login-redirect.ts:5: CONSUMER: '/dashboard',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\lib\post-login-redirect.ts:6: EMPLOYER_ADMIN: '/employer',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\lib\post-login-redirect.ts:47: return '/dashboard';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\lib\post-login-redirect.ts:50: return ROLE_HOME_PATHS[role] ?? '/dashboard';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\lib\role-routing.ts:4: | 'EMPLOYER_ADMIN'
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\lib\role-routing.ts:11: EMPLOYER_ADMIN: '/employer/dashboard',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\lib\role-routing.ts:12: CANDIDATE: '/dashboard',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\lib\role-routing.ts:13: CONSUMER: '/dashboard',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\lib\role-routing.ts:24: value === 'EMPLOYER_ADMIN' ||
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\lib\role-routing.ts:47: return path === '/employer' || path.startsWith('/employer/');
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\lib\role-routing.ts:66: const safeCallbackUrl = toSafeLocalPath(callbackUrl) ?? '/dashboard';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\lib\role-routing.ts:81: if (safePath === '/dashboard') {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\lib\role-routing.ts:97: if (safePath.startsWith('/employer')) {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\lib\role-routing.ts:98: return role === 'EMPLOYER_ADMIN';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\lib\route-guards.ts:16: requestedPath = '/dashboard'
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\lib\route-guards.ts:22: redirect(
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\lib\route-guards.ts:23: buildLoginRedirect({
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\lib\route-guards.ts:40: redirect(getDefaultDashboardForRole(role));
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\lib\route-guards.ts:59: redirect(getDefaultDashboardForRole(role));
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\lib\route-guards.ts:85: requestedPath = '/employer/dashboard'
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\lib\route-guards.ts:88: allowedRoles: ['EMPLOYER_ADMIN'],
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\lib\route-guards.ts:95: requestedPath = '/dashboard'
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\auth.ts:8: | 'EMPLOYER_ADMIN'
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\auth.ts:85: value === 'EMPLOYER_ADMIN' ||
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\auth.ts:135: role: data.user.role,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\auth.ts:197: role: data.user.role,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\auth.ts:211: token.role = isAppRole(user.role) ? user.role : undefined;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\auth.ts:247: session.user.role = isAppRole(token.role) ? token.role : undefined;

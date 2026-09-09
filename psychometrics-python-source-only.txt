@@ -1,0 +1,1445 @@
+
+===== C:\Users\REX\Desktop\IQmeridian\apps\psychometrics\app\core\config.py =====
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    service_name: str = "IQMeridian Psychometrics Service"
+    service_version: str = "0.1.0"
+    environment: str = "development"
+    port: int = 8001
+    internal_service_token: str = "dev-psychometrics-token"
+
+    data_access_mode: str = "nestjs_orchestrated"
+    internal_api_url: str = "http://localhost:3001"
+    output_mode: str = "return_to_nestjs"
+
+    model_config = SettingsConfigDict(
+        env_prefix="PSYCHOMETRICS_",
+        env_file=".env",
+        extra="ignore",
+    )
+
+
+settings = Settings()
+
+===== C:\Users\REX\Desktop\IQmeridian\apps\psychometrics\app\core\__init__.py =====
+
+===== C:\Users\REX\Desktop\IQmeridian\apps\psychometrics\app\routers\scoring.py =====
+from __future__ import annotations
+
+from fastapi import APIRouter
+
+from app.schemas.scoring import ScoringRequest, ScoringResponse
+from app.services.baseline_scoring import build_baseline_scoring_response
+from app.services.irt_scoring import build_irt_scoring_response
+
+
+router = APIRouter(prefix="/v1/scoring", tags=["scoring"])
+
+
+@router.post("/score-session", response_model=ScoringResponse)
+def score_session(request: ScoringRequest) -> ScoringResponse:
+    if request.requested_scoring_mode == "BASELINE_CLASSICAL":
+        return build_baseline_scoring_response(request)
+
+    return build_irt_scoring_response(request)
+
+===== C:\Users\REX\Desktop\IQmeridian\apps\psychometrics\app\routers\system.py =====
+from fastapi import APIRouter, Depends
+
+from app.core.config import settings
+from app.schemas.capabilities import CapabilitiesResponse
+from app.schemas.health import HealthResponse, VersionResponse
+from app.security.internal_auth import require_internal_service_token
+
+router = APIRouter(
+    tags=["system"],
+    dependencies=[Depends(require_internal_service_token)],
+)
+
+
+@router.get("/health", response_model=HealthResponse)
+def health() -> HealthResponse:
+    return HealthResponse(
+        status="ok",
+        service=settings.service_name,
+        version=settings.service_version,
+        environment=settings.environment,
+    )
+
+
+@router.get("/version", response_model=VersionResponse)
+def version() -> VersionResponse:
+    return VersionResponse(
+        service=settings.service_name,
+        version=settings.service_version,
+    )
+
+
+@router.get("/capabilities", response_model=CapabilitiesResponse)
+def capabilities() -> CapabilitiesResponse:
+    return CapabilitiesResponse(
+        service=settings.service_name,
+        version=settings.service_version,
+        responsibilities=[
+            "Calculate item difficulty metrics.",
+            "Calculate item discrimination metrics.",
+            "Analyse omission patterns.",
+            "Analyse response-time patterns.",
+            "Analyse distractor behaviour.",
+            "Analyse score distributions.",
+            "Calculate reliability indicators when sample size is sufficient.",
+            "Generate psychometric flags for researcher review.",
+            "Return structured psychometric outputs to the NestJS API.",
+        ],
+        non_responsibilities=[
+            "Candidate authentication.",
+            "Employer authentication.",
+            "Campaign creation.",
+            "Assessment delivery.",
+            "Invitation handling.",
+            "Primary scoring during live assessment completion.",
+            "Report permission enforcement.",
+            "Employer dashboard access control.",
+            "Candidate or consumer-facing report delivery.",
+            "Direct public access.",
+        ],
+        intended_consumers=[
+            "NestJS internal psychometrics orchestration module.",
+            "Platform-admin internal tooling.",
+            "Researcher internal tooling.",
+        ],
+        data_principles=[
+            "Use session IDs and participant categories instead of unnecessary personal identifiers.",
+            "Analyse assessment behaviour rather than personal identity.",
+            "Treat outputs as pilot evidence, not final validation.",
+            "Keep automated flags reviewable by researchers.",
+            "Preserve form, scoring, and report version traceability.",
+        ],
+    )
+
+===== C:\Users\REX\Desktop\IQmeridian\apps\psychometrics\app\routers\__init__.py =====
+
+===== C:\Users\REX\Desktop\IQmeridian\apps\psychometrics\app\schemas\capabilities.py =====
+from pydantic import BaseModel
+
+
+class CapabilitiesResponse(BaseModel):
+    service: str
+    version: str
+    responsibilities: list[str]
+    non_responsibilities: list[str]
+    intended_consumers: list[str]
+    data_principles: list[str]
+
+===== C:\Users\REX\Desktop\IQmeridian\apps\psychometrics\app\schemas\health.py =====
+from pydantic import BaseModel
+
+
+class HealthResponse(BaseModel):
+    status: str
+    service: str
+    version: str
+    environment: str
+
+
+class VersionResponse(BaseModel):
+    service: str
+    version: str
+
+===== C:\Users\REX\Desktop\IQmeridian\apps\psychometrics\app\schemas\scoring.py =====
+from __future__ import annotations
+
+from datetime import datetime
+from typing import Any, Literal
+
+from pydantic import BaseModel, Field
+
+
+CONTRACT_VERSION = "2026-06-25.v1"
+
+ScoringMode = Literal[
+    "BASELINE_CLASSICAL",
+    "IRT_2PL_PROVISIONAL",
+    "IRT_3PL_PROVISIONAL",
+    "MULTIDIMENSIONAL_PROVISIONAL",
+    "HYBRID_RESEARCH",
+]
+
+SessionSource = Literal[
+    "CONSUMER_SELF_SERVICE",
+    "EMPLOYER_CAMPAIGN",
+    "INVITATION",
+    "PILOT",
+    "INTERNAL_RESEARCH",
+]
+
+ItemResponseStatus = Literal[
+    "ANSWERED",
+    "OMITTED",
+    "SKIPPED",
+    "TIMED_OUT",
+    "NOT_PRESENTED",
+]
+
+ResponseCorrectness = Literal[
+    "CORRECT",
+    "INCORRECT",
+    "PARTIAL",
+    "UNSCORED",
+    "UNKNOWN",
+]
+
+ValiditySeverity = Literal["INFO", "LOW", "MEDIUM", "HIGH"]
+
+ScoreBand = Literal[
+    "VERY_LOW",
+    "LOW",
+    "LOW_AVERAGE",
+    "AVERAGE",
+    "HIGH_AVERAGE",
+    "HIGH",
+    "VERY_HIGH",
+    "UNAVAILABLE",
+]
+
+
+class SessionContext(BaseModel):
+    session_id: str = Field(alias="sessionId")
+    user_id: str | None = Field(default=None, alias="userId")
+    candidate_id: str | None = Field(default=None, alias="candidateId")
+    invitation_id: str | None = Field(default=None, alias="invitationId")
+    campaign_id: str | None = Field(default=None, alias="campaignId")
+    organisation_id: str | None = Field(default=None, alias="organisationId")
+    assessment_form_id: str = Field(alias="assessmentFormId")
+    source: SessionSource
+    started_at: datetime | None = Field(default=None, alias="startedAt")
+    completed_at: datetime | None = Field(default=None, alias="completedAt")
+    submitted_at: datetime | None = Field(default=None, alias="submittedAt")
+    locale: str | None = None
+    timezone: str | None = None
+
+
+class AssessmentDomainContext(BaseModel):
+    domain: str
+    label: str
+    expected_item_count: int | None = Field(default=None, alias="expectedItemCount")
+    expected_duration_seconds: int | None = Field(
+        default=None,
+        alias="expectedDurationSeconds",
+    )
+
+
+class AssessmentContext(BaseModel):
+    assessment_form_id: str = Field(alias="assessmentFormId")
+    assessment_form_name: str = Field(alias="assessmentFormName")
+    assessment_version: str | None = Field(default=None, alias="assessmentVersion")
+    form_blueprint_version: str | None = Field(
+        default=None,
+        alias="formBlueprintVersion",
+    )
+    total_presented_items: int = Field(alias="totalPresentedItems")
+    expected_duration_seconds: int | None = Field(
+        default=None,
+        alias="expectedDurationSeconds",
+    )
+    domains: list[AssessmentDomainContext]
+
+
+class ItemCalibration(BaseModel):
+    difficulty: float | None = None
+    discrimination: float | None = None
+    guessing: float | None = None
+    slipping: float | None = None
+    time_intensity: float | None = Field(default=None, alias="timeIntensity")
+    calibration_sample_size: int | None = Field(
+        default=None,
+        alias="calibrationSampleSize",
+    )
+    calibration_version: str | None = Field(default=None, alias="calibrationVersion")
+
+
+class PresentedItem(BaseModel):
+    item_id: str = Field(alias="itemId")
+    item_version: str | None = Field(default=None, alias="itemVersion")
+    sequence_index: int = Field(alias="sequenceIndex")
+    section_id: str | None = Field(default=None, alias="sectionId")
+    domain: str
+    subdomain: str | None = None
+    item_type: str = Field(alias="itemType")
+    max_score: float = Field(alias="maxScore")
+    correct_option_id: str | None = Field(default=None, alias="correctOptionId")
+    presented_at: datetime | None = Field(default=None, alias="presentedAt")
+    calibration: ItemCalibration
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class ItemResponse(BaseModel):
+    item_id: str = Field(alias="itemId")
+    selected_option_id: str | None = Field(default=None, alias="selectedOptionId")
+    response_text: str | None = Field(default=None, alias="responseText")
+    status: ItemResponseStatus
+    correctness: ResponseCorrectness
+    raw_score: float = Field(alias="rawScore")
+    response_time_ms: int | None = Field(default=None, alias="responseTimeMs")
+    first_interaction_time_ms: int | None = Field(
+        default=None,
+        alias="firstInteractionTimeMs",
+    )
+    revision_count: int = Field(default=0, alias="revisionCount")
+    confidence_rating: float | None = Field(default=None, alias="confidenceRating")
+    answered_at: datetime | None = Field(default=None, alias="answeredAt")
+
+
+class TimingEvent(BaseModel):
+    event_type: Literal[
+        "SESSION_STARTED",
+        "SECTION_STARTED",
+        "ITEM_PRESENTED",
+        "ITEM_ANSWERED",
+        "SECTION_COMPLETED",
+        "SESSION_SUBMITTED",
+        "VISIBILITY_LOST",
+        "VISIBILITY_GAINED",
+    ] = Field(alias="eventType")
+    item_id: str | None = Field(default=None, alias="itemId")
+    section_id: str | None = Field(default=None, alias="sectionId")
+    occurred_at: datetime = Field(alias="occurredAt")
+    duration_ms: int | None = Field(default=None, alias="durationMs")
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class ValidityInput(BaseModel):
+    omission_rate: float = Field(alias="omissionRate")
+    rapid_guessing_rate: float = Field(alias="rapidGuessingRate")
+    median_response_time_ms: int | None = Field(
+        default=None,
+        alias="medianResponseTimeMs",
+    )
+    total_response_time_ms: int | None = Field(
+        default=None,
+        alias="totalResponseTimeMs",
+    )
+    suspicious_session_flags: list[str] = Field(
+        default_factory=list,
+        alias="suspiciousSessionFlags",
+    )
+    browser_or_device_signals: dict[str, Any] = Field(
+        default_factory=dict,
+        alias="browserOrDeviceSignals",
+    )
+
+
+class ScoringRequest(BaseModel):
+    contract_version: Literal["2026-06-25.v1"] = Field(alias="contractVersion")
+    requested_scoring_mode: ScoringMode = Field(alias="requestedScoringMode")
+    requested_at: datetime = Field(alias="requestedAt")
+    session: SessionContext
+    assessment: AssessmentContext
+    items: list[PresentedItem]
+    responses: list[ItemResponse]
+    timing_events: list[TimingEvent] = Field(alias="timingEvents")
+    validity_input: ValidityInput = Field(alias="validityInput")
+
+
+class ConfidenceInterval90(BaseModel):
+    lower: float | None = None
+    upper: float | None = None
+
+
+class DomainScore(BaseModel):
+    domain: str
+    label: str
+    raw_score: float = Field(alias="rawScore")
+    max_raw_score: float = Field(alias="maxRawScore")
+    accuracy: float | None = None
+    theta: float | None = None
+    standard_score: float | None = Field(default=None, alias="standardScore")
+    percentile: float | None = None
+    score_band: ScoreBand = Field(alias="scoreBand")
+    standard_error: float | None = Field(default=None, alias="standardError")
+    confidence_interval_90: ConfidenceInterval90 = Field(alias="confidenceInterval90")
+    test_information: float | None = Field(default=None, alias="testInformation")
+    reliability: float | None = None
+    interpretation: str
+
+
+class OverallScore(DomainScore):
+    pass
+
+
+class TimingProfile(BaseModel):
+    total_response_time_ms: int | None = Field(default=None, alias="totalResponseTimeMs")
+    median_response_time_ms: int | None = Field(
+        default=None,
+        alias="medianResponseTimeMs",
+    )
+    speed_index: float | None = Field(default=None, alias="speedIndex")
+    speed_accuracy_tradeoff: str | None = Field(
+        default=None,
+        alias="speedAccuracyTradeoff",
+    )
+    rapid_guessing_rate: float = Field(alias="rapidGuessingRate")
+    omission_rate: float = Field(alias="omissionRate")
+
+
+class ValidityFlag(BaseModel):
+    code: str
+    label: str
+    severity: ValiditySeverity
+    description: str
+    evidence: dict[str, Any] = Field(default_factory=dict)
+
+
+class ScoreAuditTrace(BaseModel):
+    model_version: str = Field(alias="modelVersion")
+    contract_version: str = Field(alias="contractVersion")
+    calibration_version: str | None = Field(default=None, alias="calibrationVersion")
+    scoring_mode_used: ScoringMode = Field(alias="scoringModeUsed")
+    generated_at: datetime = Field(alias="generatedAt")
+    input_hash: str | None = Field(default=None, alias="inputHash")
+    warnings: list[str] = Field(default_factory=list)
+
+
+class ScoringResponse(BaseModel):
+    contract_version: Literal["2026-06-25.v1"] = Field(alias="contractVersion")
+    session_id: str = Field(alias="sessionId")
+    scoring_status: Literal[
+        "SCORED",
+        "PARTIAL",
+        "INSUFFICIENT_DATA",
+        "FAILED",
+    ] = Field(alias="scoringStatus")
+    overall: OverallScore
+    domains: list[DomainScore]
+    timing_profile: TimingProfile = Field(alias="timingProfile")
+    validity_flags: list[ValidityFlag] = Field(alias="validityFlags")
+    audit: ScoreAuditTrace
+
+===== C:\Users\REX\Desktop\IQmeridian\apps\psychometrics\app\schemas\__init__.py =====
+
+===== C:\Users\REX\Desktop\IQmeridian\apps\psychometrics\app\security\internal_auth.py =====
+from fastapi import Header, HTTPException, status
+
+from app.core.config import settings
+
+
+def require_internal_service_token(
+    x_internal_service_token: str | None = Header(default=None),
+) -> None:
+    if not x_internal_service_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing internal service token.",
+        )
+
+    if x_internal_service_token != settings.internal_service_token:
+        raise HTTPException(
+            
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid internal service token.",
+        )
+
+===== C:\Users\REX\Desktop\IQmeridian\apps\psychometrics\app\security\__init__.py =====
+
+===== C:\Users\REX\Desktop\IQmeridian\apps\psychometrics\app\services\baseline_scoring.py =====
+from __future__ import annotations
+
+import hashlib
+import json
+from collections import defaultdict
+from datetime import UTC, datetime
+from statistics import median
+
+from app.schemas.scoring import (
+    CONTRACT_VERSION,
+    ConfidenceInterval90,
+    DomainScore,
+    OverallScore,
+    ScoreAuditTrace,
+    ScoringMode,
+    ScoringRequest,
+    ScoringResponse,
+    TimingProfile,
+    ValidityFlag,
+)
+
+
+RAPID_GUESSING_THRESHOLD_MS = 3_000
+MIN_RESPONSE_TIME_COVERAGE = 0.7
+
+
+def build_baseline_scoring_response(request: ScoringRequest) -> ScoringResponse:
+    items_by_id = {item.item_id: item for item in request.items}
+    latest_responses = {
+        response.item_id: response
+        for response in request.responses
+        if response.item_id in items_by_id
+    }
+
+    max_raw_score = sum(item.max_score for item in request.items)
+    raw_score = sum(response.raw_score for response in latest_responses.values())
+
+    accuracy = _safe_divide(raw_score, max_raw_score)
+
+    domain_scores = _build_domain_scores(request, latest_responses)
+    timing_profile = _build_timing_profile(request, accuracy)
+    validity_flags = _build_validity_flags(request, timing_profile, latest_responses)
+
+    scoring_status = _resolve_scoring_status(
+        request=request,
+        max_raw_score=max_raw_score,
+        validity_flags=validity_flags,
+        latest_response_count=len(latest_responses),
+    )
+
+    warnings: list[str] = []
+
+    if request.requested_scoring_mode != "BASELINE_CLASSICAL":
+        warnings.append(
+            "Requested scoring mode was downgraded to BASELINE_CLASSICAL. "
+            "Advanced IRT and multidimensional scoring are not active in v1."
+        )
+
+    if scoring_status != "SCORED":
+        warnings.append(
+            "Baseline score is partial or limited because the submitted session "
+            "does not contain a complete, fully valid response set."
+        )
+
+    return ScoringResponse(
+        contractVersion=CONTRACT_VERSION,
+        sessionId=request.session.session_id,
+        scoringStatus=scoring_status,
+        overall=OverallScore(
+            domain="OVERALL",
+            label="Overall cognitive profile",
+            rawScore=raw_score,
+            maxRawScore=max_raw_score,
+            accuracy=accuracy,
+            theta=None,
+            standardScore=None,
+            percentile=None,
+            scoreBand=_score_band_from_accuracy(accuracy),
+            testInformation=None,
+            standardError=None,
+            confidenceInterval90=ConfidenceInterval90(lower=None, upper=None),
+            reliability=None,
+            interpretation=_overall_interpretation(accuracy, scoring_status),
+        ),
+        domains=domain_scores,
+        timingProfile=timing_profile,
+        validityFlags=validity_flags,
+        audit=ScoreAuditTrace(
+            modelVersion="baseline-classical.0.1.0",
+            contractVersion=CONTRACT_VERSION,
+            calibrationVersion=None,
+            scoringModeUsed="BASELINE_CLASSICAL",
+            generatedAt=datetime.now(UTC),
+            inputHash=_hash_request(request),
+            warnings=warnings,
+        ),
+    )
+
+
+def _build_domain_scores(
+    request: ScoringRequest,
+    latest_responses: dict[str, object],
+) -> list[DomainScore]:
+    domain_labels = {
+        domain.domain: domain.label for domain in request.assessment.domains
+    }
+
+    domain_max_scores: dict[str, float] = defaultdict(float)
+    domain_raw_scores: dict[str, float] = defaultdict(float)
+
+    for item in request.items:
+        domain_max_scores[item.domain] += item.max_score
+
+    for response in latest_responses.values():
+        item = next(
+            (
+                presented_item
+                for presented_item in request.items
+                if presented_item.item_id == response.item_id
+            ),
+            None,
+        )
+
+        if item is None:
+            continue
+
+        domain_raw_scores[item.domain] += response.raw_score
+
+    all_domains = sorted(set(domain_labels) | set(domain_max_scores))
+
+    return [
+        DomainScore(
+            domain=domain,
+            label=domain_labels.get(domain, domain),
+            rawScore=domain_raw_scores.get(domain, 0.0),
+            maxRawScore=domain_max_scores.get(domain, 0.0),
+            accuracy=_safe_divide(
+                domain_raw_scores.get(domain, 0.0),
+                domain_max_scores.get(domain, 0.0),
+            ),
+            theta=None,
+            standardScore=None,
+            percentile=None,
+            scoreBand=_score_band_from_accuracy(
+                _safe_divide(
+                    domain_raw_scores.get(domain, 0.0),
+                    domain_max_scores.get(domain, 0.0),
+                )
+            ),
+            standardError=None,
+            confidenceInterval90=ConfidenceInterval90(lower=None, upper=None),
+            reliability=None,
+            testInformation=None,
+            interpretation=_domain_interpretation(
+                label=domain_labels.get(domain, domain),
+                accuracy=_safe_divide(
+                    domain_raw_scores.get(domain, 0.0),
+                    domain_max_scores.get(domain, 0.0),
+                ),
+            ),
+        )
+        for domain in all_domains
+    ]
+
+
+def _build_timing_profile(
+    request: ScoringRequest,
+    accuracy: float | None,
+) -> TimingProfile:
+    response_times = [
+        response.response_time_ms
+        for response in request.responses
+        if response.response_time_ms is not None and response.response_time_ms >= 0
+    ]
+
+    total_response_time_ms = request.validity_input.total_response_time_ms
+
+    if total_response_time_ms is None and response_times:
+        total_response_time_ms = sum(response_times)
+
+    median_response_time_ms = request.validity_input.median_response_time_ms
+
+    if median_response_time_ms is None and response_times:
+        median_response_time_ms = int(median(response_times))
+
+    expected_duration_ms = None
+    if request.assessment.expected_duration_seconds is not None:
+        expected_duration_ms = request.assessment.expected_duration_seconds * 1_000
+
+    speed_index = None
+    if (
+        expected_duration_ms is not None
+        and total_response_time_ms is not None
+        and total_response_time_ms > 0
+    ):
+        speed_index = expected_duration_ms / total_response_time_ms
+
+    calculated_rapid_guessing_rate = _calculate_rapid_guessing_rate(request)
+    rapid_guessing_rate = max(
+        request.validity_input.rapid_guessing_rate,
+        calculated_rapid_guessing_rate,
+    )
+
+    calculated_omission_rate = _calculate_omission_rate(request)
+    omission_rate = max(request.validity_input.omission_rate, calculated_omission_rate)
+
+    return TimingProfile(
+        totalResponseTimeMs=total_response_time_ms,
+        medianResponseTimeMs=median_response_time_ms,
+        speedIndex=speed_index,
+        speedAccuracyTradeoff=_speed_accuracy_tradeoff(
+            speed_index=speed_index,
+            accuracy=accuracy,
+            rapid_guessing_rate=rapid_guessing_rate,
+        ),
+        rapidGuessingRate=rapid_guessing_rate,
+        omissionRate=omission_rate,
+    )
+
+
+def _build_validity_flags(
+    request: ScoringRequest,
+    timing_profile: TimingProfile,
+    latest_responses: dict[str, object],
+) -> list[ValidityFlag]:
+    flags: list[ValidityFlag] = []
+
+    if not request.items:
+        flags.append(
+            ValidityFlag(
+                code="NO_PRESENTED_ITEMS",
+                label="No presented items",
+                severity="HIGH",
+                description=(
+                    "The scoring request contains no presented items, so a "
+                    "meaningful score cannot be computed."
+                ),
+                evidence={"itemCount": 0},
+            )
+        )
+
+    if len(latest_responses) < len(request.items):
+        flags.append(
+            ValidityFlag(
+                code="INCOMPLETE_RESPONSE_SET",
+                label="Incomplete response set",
+                severity="MEDIUM",
+                description=(
+                    "The number of usable responses is lower than the number "
+                    "of presented items."
+                ),
+                evidence={
+                    "presentedItems": len(request.items),
+                    "usableResponses": len(latest_responses),
+                },
+            )
+        )
+
+    if timing_profile.omission_rate >= 0.3:
+        flags.append(
+            ValidityFlag(
+                code="HIGH_OMISSION_RATE",
+                label="High omission rate",
+                severity="HIGH",
+                description=(
+                    "A large proportion of presented items were omitted, "
+                    "skipped, timed out, or left without usable responses."
+                ),
+                evidence={"omissionRate": timing_profile.omission_rate},
+            )
+        )
+    elif timing_profile.omission_rate >= 0.1:
+        flags.append(
+            ValidityFlag(
+                code="ELEVATED_OMISSION_RATE",
+                label="Elevated omission rate",
+                severity="MEDIUM",
+                description=(
+                    "The session contains a moderate level of omitted or "
+                    "unanswered items."
+                ),
+                evidence={"omissionRate": timing_profile.omission_rate},
+            )
+        )
+
+    if timing_profile.rapid_guessing_rate >= 0.25:
+        flags.append(
+            ValidityFlag(
+                code="RAPID_GUESSING_ELEVATED",
+                label="Elevated rapid guessing",
+                severity="HIGH",
+                description=(
+                    "A substantial proportion of responses were submitted below "
+                    "the baseline rapid-guessing threshold."
+                ),
+                evidence={
+                    "rapidGuessingRate": timing_profile.rapid_guessing_rate,
+                    "thresholdMs": RAPID_GUESSING_THRESHOLD_MS,
+                },
+            )
+        )
+    elif timing_profile.rapid_guessing_rate >= 0.1:
+        flags.append(
+            ValidityFlag(
+                code="RAPID_GUESSING_PRESENT",
+                label="Rapid guessing present",
+                severity="MEDIUM",
+                description=(
+                    "Some responses were submitted unusually quickly for a "
+                    "cognitive assessment context."
+                ),
+                evidence={
+                    "rapidGuessingRate": timing_profile.rapid_guessing_rate,
+                    "thresholdMs": RAPID_GUESSING_THRESHOLD_MS,
+                },
+            )
+        )
+
+    response_time_coverage = _response_time_coverage(request)
+    if request.responses and response_time_coverage < MIN_RESPONSE_TIME_COVERAGE:
+        flags.append(
+            ValidityFlag(
+                code="LOW_RESPONSE_TIME_COVERAGE",
+                label="Low response-time coverage",
+                severity="LOW",
+                description=(
+                    "Response-time data is missing for a meaningful proportion "
+                    "of submitted responses."
+                ),
+                evidence={"responseTimeCoverage": response_time_coverage},
+            )
+        )
+
+    for suspicious_flag in request.validity_input.suspicious_session_flags:
+        flags.append(
+            ValidityFlag(
+                code="UPSTREAM_SUSPICIOUS_SESSION_FLAG",
+                label="Upstream suspicious-session flag",
+                severity="MEDIUM",
+                description=(
+                    "The platform supplied a suspicious-session flag generated "
+                    "before psychometric scoring."
+                ),
+                evidence={"flag": suspicious_flag},
+            )
+        )
+
+    return flags
+
+
+def _resolve_scoring_status(
+    request: ScoringRequest,
+    max_raw_score: float,
+    validity_flags: list[ValidityFlag],
+    latest_response_count: int,
+) -> str:
+    if max_raw_score <= 0 or not request.items:
+        return "INSUFFICIENT_DATA"
+
+    high_severity_codes = {
+        flag.code for flag in validity_flags if flag.severity == "HIGH"
+    }
+
+    if "NO_PRESENTED_ITEMS" in high_severity_codes:
+        return "INSUFFICIENT_DATA"
+
+    if latest_response_count < len(request.items) or high_severity_codes:
+        return "PARTIAL"
+
+    return "SCORED"
+
+
+def _score_band_from_accuracy(accuracy: float | None) -> str:
+    if accuracy is None:
+        return "UNAVAILABLE"
+
+    if accuracy < 0.2:
+        return "VERY_LOW"
+    if accuracy < 0.35:
+        return "LOW"
+    if accuracy < 0.5:
+        return "LOW_AVERAGE"
+    if accuracy < 0.7:
+        return "AVERAGE"
+    if accuracy < 0.85:
+        return "HIGH_AVERAGE"
+    if accuracy < 0.95:
+        return "HIGH"
+
+    return "VERY_HIGH"
+
+
+def _overall_interpretation(accuracy: float | None, scoring_status: str) -> str:
+    if accuracy is None:
+        return (
+            "A baseline score could not be interpreted because the request did "
+            "not contain scorable item data."
+        )
+
+    if scoring_status == "PARTIAL":
+        return (
+            "This is a deterministic baseline profile. Interpretation is limited "
+            "because the response set or validity signals indicate partial "
+            "scoring conditions."
+        )
+
+    return (
+        "This is a deterministic baseline profile based on raw score, presented "
+        "item coverage, domain accuracy, response timing, omissions, and basic "
+        "validity checks. Advanced IRT, norming, and multidimensional estimates "
+        "are not yet active."
+    )
+
+
+def _domain_interpretation(label: str, accuracy: float | None) -> str:
+    if accuracy is None:
+        return f"{label} could not be interpreted because no scorable item data was available."
+
+    return (
+        f"{label} baseline performance is represented as domain accuracy only. "
+        "Advanced calibrated domain estimates will be added in later scoring versions."
+    )
+
+
+def _calculate_omission_rate(request: ScoringRequest) -> float:
+    if not request.items:
+        return 0.0
+
+    responses_by_item = {response.item_id: response for response in request.responses}
+
+    omitted_count = 0
+    for item in request.items:
+        response = responses_by_item.get(item.item_id)
+
+        if response is None:
+            omitted_count += 1
+            continue
+
+        if response.status in {"OMITTED", "SKIPPED", "TIMED_OUT", "NOT_PRESENTED"}:
+            omitted_count += 1
+
+    return omitted_count / len(request.items)
+
+
+def _calculate_rapid_guessing_rate(request: ScoringRequest) -> float:
+    if not request.items:
+        return 0.0
+
+    rapid_count = 0
+    for response in request.responses:
+        if response.response_time_ms is None:
+            continue
+
+        if response.response_time_ms < RAPID_GUESSING_THRESHOLD_MS:
+            rapid_count += 1
+
+    return rapid_count / len(request.items)
+
+
+def _response_time_coverage(request: ScoringRequest) -> float:
+    if not request.responses:
+        return 0.0
+
+    responses_with_time = sum(
+        1
+        for response in request.responses
+        if response.response_time_ms is not None and response.response_time_ms >= 0
+    )
+
+    return responses_with_time / len(request.responses)
+
+
+def _speed_accuracy_tradeoff(
+    speed_index: float | None,
+    accuracy: float | None,
+    rapid_guessing_rate: float,
+) -> str | None:
+    if speed_index is None or accuracy is None:
+        return None
+
+    if rapid_guessing_rate >= 0.25 and accuracy < 0.5:
+        return "RAPID_LOW_ACCURACY"
+
+    if speed_index >= 1.5 and accuracy >= 0.7:
+        return "FAST_ACCURATE"
+
+    if speed_index >= 1.5 and accuracy < 0.7:
+        return "FAST_ERROR_PRONE"
+
+    if speed_index <= 0.65 and accuracy >= 0.7:
+        return "SLOW_ACCURATE"
+
+    if speed_index <= 0.65 and accuracy < 0.7:
+        return "SLOW_LOW_ACCURACY"
+
+    return "BALANCED"
+
+
+def _safe_divide(numerator: float, denominator: float) -> float | None:
+    if denominator <= 0:
+        return None
+
+    return numerator / denominator
+
+
+def _hash_request(request: ScoringRequest) -> str:
+    payload = request.model_dump(mode="json", by_alias=True)
+    serialized_payload = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+
+    return hashlib.sha256(serialized_payload.encode("utf-8")).hexdigest()
+
+===== C:\Users\REX\Desktop\IQmeridian\apps\psychometrics\app\services\irt_scoring.py =====
+from __future__ import annotations
+
+import math
+from dataclasses import dataclass
+from datetime import UTC, datetime
+
+from app.schemas.scoring import (
+    CONTRACT_VERSION,
+    ConfidenceInterval90,
+    DomainScore,
+    OverallScore,
+    ScoreAuditTrace,
+    ScoringMode,
+    ScoringRequest,
+    ScoringResponse,
+)
+
+from app.services.baseline_scoring import build_baseline_scoring_response
+
+
+THETA_MIN = -4.0
+THETA_MAX = 4.0
+THETA_STEP = 0.02
+CONFIDENCE_Z_90 = 1.6448536269514722
+MIN_INFORMATION_FOR_SE = 1e-6
+
+
+@dataclass(frozen=True)
+class IrtObservation:
+    item_id: str
+    domain: str
+    label: str
+    response_value: float
+    discrimination: float
+    difficulty: float
+    guessing: float
+
+
+@dataclass(frozen=True)
+class IrtEstimate:
+    theta: float | None
+    standard_error: float | None
+    test_information: float | None
+    reliability: float | None
+    confidence_interval_90: ConfidenceInterval90
+
+
+def build_irt_scoring_response(request: ScoringRequest) -> ScoringResponse:
+    baseline = build_baseline_scoring_response(request)
+
+    observations = _build_observations(request)
+
+    if not observations:
+        baseline.audit.model_version = "irt-provisional.0.2.0"
+        baseline.audit.scoring_mode_used = request.requested_scoring_mode
+        baseline.audit.generated_at = datetime.now(UTC)
+        baseline.audit.warnings.append(
+            "IRT scoring was requested, but no calibrated scorable observations "
+            "were available. Baseline scoring was returned."
+        )
+        return baseline
+
+    overall_estimate = _estimate_theta(observations)
+    domain_scores = _build_domain_irt_scores(
+        request=request,
+        baseline_domains=baseline.domains,
+        observations=observations,
+    )
+
+    baseline.overall = _build_overall_irt_score(
+        baseline_overall=baseline.overall,
+        estimate=overall_estimate,
+    )
+    baseline.domains = domain_scores
+    baseline.audit = ScoreAuditTrace(
+        modelVersion="irt-provisional.0.2.0",
+        contractVersion=CONTRACT_VERSION,
+        calibrationVersion=_resolve_calibration_version(request),
+        scoringModeUsed=_resolve_scoring_mode_used(request.requested_scoring_mode),
+        generatedAt=datetime.now(UTC),
+        inputHash=baseline.audit.input_hash,
+        warnings=[
+            *baseline.audit.warnings,
+            (
+                "IRT v2 is provisional. Accuracy depends on calibrated item "
+                "difficulty, discrimination, and guessing parameters. Current "
+                "outputs must not be marketed as norm-certified IQ scores."
+            ),
+        ],
+    )
+
+    return baseline
+
+
+def _build_observations(request: ScoringRequest) -> list[IrtObservation]:
+    response_by_item_id = {response.item_id: response for response in request.responses}
+    domain_labels = {
+        domain.domain: domain.label for domain in request.assessment.domains
+    }
+
+    observations: list[IrtObservation] = []
+
+    for item in request.items:
+        response = response_by_item_id.get(item.item_id)
+
+        if response is None:
+            response_value = 0.0
+        elif response.status in {"NOT_PRESENTED"}:
+            continue
+        elif item.max_score <= 0:
+            continue
+        else:
+            response_value = _clamp(response.raw_score / item.max_score, 0.0, 1.0)
+
+        difficulty = item.calibration.difficulty
+        discrimination = item.calibration.discrimination
+
+        if difficulty is None or discrimination is None:
+            continue
+
+        guessing = item.calibration.guessing
+        if guessing is None:
+            guessing = 0.0
+
+        observations.append(
+            IrtObservation(
+                item_id=item.item_id,
+                domain=item.domain,
+                label=domain_labels.get(item.domain, item.domain),
+                response_value=response_value,
+                discrimination=_clamp(discrimination, 0.2, 3.0),
+                difficulty=_clamp(difficulty, -4.0, 4.0),
+                guessing=_clamp(guessing, 0.0, 0.35),
+            )
+        )
+
+    return observations
+
+
+def _build_domain_irt_scores(
+    request: ScoringRequest,
+    baseline_domains: list[DomainScore],
+    observations: list[IrtObservation],
+) -> list[DomainScore]:
+    observations_by_domain: dict[str, list[IrtObservation]] = {}
+
+    for observation in observations:
+        observations_by_domain.setdefault(observation.domain, []).append(observation)
+
+    baseline_by_domain = {score.domain: score for score in baseline_domains}
+    domain_scores: list[DomainScore] = []
+
+    for domain_score in baseline_domains:
+        domain_observations = observations_by_domain.get(domain_score.domain, [])
+
+        if not domain_observations:
+            domain_score.interpretation = (
+                f"{domain_score.label} has baseline raw-score information, but "
+                "no calibrated IRT item parameters were available for this domain."
+            )
+            domain_scores.append(domain_score)
+            continue
+
+        estimate = _estimate_theta(domain_observations)
+
+        domain_scores.append(
+            DomainScore(
+                domain=domain_score.domain,
+                label=domain_score.label,
+                rawScore=domain_score.raw_score,
+                maxRawScore=domain_score.max_raw_score,
+                accuracy=domain_score.accuracy,
+                theta=_round_or_none(estimate.theta),
+                standardScore=_standard_score_from_theta(estimate.theta),
+                percentile=_percentile_from_theta(estimate.theta),
+                scoreBand=_score_band_from_standard_score(
+                    _standard_score_from_theta(estimate.theta)
+                ),
+                standardError=_round_or_none(estimate.standard_error),
+                confidenceInterval90=estimate.confidence_interval_90,
+                testInformation=_round_or_none(estimate.test_information),
+                reliability=_round_or_none(estimate.reliability),
+                interpretation=_domain_interpretation(
+                    label=domain_score.label,
+                    estimate=estimate,
+                    item_count=len(domain_observations),
+                ),
+            )
+        )
+
+    for domain, domain_observations in observations_by_domain.items():
+        if domain in baseline_by_domain:
+            continue
+
+        estimate = _estimate_theta(domain_observations)
+
+        domain_scores.append(
+            DomainScore(
+                domain=domain,
+                label=domain_observations[0].label,
+                rawScore=sum(observation.response_value for observation in domain_observations),
+                maxRawScore=float(len(domain_observations)),
+                accuracy=sum(observation.response_value for observation in domain_observations)
+                / len(domain_observations),
+                theta=_round_or_none(estimate.theta),
+                standardScore=_standard_score_from_theta(estimate.theta),
+                percentile=_percentile_from_theta(estimate.theta),
+                scoreBand=_score_band_from_standard_score(
+                    _standard_score_from_theta(estimate.theta)
+                ),
+                standardError=_round_or_none(estimate.standard_error),
+                confidenceInterval90=estimate.confidence_interval_90,
+                testInformation=_round_or_none(estimate.test_information),
+                reliability=_round_or_none(estimate.reliability),
+                interpretation=_domain_interpretation(
+                    label=domain_observations[0].label,
+                    estimate=estimate,
+                    item_count=len(domain_observations),
+                ),
+            )
+        )
+
+    return sorted(domain_scores, key=lambda score: score.domain)
+
+
+def _build_overall_irt_score(
+    baseline_overall: OverallScore,
+    estimate: IrtEstimate,
+) -> OverallScore:
+    standard_score = _standard_score_from_theta(estimate.theta)
+
+    return OverallScore(
+        domain=baseline_overall.domain,
+        label=baseline_overall.label,
+        rawScore=baseline_overall.raw_score,
+        maxRawScore=baseline_overall.max_raw_score,
+        accuracy=baseline_overall.accuracy,
+        theta=_round_or_none(estimate.theta),
+        standardScore=standard_score,
+        percentile=_percentile_from_theta(estimate.theta),
+        scoreBand=_score_band_from_standard_score(standard_score),
+        standardError=_round_or_none(estimate.standard_error),
+        confidenceInterval90=estimate.confidence_interval_90,
+        testInformation=_round_or_none(estimate.test_information),
+        reliability=_round_or_none(estimate.reliability),
+        interpretation=_overall_interpretation(estimate),
+    )
+
+
+def _estimate_theta(observations: list[IrtObservation]) -> IrtEstimate:
+    if not observations:
+        return IrtEstimate(
+            theta=None,
+            standard_error=None,
+            test_information=None,
+            reliability=None,
+            confidence_interval_90=ConfidenceInterval90(lower=None, upper=None),
+        )
+
+    best_theta = THETA_MIN
+    best_log_likelihood = -math.inf
+
+    current_theta = THETA_MIN
+    while current_theta <= THETA_MAX:
+        log_likelihood = _log_likelihood(theta=current_theta, observations=observations)
+
+        if log_likelihood > best_log_likelihood:
+            best_log_likelihood = log_likelihood
+            best_theta = current_theta
+
+        current_theta += THETA_STEP
+
+    test_information = _test_information(theta=best_theta, observations=observations)
+
+    if test_information <= MIN_INFORMATION_FOR_SE:
+        standard_error = None
+        reliability = None
+        confidence_interval = ConfidenceInterval90(lower=None, upper=None)
+    else:
+        standard_error = 1 / math.sqrt(test_information)
+        reliability = test_information / (test_information + 1)
+        confidence_interval = ConfidenceInterval90(
+            lower=round(best_theta - (CONFIDENCE_Z_90 * standard_error), 3),
+            upper=round(best_theta + (CONFIDENCE_Z_90 * standard_error), 3),
+        )
+
+    return IrtEstimate(
+        theta=best_theta,
+        standard_error=standard_error,
+        test_information=test_information,
+        reliability=reliability,
+        confidence_interval_90=confidence_interval,
+    )
+
+
+def _log_likelihood(theta: float, observations: list[IrtObservation]) -> float:
+    total = 0.0
+
+    for observation in observations:
+        probability = _irt_probability(
+            theta=theta,
+            discrimination=observation.discrimination,
+            difficulty=observation.difficulty,
+            guessing=observation.guessing,
+        )
+
+        probability = _clamp(probability, 1e-9, 1 - 1e-9)
+
+        total += (
+            observation.response_value * math.log(probability)
+            + (1 - observation.response_value) * math.log(1 - probability)
+        )
+
+    return total
+
+
+def _test_information(theta: float, observations: list[IrtObservation]) -> float:
+    total_information = 0.0
+
+    for observation in observations:
+        logistic_value = _logistic(
+            observation.discrimination * (theta - observation.difficulty)
+        )
+
+        probability = observation.guessing + (
+            (1 - observation.guessing) * logistic_value
+        )
+        probability = _clamp(probability, 1e-9, 1 - 1e-9)
+
+        derivative = (
+            (1 - observation.guessing)
+            * observation.discrimination
+            * logistic_value
+            * (1 - logistic_value)
+        )
+
+        total_information += (derivative * derivative) / (
+            probability * (1 - probability)
+        )
+
+    return total_information
+
+
+def _irt_probability(
+    theta: float,
+    discrimination: float,
+    difficulty: float,
+    guessing: float,
+) -> float:
+    return guessing + (
+        (1 - guessing) * _logistic(discrimination * (theta - difficulty))
+    )
+
+
+def _logistic(value: float) -> float:
+    if value >= 0:
+        z = math.exp(-value)
+        return 1 / (1 + z)
+
+    z = math.exp(value)
+    return z / (1 + z)
+
+
+def _standard_score_from_theta(theta: float | None) -> float | None:
+    if theta is None:
+        return None
+
+    return round(100 + (15 * theta), 1)
+
+
+def _percentile_from_theta(theta: float | None) -> float | None:
+    if theta is None:
+        return None
+
+    percentile = 100 * (0.5 * (1 + math.erf(theta / math.sqrt(2))))
+
+    return round(_clamp(percentile, 0.1, 99.9), 1)
+
+
+def _score_band_from_standard_score(standard_score: float | None) -> str:
+    if standard_score is None:
+        return "UNAVAILABLE"
+
+    if standard_score < 70:
+        return "VERY_LOW"
+    if standard_score < 80:
+        return "LOW"
+    if standard_score < 90:
+        return "LOW_AVERAGE"
+    if standard_score < 110:
+        return "AVERAGE"
+    if standard_score < 120:
+        return "HIGH_AVERAGE"
+    if standard_score < 130:
+        return "HIGH"
+
+    return "VERY_HIGH"
+
+
+def _overall_interpretation(estimate: IrtEstimate) -> str:
+    if estimate.theta is None:
+        return (
+            "The advanced scoring engine could not estimate an IRT ability "
+            "parameter because calibrated item-response observations were not "
+            "available."
+        )
+
+    return (
+        "This profile uses provisional IRT-style ability estimation. The result "
+        "combines calibrated item difficulty, item discrimination, guessing "
+        "parameters where available, response correctness, test information, "
+        "standard error, and a 90% confidence interval. Norm-certified IQ "
+        "interpretation requires a validated calibration and norming sample."
+    )
+
+
+def _domain_interpretation(
+    label: str,
+    estimate: IrtEstimate,
+    item_count: int,
+) -> str:
+    if estimate.theta is None:
+        return (
+            f"{label} could not receive an IRT-style domain estimate because "
+            "calibrated item-response observations were not available."
+        )
+
+    return (
+        f"{label} uses provisional IRT-style scoring across {item_count} "
+        "calibrated item observations. Domain confidence should be interpreted "
+        "using the standard error, confidence interval, and test information."
+    )
+
+
+def _resolve_scoring_mode_used(requested_mode: ScoringMode) -> ScoringMode:
+    if requested_mode == "BASELINE_CLASSICAL":
+        return "IRT_2PL_PROVISIONAL"
+
+    return requested_mode
+
+
+def _resolve_calibration_version(request: ScoringRequest) -> str | None:
+    versions = {
+        item.calibration.calibration_version
+        for item in request.items
+        if item.calibration.calibration_version is not None
+    }
+
+    if not versions:
+        return None
+
+    return ",".join(sorted(versions))
+
+
+def _round_or_none(value: float | None) -> float | None:
+    if value is None:
+        return None
+
+    return round(value, 3)
+
+
+def _clamp(value: float, lower: float, upper: float) -> float:
+    return max(lower, min(value, upper))
+
+===== C:\Users\REX\Desktop\IQmeridian\apps\psychometrics\app\services\__init__.py =====
+
+===== C:\Users\REX\Desktop\IQmeridian\apps\psychometrics\app\main.py =====
+from fastapi import FastAPI
+
+from app.core.config import settings
+from app.routers.scoring import router as scoring_router
+from app.routers.system import router as system_router
+
+
+app = FastAPI(
+    title="IQMeridian Psychometrics Service",
+    version=settings.service_version,
+    description=(
+        "Internal psychometric analysis service for IQMeridian assessment data. "
+        "This service is not intended for public user access."
+    ),
+)
+
+app.include_router(system_router)
+app.include_router(scoring_router)
+
+===== C:\Users\REX\Desktop\IQmeridian\apps\psychometrics\app\__init__.py =====

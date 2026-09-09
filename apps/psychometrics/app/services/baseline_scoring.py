@@ -5,6 +5,7 @@ import json
 from collections import defaultdict
 from datetime import UTC, datetime
 from statistics import median
+from typing import Any
 
 from app.schemas.scoring import (
     CONTRACT_VERSION,
@@ -12,11 +13,29 @@ from app.schemas.scoring import (
     DomainScore,
     OverallScore,
     ScoreAuditTrace,
-    ScoringMode,
     ScoringRequest,
     ScoringResponse,
     TimingProfile,
     ValidityFlag,
+)
+from app.services.feature_engine import (
+    BASELINE_SCORING_MODEL_VERSION,
+    DEFAULT_SCORING_SIGNALS_USED,
+    FEATURE_SET_VERSION,
+    SCORING_ENGINE_VERSION,
+    build_feature_summary,
+    build_feature_vector,
+    domain_accuracy_spread_from_scores,
+    estimate_test_information,
+    estimate_theta_from_accuracy,
+    iq_confidence_interval_90_from_theta_interval,
+    percentile_from_theta,
+    reliability_from_test_information,
+    resolve_leaderboard_eligibility,
+    score_band_from_standard_score,
+    standard_error_from_test_information,
+    theta_confidence_interval_90,
+    theta_to_iq_score,
 )
 
 
@@ -48,19 +67,77 @@ def build_baseline_scoring_response(request: ScoringRequest) -> ScoringResponse:
         latest_response_count=len(latest_responses),
     )
 
+    domain_scores = _add_iq_estimates_to_domains(
+        domain_scores=domain_scores,
+        timing_profile=timing_profile,
+        validity_flags=validity_flags,
+    )
+
+    overall_theta = estimate_theta_from_accuracy(
+        accuracy=accuracy,
+        timing_profile=timing_profile,
+        validity_flags=validity_flags,
+        domain_accuracy_spread=domain_accuracy_spread_from_scores(domain_scores),
+    )
+    overall_standard_score = theta_to_iq_score(overall_theta)
+    overall_percentile = percentile_from_theta(overall_theta)
+    overall_test_information = estimate_test_information(
+        item_count=len(request.items),
+        accuracy=accuracy,
+        validity_flags=validity_flags,
+    )
+    overall_standard_error = standard_error_from_test_information(
+        overall_test_information,
+    )
+    overall_reliability = reliability_from_test_information(overall_test_information)
+    theta_ci_lower, theta_ci_upper = theta_confidence_interval_90(
+        theta=overall_theta,
+        standard_error=overall_standard_error,
+    )
+    iq_ci_lower, iq_ci_upper = iq_confidence_interval_90_from_theta_interval(
+        theta_ci_lower,
+        theta_ci_upper,
+    )
+
+    feature_vector = build_feature_vector(
+        request=request,
+        timing_profile=timing_profile,
+        validity_flags=validity_flags,
+        raw_score=raw_score,
+        max_raw_score=max_raw_score,
+        accuracy=accuracy,
+        theta=overall_theta,
+        standard_score=overall_standard_score,
+        percentile=overall_percentile,
+        domains=domain_scores,
+    )
+
+    leaderboard_eligible, leaderboard_reasons = resolve_leaderboard_eligibility(
+        scoring_status=scoring_status,
+        validity_flags=validity_flags,
+        iq_score=overall_standard_score,
+    )
+
     warnings: list[str] = []
 
     if request.requested_scoring_mode != "BASELINE_CLASSICAL":
         warnings.append(
-            "Requested scoring mode was downgraded to BASELINE_CLASSICAL. "
-            "Advanced IRT and multidimensional scoring are not active in v1."
+            "Requested scoring mode was downgraded to the deterministic "
+            "IQMeridian Cognitive Intelligence Engine baseline because calibrated "
+            "IRT or ML ability modelling was not available for this request."
         )
 
     if scoring_status != "SCORED":
         warnings.append(
-            "Baseline score is partial or limited because the submitted session "
-            "does not contain a complete, fully valid response set."
+            "Score interpretation is partial or limited because the submitted "
+            "session does not contain a complete, fully valid response set."
         )
+
+    warnings.append(
+        "IQMeridian IQ Score v0.1 is a platform-standardised cognitive estimate. "
+        "It is not a clinical diagnosis and should be interpreted with the "
+        "validity flags and confidence interval."
+    )
 
     return ScoringResponse(
         contractVersion=CONTRACT_VERSION,
@@ -72,34 +149,61 @@ def build_baseline_scoring_response(request: ScoringRequest) -> ScoringResponse:
             rawScore=raw_score,
             maxRawScore=max_raw_score,
             accuracy=accuracy,
-            theta=None,
-            standardScore=None,
-            percentile=None,
-            scoreBand=_score_band_from_accuracy(accuracy),
-            testInformation=None,
-            standardError=None,
-            confidenceInterval90=ConfidenceInterval90(lower=None, upper=None),
-            reliability=None,
-            interpretation=_overall_interpretation(accuracy, scoring_status),
+            theta=overall_theta,
+            standardScore=overall_standard_score,
+            percentile=overall_percentile,
+            iqScore=overall_standard_score,
+            iqPercentile=overall_percentile,
+            iqConfidenceInterval90=ConfidenceInterval90(
+                lower=iq_ci_lower,
+                upper=iq_ci_upper,
+            ),
+            scoreBand=score_band_from_standard_score(overall_standard_score),
+            testInformation=overall_test_information,
+            standardError=overall_standard_error,
+            confidenceInterval90=ConfidenceInterval90(
+                lower=theta_ci_lower,
+                upper=theta_ci_upper,
+            ),
+            reliability=overall_reliability,
+            interpretation=_overall_interpretation(
+                accuracy=accuracy,
+                scoring_status=scoring_status,
+                standard_score=overall_standard_score,
+            ),
+            featureVector=feature_vector,
         ),
         domains=domain_scores,
         timingProfile=timing_profile,
         validityFlags=validity_flags,
         audit=ScoreAuditTrace(
-            modelVersion="baseline-classical.0.1.0",
+            modelVersion=BASELINE_SCORING_MODEL_VERSION,
             contractVersion=CONTRACT_VERSION,
             calibrationVersion=None,
-            scoringModeUsed="BASELINE_CLASSICAL",
+            scoringModeUsed="HYBRID_PSYCHOMETRIC_IQ",
             generatedAt=datetime.now(UTC),
             inputHash=_hash_request(request),
             warnings=warnings,
+            scoringEngineVersion=SCORING_ENGINE_VERSION,
+            scoringModelFamily="HYBRID_PSYCHOMETRIC",
+            scoringModelVersion=BASELINE_SCORING_MODEL_VERSION,
+            featureSetVersion=FEATURE_SET_VERSION,
+            scoringSignalsUsed=DEFAULT_SCORING_SIGNALS_USED,
+            featureSummary=build_feature_summary(
+                feature_vector=feature_vector,
+                scoring_signals_used=DEFAULT_SCORING_SIGNALS_USED,
+            ),
+            featureVector=feature_vector,
+            validityAdjusted=bool(validity_flags),
+            leaderboardEligible=leaderboard_eligible,
+            leaderboardIneligibilityReasons=leaderboard_reasons,
         ),
     )
 
 
 def _build_domain_scores(
     request: ScoringRequest,
-    latest_responses: dict[str, object],
+    latest_responses: dict[str, Any],
 ) -> list[DomainScore]:
     domain_labels = {
         domain.domain: domain.label for domain in request.assessment.domains
@@ -141,12 +245,7 @@ def _build_domain_scores(
             theta=None,
             standardScore=None,
             percentile=None,
-            scoreBand=_score_band_from_accuracy(
-                _safe_divide(
-                    domain_raw_scores.get(domain, 0.0),
-                    domain_max_scores.get(domain, 0.0),
-                )
-            ),
+            scoreBand="UNAVAILABLE",
             standardError=None,
             confidenceInterval90=ConfidenceInterval90(lower=None, upper=None),
             reliability=None,
@@ -161,6 +260,81 @@ def _build_domain_scores(
         )
         for domain in all_domains
     ]
+
+
+def _add_iq_estimates_to_domains(
+    *,
+    domain_scores: list[DomainScore],
+    timing_profile: TimingProfile,
+    validity_flags: list[ValidityFlag],
+) -> list[DomainScore]:
+    enriched_scores: list[DomainScore] = []
+
+    for domain_score in domain_scores:
+        theta = estimate_theta_from_accuracy(
+            accuracy=domain_score.accuracy,
+            timing_profile=timing_profile,
+            validity_flags=validity_flags,
+            domain_accuracy_spread=None,
+        )
+        standard_score = theta_to_iq_score(theta)
+        percentile = percentile_from_theta(theta)
+        test_information = estimate_test_information(
+            item_count=max(int(round(domain_score.max_raw_score)), 0),
+            accuracy=domain_score.accuracy,
+            validity_flags=validity_flags,
+        )
+        standard_error = standard_error_from_test_information(test_information)
+        reliability = reliability_from_test_information(test_information)
+        theta_ci_lower, theta_ci_upper = theta_confidence_interval_90(
+            theta=theta,
+            standard_error=standard_error,
+        )
+        iq_ci_lower, iq_ci_upper = iq_confidence_interval_90_from_theta_interval(
+            theta_ci_lower,
+            theta_ci_upper,
+        )
+
+        enriched_scores.append(
+            DomainScore(
+                domain=domain_score.domain,
+                label=domain_score.label,
+                rawScore=domain_score.raw_score,
+                maxRawScore=domain_score.max_raw_score,
+                accuracy=domain_score.accuracy,
+                theta=theta,
+                standardScore=standard_score,
+                percentile=percentile,
+                iqScore=standard_score,
+                iqPercentile=percentile,
+                iqConfidenceInterval90=ConfidenceInterval90(
+                    lower=iq_ci_lower,
+                    upper=iq_ci_upper,
+                ),
+                scoreBand=score_band_from_standard_score(standard_score),
+                standardError=standard_error,
+                confidenceInterval90=ConfidenceInterval90(
+                    lower=theta_ci_lower,
+                    upper=theta_ci_upper,
+                ),
+                testInformation=test_information,
+                reliability=reliability,
+                interpretation=domain_score.interpretation,
+                featureVector={
+                    "domain": domain_score.domain,
+                    "domain_raw_score": domain_score.raw_score,
+                    "domain_max_raw_score": domain_score.max_raw_score,
+                    "domain_accuracy": domain_score.accuracy,
+                    "domain_theta": theta,
+                    "domain_iq_score": standard_score,
+                    "domain_percentile": percentile,
+                    "domain_test_information": test_information,
+                    "domain_reliability": reliability,
+                },
+            )
+        )
+
+    return enriched_scores
 
 
 def _build_timing_profile(
@@ -221,7 +395,7 @@ def _build_timing_profile(
 def _build_validity_flags(
     request: ScoringRequest,
     timing_profile: TimingProfile,
-    latest_responses: dict[str, object],
+    latest_responses: dict[str, Any],
 ) -> list[ValidityFlag]:
     flags: list[ValidityFlag] = []
 
@@ -370,45 +544,32 @@ def _resolve_scoring_status(
     return "SCORED"
 
 
-def _score_band_from_accuracy(accuracy: float | None) -> str:
-    if accuracy is None:
-        return "UNAVAILABLE"
-
-    if accuracy < 0.2:
-        return "VERY_LOW"
-    if accuracy < 0.35:
-        return "LOW"
-    if accuracy < 0.5:
-        return "LOW_AVERAGE"
-    if accuracy < 0.7:
-        return "AVERAGE"
-    if accuracy < 0.85:
-        return "HIGH_AVERAGE"
-    if accuracy < 0.95:
-        return "HIGH"
-
-    return "VERY_HIGH"
-
-
-def _overall_interpretation(accuracy: float | None, scoring_status: str) -> str:
-    if accuracy is None:
+def _overall_interpretation(
+    *,
+    accuracy: float | None,
+    scoring_status: str,
+    standard_score: float | None,
+) -> str:
+    if accuracy is None or standard_score is None:
         return (
-            "A baseline score could not be interpreted because the request did "
-            "not contain scorable item data."
+            "An IQMeridian IQ Score could not be estimated because the request "
+            "did not contain enough scorable item data."
         )
 
     if scoring_status == "PARTIAL":
         return (
-            "This is a deterministic baseline profile. Interpretation is limited "
-            "because the response set or validity signals indicate partial "
-            "scoring conditions."
+            "This IQMeridian IQ Score is a partial platform-standardised estimate. "
+            "It uses response accuracy, domain coverage, timing behaviour, omissions, "
+            "and validity flags, but interpretation is limited because the session "
+            "contains incomplete or flagged response evidence."
         )
 
     return (
-        "This is a deterministic baseline profile based on raw score, presented "
-        "item coverage, domain accuracy, response timing, omissions, and basic "
-        "validity checks. Advanced IRT, norming, and multidimensional estimates "
-        "are not yet active."
+        "This IQMeridian IQ Score is a platform-standardised cognitive ability "
+        "estimate on a mean-100, SD-15 scale. The v0.1 engine combines response "
+        "accuracy, domain performance, response timing, omissions, validity flags, "
+        "confidence estimates, and ML-ready feature extraction. It is not a "
+        "clinical diagnosis."
     )
 
 
@@ -417,8 +578,9 @@ def _domain_interpretation(label: str, accuracy: float | None) -> str:
         return f"{label} could not be interpreted because no scorable item data was available."
 
     return (
-        f"{label} baseline performance is represented as domain accuracy only. "
-        "Advanced calibrated domain estimates will be added in later scoring versions."
+        f"{label} contributes to the IQMeridian IQ profile through domain accuracy, "
+        "domain coverage, timing-adjusted validity context, and confidence-aware "
+        "standardised scoring."
     )
 
 

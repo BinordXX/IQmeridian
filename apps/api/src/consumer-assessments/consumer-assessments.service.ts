@@ -6,6 +6,7 @@ import {
 
 import { PrismaService } from '../prisma/prisma.service';
 import { SetConsumerAssessmentDefaultDto } from './dto/set-consumer-assessment-default.dto';
+import { AssessmentFormStatus } from '@prisma/client';
 
 const CONSUMER_DEFAULT_ASSESSMENT_KEY = 'CONSUMER_DEFAULT_ASSESSMENT';
 
@@ -18,7 +19,13 @@ type RequestUser = {
 const assessmentFormSelect = {
   id: true,
   name: true,
+  version: true,
+  versionLabel: true,
   isActive: true,
+  formStatus: true,
+  deliveryItemCount: true,
+  randomizeItems: true,
+  randomizeOptions: true,
   createdAt: true,
   updatedAt: true,
 };
@@ -68,9 +75,12 @@ export class ConsumerAssessmentsService {
       );
     }
 
-    if (!setting.assessmentForm.isActive) {
+    if (
+      !setting.assessmentForm.isActive ||
+      setting.assessmentForm.formStatus !== AssessmentFormStatus.PUBLIC
+    ) {
       throw new BadRequestException(
-        'The consumer assessment form is not currently active.',
+        'The consumer assessment form is not currently public.',
       );
     }
 
@@ -102,9 +112,12 @@ export class ConsumerAssessmentsService {
       throw new NotFoundException('Assessment form was not found.');
     }
 
-    if (!assessmentForm.isActive) {
+    if (
+      !assessmentForm.isActive ||
+      assessmentForm.formStatus !== AssessmentFormStatus.PUBLIC
+    ) {
       throw new BadRequestException(
-        'Only active forms can be selected as the consumer default.',
+        'Only public active forms can be selected as the consumer default.',
       );
     }
 

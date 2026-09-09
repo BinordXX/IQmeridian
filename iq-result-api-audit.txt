@@ -1,0 +1,215 @@
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\about\page.tsx:48: description="The platform is designed to evolve from MVP assessment delivery into a calibrated intelligence profile ecosystem with psychometric discipline, role-based access, and governance controls."
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\api\page.tsx:47: GET /sessions/:sessionId/psychometric-score
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\api\page.tsx:50: POST /internal/psychometrics/sessions/:sessionId/score
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\assessment\result\[token]\page.tsx:1: import { CandidateResultAccessLoader } from '@/features/assessment/components/candidate-result-access-loader';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\assessment\result\[token]\page.tsx:3: type CandidateResultAccessPageProps = {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\assessment\result\[token]\page.tsx:9: export default async function CandidateResultAccessPage({
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\assessment\result\[token]\page.tsx:11: }: CandidateResultAccessPageProps) {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\assessment\result\[token]\page.tsx:17: <CandidateResultAccessLoader token={token} />
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\assessment\status\page.tsx:2: import { CompletedResultAccess } from '@/features/assessment/components/completed-result-access';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\assessment\status\page.tsx:230: <CompletedResultAccess
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\careers\page.tsx:15: 'Psychometricians and assessment researchers',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\careers\page.tsx:33: description="IQMeridian will require engineering, psychometrics, governance, product design, and data-security capability as it matures."
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\contact\page.tsx:28: 'For psychometric research, calibration, item analysis, validation, and data-governance enquiries.',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\settings\_components\account-settings-client.tsx:135: 'Updates about research workflows, governance changes, and psychometric review notices.',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\consumer-dashboard-api.ts:36: psychometricScore?: ConsumerPsychometricScoreResult | null;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\consumer-dashboard-api.ts:37: psychometricScoreResult?: ConsumerPsychometricScoreResult | null;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\consumer-dashboard-api.ts:40: export type ConsumerPsychometricDomainScore = {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\consumer-dashboard-api.ts:59: export type ConsumerPsychometricValidityFlag = {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\consumer-dashboard-api.ts:68: export type ConsumerPsychometricScoreResult = {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\consumer-dashboard-api.ts:98: domainScores: ConsumerPsychometricDomainScore[];
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\consumer-dashboard-api.ts:99: validityFlags: ConsumerPsychometricValidityFlag[];
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\consumer-dashboard-api.ts:177: const attachEmbeddedPsychometricScores = (
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\consumer-dashboard-api.ts:182: psychometricScore:
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\consumer-dashboard-api.ts:183: session.psychometricScore ?? session.psychometricScoreResult ?? null,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\consumer-dashboard-api.ts:191: return attachEmbeddedPsychometricScores(response);
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\consumer-dashboard-api.ts:195: return attachEmbeddedPsychometricScores(response.sessions);
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\consumer-dashboard-api.ts:199: return attachEmbeddedPsychometricScores(response.items);
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\consumer-dashboard-api.ts:203: return attachEmbeddedPsychometricScores(response.data);
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\consumer-dashboard-api.ts:222: export const getConsumerSessionPsychometricScore = async (
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\consumer-dashboard-api.ts:225: return requestApi<ConsumerPsychometricScoreResult | null>(
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\consumer-dashboard-api.ts:226: `/sessions/${encodeURIComponent(sessionId)}/psychometric-score`
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\consumer-dashboard-api.ts:230: export const listConsumerSessionsWithPsychometricScores = async () => {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\consumer-dashboard-api.ts:235: if (session.psychometricScore) {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\consumer-dashboard-api.ts:242: psychometricScore: null,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\consumer-dashboard-api.ts:247: const psychometricScore = await getConsumerSessionPsychometricScore(
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\consumer-dashboard-api.ts:253: psychometricScore,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\consumer-dashboard-api.ts:257: `Failed to load psychometric score for session ${session.id}`,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\consumer-dashboard-api.ts:263: psychometricScore: null,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:26: listConsumerSessionsWithPsychometricScores,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:257: .filter((sessionRecord) => sessionRecord.psychometricScore)
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:259: const leftScore = left.psychometricScore;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:260: const rightScore = right.psychometricScore;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:274: const domainScores = session?.psychometricScore?.domainScores ?? [];
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:351: listConsumerSessionsWithPsychometricScores(),
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:358: listConsumerSessionsWithPsychometricScores(),
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:404: const currentProfileScore = currentProfileSession?.psychometricScore ?? null;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:906: assessmentSession.psychometricScore ? (
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:911: Psychometric profile
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:915: assessmentSession.psychometricScore
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:921: assessmentSession.psychometricScore
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:928: {assessmentSession.psychometricScore.scoringStatus}
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:939: assessmentSession.psychometricScore
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:951: assessmentSession.psychometricScore
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:963: assessmentSession.psychometricScore
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:975: assessmentSession.psychometricScore
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:977: assessmentSession.psychometricScore
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:986: assessmentSession.psychometricScore.validityFlags
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:991: assessmentSession.psychometricScore.validityFlags
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\dashboard\page.tsx:996: assessmentSession.psychometricScore.validityFlags
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\researcher\page.tsx:122: Psychometric readiness workspace
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\researcher\page.tsx:128: psychometric review.
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\analytics-export-client.tsx:87: 'Psychometric readiness review',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-bank-management-client.tsx:85: item.psychometricStatus === 'FLAGGED_AFTER_PILOT' ||
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-bank-management-client.tsx:86: item.psychometricFlags.length > 0
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-bank-management-client.tsx:99: if (item.status === 'RETIRED' || item.psychometricStatus === 'RETIRED') {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-bank-management-client.tsx:108: item.psychometricStatus === 'FLAGGED_AFTER_PILOT' ||
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-bank-management-client.tsx:109: item.psychometricFlags.length > 0
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-bank-management-client.tsx:118: if (item.psychometricStatus === 'CALIBRATED') {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-bank-management-client.tsx:122: description: 'Has usable psychometric evidence.',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-bank-management-client.tsx:126: if (item.psychometricStatus === 'PILOT_READY') {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-bank-management-client.tsx:134: if (item.psychometricStatus === 'CONTENT_REVIEWED') {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-bank-management-client.tsx:142: if (item.psychometricStatus === 'UNDER_REVIEW') {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-bank-management-client.tsx:238: item.psychometricStatus.toLowerCase().includes(normalisedSearch) ||
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-bank-management-client.tsx:440: Latest psychometric run
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-bank-management-client.tsx:503: {item.psychometricFlags.length > 0
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-bank-management-client.tsx:504: ? item.psychometricFlags.map((flag) => (
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-bank-management-client.tsx:524: ) : item.psychometricFlags.length === 0 ? (
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-creation-form.tsx:202: placeholder="Add reviewer notes, scoring explanation, or psychometric assumptions."
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-draft-create-client.tsx:11: psychometricItemStatusLabels,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-draft-create-client.tsx:52: const psychometricStatusOptions = [
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-draft-create-client.tsx:87: const [psychometricStatus, setPsychometricStatus] = useState('DRAFT');
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-draft-create-client.tsx:153: psychometricStatus,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-draft-create-client.tsx:409: Psychometric status
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-draft-create-client.tsx:411: value={psychometricStatus}
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-draft-create-client.tsx:412: onChange={(event) => setPsychometricStatus(event.target.value)}
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-draft-create-client.tsx:415: {psychometricStatusOptions.map((option) => (
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-draft-create-client.tsx:417: {psychometricItemStatusLabels[option] ?? option}
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-draft-edit-client.tsx:11: psychometricItemStatusLabels,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-draft-edit-client.tsx:53: const psychometricStatusOptions = [
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-draft-edit-client.tsx:80: psychometricStatus: string;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-draft-edit-client.tsx:109: psychometricStatus: item?.psychometricStatus ?? 'DRAFT',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-draft-edit-client.tsx:335: psychometricStatus: formState.psychometricStatus,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-draft-edit-client.tsx:409: <p className="text-slate-500">Psychometric status</p>
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-draft-edit-client.tsx:411: {psychometricItemStatusLabels[
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-draft-edit-client.tsx:412: selectedItem.psychometricStatus
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-draft-edit-client.tsx:413: ] ?? selectedItem.psychometricStatus}
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-draft-edit-client.tsx:687: Psychometric status
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-draft-edit-client.tsx:689: value={formState.psychometricStatus}
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-draft-edit-client.tsx:691: updateField('psychometricStatus', event.target.value)
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-draft-edit-client.tsx:696: {psychometricStatusOptions.map((option) => (
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-draft-edit-client.tsx:698: {psychometricItemStatusLabels[option] ?? option}
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-form-placement-client.tsx:11: psychometricItemStatusLabels,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-form-placement-client.tsx:130: item.psychometricStatus === 'PILOT_READY' &&
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-form-placement-client.tsx:196: later psychometric interpretation.
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-form-placement-client.tsx:216: {psychometricItemStatusLabels[item.psychometricStatus] ??
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-form-placement-client.tsx:217: item.psychometricStatus}
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-review-readiness-client.tsx:7: psychometricItemStatusLabels,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-review-readiness-client.tsx:20: const psychometricStatusOptions = [
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-review-readiness-client.tsx:32: psychometricStatus,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-review-readiness-client.tsx:35: psychometricStatus: string;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-review-readiness-client.tsx:39: psychometricStatus === 'PILOT_READY'
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-review-readiness-client.tsx:48: if (psychometricStatus !== 'PILOT_READY') {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-review-readiness-client.tsx:62: const [psychometricStatus, setPsychometricStatus] = useState(
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-review-readiness-client.tsx:63: item.psychometricStatus,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-review-readiness-client.tsx:72: psychometricStatus,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-review-readiness-client.tsx:77: currentItem.psychometricStatus === 'PILOT_READY';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-review-readiness-client.tsx:89: psychometricStatus,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-review-readiness-client.tsx:96: setPsychometricStatus(updatedItem.psychometricStatus);
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-review-readiness-client.tsx:136: {psychometricItemStatusLabels[currentItem.psychometricStatus] ??
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-review-readiness-client.tsx:137: currentItem.psychometricStatus}
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-review-readiness-client.tsx:183: Psychometric readiness status
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-review-readiness-client.tsx:185: value={psychometricStatus}
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-review-readiness-client.tsx:186: onChange={(event) => setPsychometricStatus(event.target.value)}
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-review-readiness-client.tsx:189: {psychometricStatusOptions.map((status) => (
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_components\item-review-readiness-client.tsx:191: {psychometricItemStatusLabels[status] ?? status}
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_data\internal-tooling-data.ts:194: 'Requires psychometric review before any future activation decision.',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_lib\internal-api.ts:106: psychometricStatus?: string | null;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_lib\internal-api.ts:113: psychometricStatus: string;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_lib\internal-api.ts:190: psychometricStatus?: string | null;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_lib\internal-api.ts:496: export const psychometricItemStatusLabels: Record<string, string> = {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_lib\internal-api.ts:876: psychometricStatus: string;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\_lib\internal-api.ts:887: psychometricFlags: {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\internal\page.tsx:109: supportingText="Items paused for psychometric, content, or operational review."
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\research-governance\page.tsx:12: 'IQMeridian research governance, psychometric validation, and calibration-readiness information.',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\research-governance\page.tsx:17: title: 'Psychometric caution',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\research-governance\page.tsx:37: 'Report language should distinguish provisional insight from certified psychometric claims.',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\research-governance\page.tsx:46: title="IQMeridian is built to grow into validated psychometric infrastructure."
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\_components\public-site-nav.tsx:113: description: 'Psychometric caution and validation pathway.',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\page.tsx:54: title: 'Psychometric scoring pipeline',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\page.tsx:82: detail: 'Built to mature toward calibrated psychometric estimates.',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\page.tsx:180: role: 'Chief Psychometrics Officer',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\page.tsx:205: 'No. The current platform is a serious psychometric infrastructure with provisional scoring. Formal IQ claims require calibration, norming, reliability validation, and governance review.',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\page.tsx:576: IQMeridian combines assessment delivery, psychometric scoring,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\app\twitter-image.tsx:73: Cognitive testing, psychometric scoring, validity diagnostics,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\api\assessment-api.ts:82: export type CandidateResultAccessExchangeResult = {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\api\assessment-api.ts:88: export type AssessmentPsychometricDomainScore = {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\api\assessment-api.ts:107: export type AssessmentPsychometricValidityFlag = {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\api\assessment-api.ts:116: export type AssessmentPsychometricScoreResult = {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\api\assessment-api.ts:146: domainScores: AssessmentPsychometricDomainScore[];
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\api\assessment-api.ts:147: validityFlags: AssessmentPsychometricValidityFlag[];
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\api\assessment-api.ts:198: resultAccess: '/sessions/result-access',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\api\assessment-api.ts:241: getPsychometricScore: (sessionId: string) =>
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\api\assessment-api.ts:242: `/sessions/${encodeURIComponent(sessionId)}/psychometric-score`,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\api\assessment-api.ts:399: export const exchangeCandidateResultAccessToken = async (
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\api\assessment-api.ts:402: ): Promise<CandidateResultAccessExchangeResult> => {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\api\assessment-api.ts:403: return assessmentRequest<CandidateResultAccessExchangeResult>(
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\api\assessment-api.ts:404: assessmentEndpoints.resultAccess,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\api\assessment-api.ts:567: export const getCandidateResultSummary = async (
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\api\assessment-api.ts:585: export const getAssessmentPsychometricScore = async (
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\api\assessment-api.ts:588: ): Promise<AssessmentPsychometricScoreResult | null> => {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\api\assessment-api.ts:589: return assessmentRequest<AssessmentPsychometricScoreResult | null>(
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\api\assessment-api.ts:590: assessmentEndpoints.getPsychometricScore(sessionId),
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\components\candidate-report-loader.tsx:8: getCandidateResultSummary,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\components\candidate-report-loader.tsx:119: const result = await getCandidateResultSummary(
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\components\candidate-result-access-loader.tsx:9: exchangeCandidateResultAccessToken,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\components\candidate-result-access-loader.tsx:13: type CandidateResultAccessLoaderProps = {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\components\candidate-result-access-loader.tsx:42: export const CandidateResultAccessLoader = ({
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\components\candidate-result-access-loader.tsx:44: }: CandidateResultAccessLoaderProps) => {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\components\candidate-result-access-loader.tsx:53: const result = await exchangeCandidateResultAccessToken(
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\components\completed-result-access.tsx:8: getCandidateResultSummary,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\components\completed-result-access.tsx:12: type CompletedResultAccessProps = {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\components\completed-result-access.tsx:40: export const CompletedResultAccess = ({
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\components\completed-result-access.tsx:43: }: CompletedResultAccessProps) => {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\components\completed-result-access.tsx:57: const checkResultAccess = async () => {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\components\completed-result-access.tsx:62: const result = await getCandidateResultSummary(
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\components\completed-result-access.tsx:94: void checkResultAccess();
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\components\live-assessment-shell.tsx:17: getCandidateResultSummary,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\components\live-assessment-shell.tsx:89: const summary = await getCandidateResultSummary(sessionId);
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\assessment\contracts\assessment-contracts.ts:156: psychometricScoring?: {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\api\employer-dashboard-api.ts:17: export type PsychometricScoreBand =
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\api\employer-dashboard-api.ts:26: export const psychometricScoreBandOptions: Array<{
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\api\employer-dashboard-api.ts:27: value: PsychometricScoreBand;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\api\employer-dashboard-api.ts:41: minimumOverallBand: PsychometricScoreBand | null;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\api\employer-dashboard-api.ts:42: minimumAbstractReasoningBand: PsychometricScoreBand | null;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\api\employer-dashboard-api.ts:43: minimumNumericalReasoningBand: PsychometricScoreBand | null;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\api\employer-dashboard-api.ts:122: export type EmployerPsychometricDomainScoreSummary = {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\api\employer-dashboard-api.ts:126: scoreBand?: PsychometricScoreBand | string;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\api\employer-dashboard-api.ts:132: export type EmployerPsychometricValidityFlagSummary = {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\api\employer-dashboard-api.ts:140: export type EmployerPsychometricScoreResultSummary = {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\api\employer-dashboard-api.ts:144: overallScoreBand: PsychometricScoreBand | string;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\api\employer-dashboard-api.ts:149: domainScores?: EmployerPsychometricDomainScoreSummary[];
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\api\employer-dashboard-api.ts:150: validityFlags?: EmployerPsychometricValidityFlagSummary[];
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\api\employer-dashboard-api.ts:186: psychometricScoreResult?: EmployerPsychometricScoreResultSummary | null;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\api\employer-dashboard-api.ts:386: return Boolean(session.psychometricScoreResult ?? session.score);
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-campaign-list.tsx:54: psychometric results.
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-candidate-threshold-summary.tsx:142: {session.psychometricScoreResult?.overallScoreBand ??
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-result-threshold-control.tsx:8: PsychometricScoreBand,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-result-threshold-control.tsx:10: import { psychometricScoreBandOptions } from '../api/employer-dashboard-api';
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-result-threshold-control.tsx:19: const nullableBand = (value: string): PsychometricScoreBand | null => {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-result-threshold-control.tsx:20: return value ? (value as PsychometricScoreBand) : null;
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-result-threshold-control.tsx:170: {psychometricScoreBandOptions.map((option) => (
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-result-threshold-control.tsx:193: {psychometricScoreBandOptions.map((option) => (
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-result-threshold-control.tsx:216: {psychometricScoreBandOptions.map((option) => (
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-result-threshold-control.tsx:244: Keep candidates without psychometric scores outside the filtered
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\components\employer-result-visibility-control.tsx:24: body: 'Candidates may see a restrained result summary after completion. Item-level answers, raw psychometric evidence, and employer-only reports remain hidden.',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\utils\employer-candidate-thresholds.ts:4: PsychometricScoreBand,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\utils\employer-candidate-thresholds.ts:24: const scoreBandOrder: PsychometricScoreBand[] = [
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\utils\employer-candidate-thresholds.ts:39: return scoreBandOrder.indexOf(band as PsychometricScoreBand);
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\utils\employer-candidate-thresholds.ts:44: minimumBand?: PsychometricScoreBand | null,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\utils\employer-candidate-thresholds.ts:88: session.psychometricScoreResult?.domainScores?.find((domainScore) => {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\utils\employer-candidate-thresholds.ts:96: session.psychometricScoreResult?.validityFlags?.some((flag) => {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\utils\employer-candidate-thresholds.ts:112: if (!session.psychometricScoreResult) {
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\features\employer\utils\employer-candidate-thresholds.ts:128: session.psychometricScoreResult.overallScoreBand,
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\lib\public-seo.ts:5: 'IQMeridian is intelligence assessment infrastructure for structured cognitive testing, psychometric scoring, validity diagnostics, research governance, and role-aware dashboards.',
+C:\Users\REX\Desktop\IQmeridian\apps\web\src\lib\public-seo.ts:17: 'psychometric scoring',

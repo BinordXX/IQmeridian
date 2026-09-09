@@ -32,6 +32,7 @@ import {
   Sparkles,
   UsersRound,
   X,
+  Trophy,
 } from 'lucide-react';
 import Link from 'next/link';
 import {
@@ -602,6 +603,14 @@ export default function HomePage() {
                   Explore platform
                   <ChevronRight size={17} strokeWidth={2.4} />
                 </MagneticLink>
+
+                <MagneticLink
+                  className={secondaryButtonClassName}
+                  href="/leaderboard"
+                >
+                  Public leaderboard
+                  <Trophy size={17} strokeWidth={2.4} />
+                </MagneticLink>
               </div>
 
               <div className="mt-10 grid max-w-3xl gap-3 sm:grid-cols-3">
@@ -1063,6 +1072,12 @@ export default function HomePage() {
 
               <Link className={primaryButtonClassName} href="/register">
                 Create account
+              </Link>
+              <Link
+                className="rounded-full border border-white/10 px-5 py-3 text-sm font-bold text-blue-50/75 transition hover:bg-white/10 hover:text-white"
+                href="/leaderboard"
+              >
+                Public leaderboard
               </Link>
             </div>
           </div>

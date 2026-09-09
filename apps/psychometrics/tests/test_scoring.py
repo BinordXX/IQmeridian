@@ -219,10 +219,22 @@ def test_score_session_returns_baseline_profile() -> None:
     assert body["overall"]["rawScore"] == 3
     assert body["overall"]["maxRawScore"] == 4
     assert body["overall"]["accuracy"] == 0.75
-    assert body["overall"]["theta"] is None
-    assert body["overall"]["standardScore"] is None
-    assert body["overall"]["testInformation"] is None
-    assert body["audit"]["scoringModeUsed"] == "BASELINE_CLASSICAL"
+    assert body["overall"]["theta"] is not None
+    assert body["overall"]["standardScore"] is not None
+    assert body["overall"]["iqScore"] == body["overall"]["standardScore"]
+    assert body["overall"]["iqPercentile"] == body["overall"]["percentile"]
+    assert body["overall"]["iqScale"]["mean"] == 100
+    assert body["overall"]["iqScale"]["standardDeviation"] == 15
+    assert body["overall"]["testInformation"] is not None
+    assert body["overall"]["featureVector"]["ml_ready"] is True
+    assert body["audit"]["scoringModeUsed"] == "HYBRID_PSYCHOMETRIC_IQ"
+    assert (
+        body["audit"]["scoringEngineVersion"]
+        == "iqmeridian-cognitive-intelligence-engine.0.1.0"
+    )
+    assert body["audit"]["scoringModelFamily"] == "HYBRID_PSYCHOMETRIC"
+    assert body["audit"]["featureSummary"]["mlReady"] is True
+    assert body["audit"]["featureSummary"]["signalCount"] >= 60
 
 
 def test_score_session_returns_irt_profile_when_requested() -> None:
@@ -242,6 +254,9 @@ def test_score_session_returns_irt_profile_when_requested() -> None:
     assert body["overall"]["maxRawScore"] == 4
     assert body["overall"]["theta"] is not None
     assert body["overall"]["standardScore"] is not None
+    assert body["overall"]["iqScore"] == body["overall"]["standardScore"]
+    assert body["overall"]["iqConfidenceInterval90"]["lower"] is not None
+    assert body["overall"]["iqConfidenceInterval90"]["upper"] is not None
     assert body["overall"]["percentile"] is not None
     assert body["overall"]["standardError"] is not None
     assert body["overall"]["confidenceInterval90"]["lower"] is not None
@@ -251,6 +266,13 @@ def test_score_session_returns_irt_profile_when_requested() -> None:
     assert body["audit"]["modelVersion"] == "irt-provisional.0.2.0"
     assert body["audit"]["scoringModeUsed"] == "IRT_3PL_PROVISIONAL"
     assert body["audit"]["calibrationVersion"] == "calibration-v0"
+    assert (
+        body["audit"]["scoringEngineVersion"]
+        == "iqmeridian-cognitive-intelligence-engine.0.1.0"
+    )
+    assert body["audit"]["scoringModelFamily"] == "IRT"
+    assert body["audit"]["featureSummary"]["mlReady"] is True
+    assert body["audit"]["featureSummary"]["signalCount"] >= 60
 
     domains = {domain["domain"]: domain for domain in body["domains"]}
 

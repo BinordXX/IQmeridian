@@ -14,6 +14,7 @@ import { SessionsModule } from './sessions/sessions.module';
 import { ResponsesModule } from './responses/responses.module';
 import { ScoringModule } from './scoring/scoring.module';
 import { ReportsModule } from './reports/reports.module';
+import { LeaderboardModule } from './leaderboard/leaderboard.module';
 import { AuditModule } from './audit/audit.module';
 import { DiagnosticsModule } from './diagnostics/diagnostics.module';
 import { InternalToolingModule } from './internal-tooling/internal-tooling.module';
@@ -51,6 +52,7 @@ import { VerificationTokensModule } from './verification-tokens/verification-tok
     OrganisationAccessRequestsModule,
     EmailModule,
     VerificationTokensModule,
+    LeaderboardModule,
   ],
   controllers: [AppController],
   providers: [AppService],

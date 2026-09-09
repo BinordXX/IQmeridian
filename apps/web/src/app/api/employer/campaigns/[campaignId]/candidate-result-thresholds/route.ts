@@ -17,7 +17,7 @@ const getApiBaseUrl = (): string => {
     process.env.API_BASE_URL ??
       process.env.NEXT_PUBLIC_API_BASE_URL ??
       process.env.NEXT_PUBLIC_API_URL ??
-      'http://localhost:3001',
+      'http://localhost:3001'
   );
 };
 
@@ -28,7 +28,7 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   const response = await fetch(
     `${getApiBaseUrl()}/campaigns/${encodeURIComponent(
-      campaignId,
+      campaignId
     )}/candidate-result-thresholds`,
     {
       method: 'PATCH',
@@ -38,7 +38,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       },
       body: JSON.stringify(body),
       cache: 'no-store',
-    },
+    }
   );
 
   const responseText = await response.text();
