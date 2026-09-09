@@ -67,7 +67,9 @@ const StatusCard = ({
         : 'border-cyan-300/15 bg-[#07142f]/95 text-slate-300';
 
   return (
-    <section className={`rounded-[1.5rem] border p-5 sm:rounded-[2rem] sm:p-8 ${toneClass}`}>
+    <section
+      className={`rounded-[1.5rem] border p-5 sm:rounded-[2rem] sm:p-8 ${toneClass}`}
+    >
       <p className="text-xs font-black uppercase tracking-[0.24em] text-cyan-300">
         {eyebrow}
       </p>
@@ -182,7 +184,7 @@ export const CandidateReportLoader = ({
   }
 
   if (!summary || summary.visibility !== 'summary') {
-   const hiddenCopy = getHiddenCopy(summary?.reason, summary?.audience);
+    const hiddenCopy = getHiddenCopy(summary?.reason, summary?.audience);
 
     return (
       <StatusCard
@@ -195,9 +197,20 @@ export const CandidateReportLoader = ({
 
   return (
     <CandidateResultSummary
+      iqScore={summary.iqScore ?? null}
+      iqPercentile={summary.iqPercentile ?? null}
+      iqConfidenceInterval90={summary.iqConfidenceInterval90}
       overallBand={summary.overallBand ?? 'Not available'}
       abstractReasoningBand={summary.abstractReasoningBand ?? 'Not available'}
       numericalReasoningBand={summary.numericalReasoningBand ?? 'Not available'}
+      scoringStatus={summary.scoringStatus ?? null}
+      scoringEngineVersion={summary.scoringEngineVersion ?? null}
+      scoringModelVersion={summary.scoringModelVersion ?? null}
+      featureSetVersion={summary.featureSetVersion ?? null}
+      signalCount={summary.signalCount ?? null}
+      leaderboardEligible={summary.leaderboardEligible ?? false}
+      validityFlagCount={summary.validityFlagCount}
+      generatedAt={summary.generatedAt ?? null}
       audience={summary.audience ?? 'employer-invited'}
     />
   );

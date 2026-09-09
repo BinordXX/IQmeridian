@@ -14,7 +14,7 @@ type CollectionResponse<T> =
       };
     };
 
-  export type PsychometricScoreBand =
+export type PsychometricScoreBand =
   | 'VERY_LOW'
   | 'LOW'
   | 'BELOW_AVERAGE'
@@ -162,7 +162,7 @@ export type EmployerResponseSummary = {
 
 export type EmployerSessionSummary = {
   id: string;
-    userId?: string | null;
+  userId?: string | null;
   campaignId?: string | null;
   invitationId?: string | null;
   assessmentFormId: string;
@@ -172,14 +172,14 @@ export type EmployerSessionSummary = {
   createdAt?: string;
   updatedAt?: string;
   candidateName?: string;
-  
+
   user?: {
     id: string;
     name?: string | null;
     email?: string | null;
   };
   invitation?: EmployerInvitationSummary | null;
-    applicantName?: string | null;
+  applicantName?: string | null;
   applicantEmail?: string | null;
   responses?: EmployerResponseSummary[];
   score?: EmployerScoreSummary | null;
@@ -239,13 +239,13 @@ export type UpdateEmployerCandidateResultThresholdsInput =
 
 export const updateEmployerCandidateResultVisibility = async (
   campaignId: string,
-  input: UpdateEmployerCandidateResultVisibilityInput,
+  input: UpdateEmployerCandidateResultVisibilityInput
 ): Promise<EmployerCampaignSummary> => {
   const authHeaders = await getRequiredServerApiAuthHeaders();
 
   const response = await fetch(
     `${getApiBaseUrl()}/campaigns/${encodeURIComponent(
-      campaignId,
+      campaignId
     )}/candidate-result-visibility`,
     {
       method: 'PATCH',
@@ -255,7 +255,7 @@ export const updateEmployerCandidateResultVisibility = async (
       },
       body: JSON.stringify(input),
       cache: 'no-store',
-    },
+    }
   );
 
   if (!response.ok) {
@@ -271,7 +271,7 @@ export const updateEmployerCandidateResultVisibility = async (
     throw new Error(
       message ??
         payload.error ??
-        `Candidate result visibility update failed with status ${response.status}`,
+        `Candidate result visibility update failed with status ${response.status}`
     );
   }
 
@@ -383,8 +383,8 @@ export const getEmployerDashboardData =
     }).length;
 
     const reportReadyResults = sessions.filter((session) => {
-  return Boolean(session.psychometricScoreResult ?? session.score);
-}).length;
+      return Boolean(session.psychometricScoreResult ?? session.score);
+    }).length;
 
     return {
       campaigns,

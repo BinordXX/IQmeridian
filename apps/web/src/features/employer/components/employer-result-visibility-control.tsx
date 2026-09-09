@@ -12,7 +12,7 @@ type EmployerResultVisibilityControlProps = {
 };
 
 const getNormalisedVisibility = (
-  value?: string | null,
+  value?: string | null
 ): CandidateResultVisibility => {
   return value === 'SUMMARY_ONLY' ? 'SUMMARY_ONLY' : 'COMPLETION_ONLY';
 };
@@ -40,11 +40,11 @@ export const EmployerResultVisibilityControl = ({
 
   const [selectedVisibility, setSelectedVisibility] =
     useState<CandidateResultVisibility>(
-      getNormalisedVisibility(candidateResultVisibility),
+      getNormalisedVisibility(candidateResultVisibility)
     );
   const [savedVisibility, setSavedVisibility] =
     useState<CandidateResultVisibility>(
-      getNormalisedVisibility(candidateResultVisibility),
+      getNormalisedVisibility(candidateResultVisibility)
     );
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -65,7 +65,7 @@ export const EmployerResultVisibilityControl = ({
     try {
       const response = await fetch(
         `/api/employer/campaigns/${encodeURIComponent(
-          campaignId,
+          campaignId
         )}/candidate-result-visibility`,
         {
           method: 'PATCH',
@@ -75,16 +75,14 @@ export const EmployerResultVisibilityControl = ({
           body: JSON.stringify({
             candidateResultVisibility: selectedVisibility,
           }),
-        },
+        }
       );
 
       if (!response.ok) {
-        const payload = (await response.json().catch(() => null)) as
-          | {
-              message?: string | string[];
-              error?: string;
-            }
-          | null;
+        const payload = (await response.json().catch(() => null)) as {
+          message?: string | string[];
+          error?: string;
+        } | null;
 
         const message = Array.isArray(payload?.message)
           ? payload.message.join(' ')
@@ -93,7 +91,7 @@ export const EmployerResultVisibilityControl = ({
         throw new Error(
           message ??
             payload?.error ??
-            `Visibility update failed with status ${response.status}`,
+            `Visibility update failed with status ${response.status}`
         );
       }
 
@@ -104,7 +102,7 @@ export const EmployerResultVisibilityControl = ({
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : 'Candidate result visibility could not be updated.',
+          : 'Candidate result visibility could not be updated.'
       );
     } finally {
       setIsSaving(false);
@@ -141,7 +139,7 @@ export const EmployerResultVisibilityControl = ({
             value={selectedVisibility}
             onChange={(event) =>
               setSelectedVisibility(
-                event.currentTarget.value as CandidateResultVisibility,
+                event.currentTarget.value as CandidateResultVisibility
               )
             }
             className="mt-2 min-h-12 w-full rounded-2xl border border-cyan-300/15 bg-[#020817] px-4 py-3 text-sm font-black text-white outline-none transition focus:border-cyan-300/50"

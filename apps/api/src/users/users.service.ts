@@ -121,6 +121,9 @@ export class UsersService {
     const name = input.input.name?.trim() || null;
     const role = input.input.role;
     const status = input.input.status ?? UserStatus.ACTIVE;
+
+    this.assertActorCanAssignRole(input.actor, role);
+
     const organisationId =
       input.input.organisationId && input.input.organisationId.trim().length > 0
         ? input.input.organisationId.trim()
@@ -268,14 +271,29 @@ export class UsersService {
     role: UserRole;
   }) {
     const targetUser = await this.getExistingUser(input.userId);
+
+    this.assertActorCanManageTargetUser(input.actor, targetUser);
+    this.assertActorCanAssignRole(input.actor, input.role);
+
     if (input.role === UserRole.EMPLOYER_ADMIN && !targetUser.organisationId) {
       throw new BadRequestException(
         'Employer admins must be attached to an organisation before the role is assigned.',
       );
     }
 
-    if (targetUser.role === UserRole.PLATFORM_ADMIN) {
-      await this.assertNotRemovingLastActivePlatformAdmin({
+    if (targetUser.role === UserRole.SUPER_ADMIN) {
+      await this.assertNotRemovingLastActiveSuperAdmin({
+        targetUserId: targetUser.id,
+        nextRole: input.role,
+        nextStatus: targetUser.status,
+      });
+    }
+
+    if (
+      targetUser.role === UserRole.PLATFORM_ADMIN ||
+      targetUser.role === UserRole.SUPER_ADMIN
+    ) {
+      await this.assertNotRemovingLastActiveAdminLevelUser({
         targetUserId: targetUser.id,
         nextRole: input.role,
         nextStatus: targetUser.status,
@@ -316,17 +334,30 @@ export class UsersService {
   }) {
     const targetUser = await this.getExistingUser(input.userId);
 
+    this.assertActorCanManageTargetUser(input.actor, targetUser);
+
     if (
       targetUser.id === input.actor.id &&
       input.status !== UserStatus.ACTIVE
     ) {
       throw new BadRequestException(
-        'Platform admins cannot suspend or disable their own account.',
+        'Admins cannot suspend or disable their own account.',
       );
     }
 
-    if (targetUser.role === UserRole.PLATFORM_ADMIN) {
-      await this.assertNotRemovingLastActivePlatformAdmin({
+    if (targetUser.role === UserRole.SUPER_ADMIN) {
+      await this.assertNotRemovingLastActiveSuperAdmin({
+        targetUserId: targetUser.id,
+        nextRole: targetUser.role,
+        nextStatus: input.status,
+      });
+    }
+
+    if (
+      targetUser.role === UserRole.PLATFORM_ADMIN ||
+      targetUser.role === UserRole.SUPER_ADMIN
+    ) {
+      await this.assertNotRemovingLastActiveAdminLevelUser({
         targetUserId: targetUser.id,
         nextRole: targetUser.role,
         nextStatus: input.status,
@@ -380,6 +411,9 @@ export class UsersService {
     organisationId: string | null;
   }) {
     const targetUser = await this.getExistingUser(input.userId);
+
+    this.assertActorCanManageTargetUser(input.actor, targetUser);
+
     const nextOrganisationId =
       input.organisationId && input.organisationId.trim().length > 0
         ? input.organisationId.trim()
@@ -447,22 +481,53 @@ export class UsersService {
     return user;
   }
 
-  private async assertNotRemovingLastActivePlatformAdmin(input: {
+  private isSuperAdmin(actor: RequestUser) {
+    return actor.role === UserRole.SUPER_ADMIN;
+  }
+
+  private assertActorCanAssignRole(actor: RequestUser, role: UserRole) {
+    if (role === UserRole.SUPER_ADMIN || role === UserRole.PLATFORM_ADMIN) {
+      if (!this.isSuperAdmin(actor)) {
+        throw new BadRequestException(
+          'Only super admins can create or assign admin-level roles.',
+        );
+      }
+    }
+  }
+
+  private assertActorCanManageTargetUser(actor: RequestUser, targetUser: User) {
+    if (targetUser.id === actor.id) {
+      return;
+    }
+
+    if (
+      targetUser.role === UserRole.SUPER_ADMIN ||
+      targetUser.role === UserRole.PLATFORM_ADMIN
+    ) {
+      if (!this.isSuperAdmin(actor)) {
+        throw new BadRequestException(
+          'Only super admins can manage admin-level accounts.',
+        );
+      }
+    }
+  }
+
+  private async assertNotRemovingLastActiveSuperAdmin(input: {
     targetUserId: string;
     nextRole: UserRole;
     nextStatus: UserStatus;
   }) {
-    const wouldRemainActivePlatformAdmin =
-      input.nextRole === UserRole.PLATFORM_ADMIN &&
+    const wouldRemainActiveSuperAdmin =
+      input.nextRole === UserRole.SUPER_ADMIN &&
       input.nextStatus === UserStatus.ACTIVE;
 
-    if (wouldRemainActivePlatformAdmin) {
+    if (wouldRemainActiveSuperAdmin) {
       return;
     }
 
-    const activePlatformAdminCount = await this.prisma.user.count({
+    const activeSuperAdminCount = await this.prisma.user.count({
       where: {
-        role: UserRole.PLATFORM_ADMIN,
+        role: UserRole.SUPER_ADMIN,
         status: UserStatus.ACTIVE,
         id: {
           not: input.targetUserId,
@@ -470,9 +535,42 @@ export class UsersService {
       },
     });
 
-    if (activePlatformAdminCount === 0) {
+    if (activeSuperAdminCount === 0) {
       throw new BadRequestException(
-        'At least one active platform admin must remain.',
+        'At least one active super admin must remain.',
+      );
+    }
+  }
+
+  private async assertNotRemovingLastActiveAdminLevelUser(input: {
+    targetUserId: string;
+    nextRole: UserRole;
+    nextStatus: UserStatus;
+  }) {
+    const wouldRemainActiveAdminLevelUser =
+      (input.nextRole === UserRole.SUPER_ADMIN ||
+        input.nextRole === UserRole.PLATFORM_ADMIN) &&
+      input.nextStatus === UserStatus.ACTIVE;
+
+    if (wouldRemainActiveAdminLevelUser) {
+      return;
+    }
+
+    const activeAdminLevelUserCount = await this.prisma.user.count({
+      where: {
+        role: {
+          in: [UserRole.SUPER_ADMIN, UserRole.PLATFORM_ADMIN],
+        },
+        status: UserStatus.ACTIVE,
+        id: {
+          not: input.targetUserId,
+        },
+      },
+    });
+
+    if (activeAdminLevelUserCount === 0) {
+      throw new BadRequestException(
+        'At least one active admin-level account must remain.',
       );
     }
   }

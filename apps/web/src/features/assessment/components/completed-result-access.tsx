@@ -114,12 +114,15 @@ export const CompletedResultAccess = ({
   }
 
   if (summary?.visibility === 'summary' && sessionId) {
-    const isConsumer = summary.audience === 'consumer' || audience === 'consumer';
+    const isConsumer =
+      summary.audience === 'consumer' || audience === 'consumer';
 
     return (
       <div className="mt-6 rounded-2xl border border-cyan-300/15 bg-white/[0.035] p-5">
         <h2 className="text-lg font-black text-white">
-          {isConsumer ? 'Your result summary is ready' : 'Result summary available'}
+          {isConsumer
+            ? 'Your result summary is ready'
+            : 'Result summary available'}
         </h2>
 
         <p className="mt-2 text-sm leading-6 text-slate-300">

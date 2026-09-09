@@ -47,6 +47,12 @@ export type ConsumerPsychometricDomainScore = {
   theta: number | null;
   standardScore: number | null;
   percentile: number | null;
+  iqScore?: number | null;
+  iqPercentile?: number | null;
+  iqCi90Lower?: number | null;
+  iqCi90Upper?: number | null;
+  iqScaleMean?: number;
+  iqScaleSd?: number;
   scoreBand: string;
   standardError: number | null;
   ci90Lower: number | null;
@@ -54,6 +60,7 @@ export type ConsumerPsychometricDomainScore = {
   testInformation: number | null;
   reliability: number | null;
   interpretation: string;
+  featureVector?: unknown;
 };
 
 export type ConsumerPsychometricValidityFlag = {
@@ -76,6 +83,12 @@ export type ConsumerPsychometricScoreResult = {
   overallTheta: number | null;
   overallStandardScore: number | null;
   overallPercentile: number | null;
+  overallIqScore?: number | null;
+  overallIqPercentile?: number | null;
+  overallIqCi90Lower?: number | null;
+  overallIqCi90Upper?: number | null;
+  overallIqScaleMean?: number;
+  overallIqScaleSd?: number;
   overallScoreBand: string;
   overallStandardError: number | null;
   overallCi90Lower: number | null;
@@ -95,6 +108,16 @@ export type ConsumerPsychometricScoreResult = {
   generatedAt: string;
   inputHash: string | null;
   warnings: unknown;
+  scoringEngineVersion?: string | null;
+  scoringModelFamily?: string | null;
+  scoringModelVersion?: string | null;
+  featureSetVersion?: string | null;
+  scoringSignalsUsed?: unknown;
+  scoringFeatureVector?: unknown;
+  scoringFeatureSummary?: unknown;
+  validityAdjusted?: boolean;
+  leaderboardEligible?: boolean;
+  leaderboardIneligibilityReasons?: unknown;
   domainScores: ConsumerPsychometricDomainScore[];
   validityFlags: ConsumerPsychometricValidityFlag[];
   createdAt: string;
@@ -286,4 +309,103 @@ export const createConsumerAssessmentSession = async () => {
     sessionId,
     status: created.status ?? 'NOT_STARTED',
   };
+};
+
+export type ConsumerLeaderboardEntry = {
+  rank?: number;
+  displayName?: string;
+  iqScore: number;
+  percentile: number | null;
+  scoreBand: string;
+  generatedAt: string;
+};
+
+export type ConsumerLeaderboardSummary = {
+  preferences: {
+    optIn: boolean;
+    displayName: string | null;
+  };
+  eligibility: {
+    eligible: boolean;
+    publicListingActive: boolean;
+    reasons: string[];
+  };
+  rank: number | null;
+  totalRanked: number;
+  entry: ConsumerLeaderboardEntry | null;
+};
+
+export type UpdateLeaderboardPreferencesInput = {
+  optIn?: boolean;
+  displayName?: string | null;
+};
+
+export const getMyLeaderboardSummary = async () => {
+  return requestApi<ConsumerLeaderboardSummary>('/leaderboard/me');
+};
+
+export const updateMyLeaderboardPreferences = async (
+  input: UpdateLeaderboardPreferencesInput
+) => {
+  return requestApi<ConsumerLeaderboardSummary>('/leaderboard/me', {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
+};
+
+export type ConsumerPublicProfile = {
+  profile: {
+    publicProfileEnabled: boolean;
+    profileSlug: string | null;
+    displayName: string | null;
+    headline: string | null;
+    bio: string | null;
+    quote: string | null;
+    location: string | null;
+    avatarUrl: string | null;
+    websiteUrl: string | null;
+    publicProfileUrl: string | null;
+  };
+  leaderboard: {
+    optIn: boolean;
+    eligible: boolean;
+    publicProfileVisible: boolean;
+    rank: number | null;
+    entry: {
+      entryId?: string;
+      rank?: number;
+      displayName?: string;
+      profileSlug?: string | null;
+      avatarUrl?: string | null;
+      iqScore: number;
+      percentile: number | null;
+      scoreBand: string;
+      generatedAt: string;
+    } | null;
+  };
+};
+
+export type UpdatePublicProfileInput = {
+  publicProfileEnabled?: boolean;
+  displayName?: string | null;
+  profileSlug?: string | null;
+  headline?: string | null;
+  bio?: string | null;
+  quote?: string | null;
+  location?: string | null;
+  avatarUrl?: string | null;
+  websiteUrl?: string | null;
+};
+
+export const getMyPublicProfile = async () => {
+  return requestApi<ConsumerPublicProfile>('/leaderboard/me/profile');
+};
+
+export const updateMyPublicProfile = async (
+  input: UpdatePublicProfileInput
+) => {
+  return requestApi<ConsumerPublicProfile>('/leaderboard/me/profile', {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
 };

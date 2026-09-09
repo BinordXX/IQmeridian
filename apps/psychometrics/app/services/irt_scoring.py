@@ -16,6 +16,19 @@ from app.schemas.scoring import (
 )
 
 from app.services.baseline_scoring import build_baseline_scoring_response
+from app.services.feature_engine import (
+    DEFAULT_SCORING_SIGNALS_USED,
+    FEATURE_SET_VERSION,
+    IRT_SCORING_MODEL_VERSION,
+    SCORING_ENGINE_VERSION,
+    build_feature_summary,
+    build_feature_vector,
+    iq_confidence_interval_90_from_theta_interval,
+    percentile_from_theta,
+    resolve_leaderboard_eligibility,
+    score_band_from_standard_score,
+    theta_to_iq_score,
+)
 
 
 THETA_MIN = -4.0
@@ -51,12 +64,15 @@ def build_irt_scoring_response(request: ScoringRequest) -> ScoringResponse:
     observations = _build_observations(request)
 
     if not observations:
-        baseline.audit.model_version = "irt-provisional.0.2.0"
-        baseline.audit.scoring_mode_used = request.requested_scoring_mode
+        baseline.audit.model_version = IRT_SCORING_MODEL_VERSION
+        baseline.audit.scoring_mode_used = _resolve_scoring_mode_used(
+            request.requested_scoring_mode
+        )
+        baseline.audit.scoring_model_version = IRT_SCORING_MODEL_VERSION
         baseline.audit.generated_at = datetime.now(UTC)
         baseline.audit.warnings.append(
             "IRT scoring was requested, but no calibrated scorable observations "
-            "were available. Baseline scoring was returned."
+            "were available. The IQMeridian hybrid baseline estimate was returned."
         )
         return baseline
 
@@ -72,8 +88,28 @@ def build_irt_scoring_response(request: ScoringRequest) -> ScoringResponse:
         estimate=overall_estimate,
     )
     baseline.domains = domain_scores
+
+    feature_vector = build_feature_vector(
+        request=request,
+        timing_profile=baseline.timing_profile,
+        validity_flags=baseline.validity_flags,
+        raw_score=baseline.overall.raw_score,
+        max_raw_score=baseline.overall.max_raw_score,
+        accuracy=baseline.overall.accuracy,
+        theta=baseline.overall.theta,
+        standard_score=baseline.overall.standard_score,
+        percentile=baseline.overall.percentile,
+        domains=domain_scores,
+    )
+
+    leaderboard_eligible, leaderboard_reasons = resolve_leaderboard_eligibility(
+        scoring_status=baseline.scoring_status,
+        validity_flags=baseline.validity_flags,
+        iq_score=baseline.overall.iq_score,
+    )
+
     baseline.audit = ScoreAuditTrace(
-        modelVersion="irt-provisional.0.2.0",
+        modelVersion=IRT_SCORING_MODEL_VERSION,
         contractVersion=CONTRACT_VERSION,
         calibrationVersion=_resolve_calibration_version(request),
         scoringModeUsed=_resolve_scoring_mode_used(request.requested_scoring_mode),
@@ -82,11 +118,26 @@ def build_irt_scoring_response(request: ScoringRequest) -> ScoringResponse:
         warnings=[
             *baseline.audit.warnings,
             (
-                "IRT v2 is provisional. Accuracy depends on calibrated item "
-                "difficulty, discrimination, and guessing parameters. Current "
-                "outputs must not be marketed as norm-certified IQ scores."
+                "IRT v2 is provisional. It estimates latent ability from item "
+                "difficulty, discrimination, guessing parameters, response "
+                "correctness, test information, standard error, and confidence "
+                "intervals. Norm-certified interpretation requires validated "
+                "calibration and norming samples."
             ),
         ],
+        scoringEngineVersion=SCORING_ENGINE_VERSION,
+        scoringModelFamily="IRT",
+        scoringModelVersion=IRT_SCORING_MODEL_VERSION,
+        featureSetVersion=FEATURE_SET_VERSION,
+        scoringSignalsUsed=DEFAULT_SCORING_SIGNALS_USED,
+        featureSummary=build_feature_summary(
+            feature_vector=feature_vector,
+            scoring_signals_used=DEFAULT_SCORING_SIGNALS_USED,
+        ),
+        featureVector=feature_vector,
+        validityAdjusted=bool(baseline.validity_flags),
+        leaderboardEligible=leaderboard_eligible,
+        leaderboardIneligibilityReasons=leaderboard_reasons,
     )
 
     return baseline
@@ -155,13 +206,19 @@ def _build_domain_irt_scores(
 
         if not domain_observations:
             domain_score.interpretation = (
-                f"{domain_score.label} has baseline raw-score information, but "
+                f"{domain_score.label} has hybrid baseline score information, but "
                 "no calibrated IRT item parameters were available for this domain."
             )
             domain_scores.append(domain_score)
             continue
 
         estimate = _estimate_theta(domain_observations)
+        standard_score = theta_to_iq_score(estimate.theta)
+        percentile = percentile_from_theta(estimate.theta)
+        iq_ci_lower, iq_ci_upper = iq_confidence_interval_90_from_theta_interval(
+            estimate.confidence_interval_90.lower,
+            estimate.confidence_interval_90.upper,
+        )
 
         domain_scores.append(
             DomainScore(
@@ -171,11 +228,15 @@ def _build_domain_irt_scores(
                 maxRawScore=domain_score.max_raw_score,
                 accuracy=domain_score.accuracy,
                 theta=_round_or_none(estimate.theta),
-                standardScore=_standard_score_from_theta(estimate.theta),
-                percentile=_percentile_from_theta(estimate.theta),
-                scoreBand=_score_band_from_standard_score(
-                    _standard_score_from_theta(estimate.theta)
+                standardScore=standard_score,
+                percentile=percentile,
+                iqScore=standard_score,
+                iqPercentile=percentile,
+                iqConfidenceInterval90=ConfidenceInterval90(
+                    lower=iq_ci_lower,
+                    upper=iq_ci_upper,
                 ),
+                scoreBand=score_band_from_standard_score(standard_score),
                 standardError=_round_or_none(estimate.standard_error),
                 confidenceInterval90=estimate.confidence_interval_90,
                 testInformation=_round_or_none(estimate.test_information),
@@ -185,6 +246,17 @@ def _build_domain_irt_scores(
                     estimate=estimate,
                     item_count=len(domain_observations),
                 ),
+                featureVector={
+                    "domain": domain_score.domain,
+                    "irt_observation_count": len(domain_observations),
+                    "domain_theta": _round_or_none(estimate.theta),
+                    "domain_iq_score": standard_score,
+                    "domain_percentile": percentile,
+                    "domain_test_information": _round_or_none(
+                        estimate.test_information
+                    ),
+                    "domain_reliability": _round_or_none(estimate.reliability),
+                },
             )
         )
 
@@ -193,21 +265,36 @@ def _build_domain_irt_scores(
             continue
 
         estimate = _estimate_theta(domain_observations)
+        standard_score = theta_to_iq_score(estimate.theta)
+        percentile = percentile_from_theta(estimate.theta)
+        iq_ci_lower, iq_ci_upper = iq_confidence_interval_90_from_theta_interval(
+            estimate.confidence_interval_90.lower,
+            estimate.confidence_interval_90.upper,
+        )
+
+        raw_score = sum(
+            observation.response_value for observation in domain_observations
+        )
+        max_score = float(len(domain_observations))
+        accuracy = raw_score / len(domain_observations)
 
         domain_scores.append(
             DomainScore(
                 domain=domain,
                 label=domain_observations[0].label,
-                rawScore=sum(observation.response_value for observation in domain_observations),
-                maxRawScore=float(len(domain_observations)),
-                accuracy=sum(observation.response_value for observation in domain_observations)
-                / len(domain_observations),
+                rawScore=raw_score,
+                maxRawScore=max_score,
+                accuracy=accuracy,
                 theta=_round_or_none(estimate.theta),
-                standardScore=_standard_score_from_theta(estimate.theta),
-                percentile=_percentile_from_theta(estimate.theta),
-                scoreBand=_score_band_from_standard_score(
-                    _standard_score_from_theta(estimate.theta)
+                standardScore=standard_score,
+                percentile=percentile,
+                iqScore=standard_score,
+                iqPercentile=percentile,
+                iqConfidenceInterval90=ConfidenceInterval90(
+                    lower=iq_ci_lower,
+                    upper=iq_ci_upper,
                 ),
+                scoreBand=score_band_from_standard_score(standard_score),
                 standardError=_round_or_none(estimate.standard_error),
                 confidenceInterval90=estimate.confidence_interval_90,
                 testInformation=_round_or_none(estimate.test_information),
@@ -217,6 +304,17 @@ def _build_domain_irt_scores(
                     estimate=estimate,
                     item_count=len(domain_observations),
                 ),
+                featureVector={
+                    "domain": domain,
+                    "irt_observation_count": len(domain_observations),
+                    "domain_theta": _round_or_none(estimate.theta),
+                    "domain_iq_score": standard_score,
+                    "domain_percentile": percentile,
+                    "domain_test_information": _round_or_none(
+                        estimate.test_information
+                    ),
+                    "domain_reliability": _round_or_none(estimate.reliability),
+                },
             )
         )
 
@@ -227,7 +325,12 @@ def _build_overall_irt_score(
     baseline_overall: OverallScore,
     estimate: IrtEstimate,
 ) -> OverallScore:
-    standard_score = _standard_score_from_theta(estimate.theta)
+    standard_score = theta_to_iq_score(estimate.theta)
+    percentile = percentile_from_theta(estimate.theta)
+    iq_ci_lower, iq_ci_upper = iq_confidence_interval_90_from_theta_interval(
+        estimate.confidence_interval_90.lower,
+        estimate.confidence_interval_90.upper,
+    )
 
     return OverallScore(
         domain=baseline_overall.domain,
@@ -237,13 +340,27 @@ def _build_overall_irt_score(
         accuracy=baseline_overall.accuracy,
         theta=_round_or_none(estimate.theta),
         standardScore=standard_score,
-        percentile=_percentile_from_theta(estimate.theta),
-        scoreBand=_score_band_from_standard_score(standard_score),
+        percentile=percentile,
+        iqScore=standard_score,
+        iqPercentile=percentile,
+        iqConfidenceInterval90=ConfidenceInterval90(
+            lower=iq_ci_lower,
+            upper=iq_ci_upper,
+        ),
+        scoreBand=score_band_from_standard_score(standard_score),
         standardError=_round_or_none(estimate.standard_error),
         confidenceInterval90=estimate.confidence_interval_90,
         testInformation=_round_or_none(estimate.test_information),
         reliability=_round_or_none(estimate.reliability),
         interpretation=_overall_interpretation(estimate),
+        featureVector={
+            "scoring_model": IRT_SCORING_MODEL_VERSION,
+            "overall_theta": _round_or_none(estimate.theta),
+            "overall_iq_score": standard_score,
+            "overall_percentile": percentile,
+            "overall_test_information": _round_or_none(estimate.test_information),
+            "overall_reliability": _round_or_none(estimate.reliability),
+        },
     )
 
 
@@ -361,42 +478,6 @@ def _logistic(value: float) -> float:
     return z / (1 + z)
 
 
-def _standard_score_from_theta(theta: float | None) -> float | None:
-    if theta is None:
-        return None
-
-    return round(100 + (15 * theta), 1)
-
-
-def _percentile_from_theta(theta: float | None) -> float | None:
-    if theta is None:
-        return None
-
-    percentile = 100 * (0.5 * (1 + math.erf(theta / math.sqrt(2))))
-
-    return round(_clamp(percentile, 0.1, 99.9), 1)
-
-
-def _score_band_from_standard_score(standard_score: float | None) -> str:
-    if standard_score is None:
-        return "UNAVAILABLE"
-
-    if standard_score < 70:
-        return "VERY_LOW"
-    if standard_score < 80:
-        return "LOW"
-    if standard_score < 90:
-        return "LOW_AVERAGE"
-    if standard_score < 110:
-        return "AVERAGE"
-    if standard_score < 120:
-        return "HIGH_AVERAGE"
-    if standard_score < 130:
-        return "HIGH"
-
-    return "VERY_HIGH"
-
-
 def _overall_interpretation(estimate: IrtEstimate) -> str:
     if estimate.theta is None:
         return (
@@ -406,11 +487,11 @@ def _overall_interpretation(estimate: IrtEstimate) -> str:
         )
 
     return (
-        "This profile uses provisional IRT-style ability estimation. The result "
-        "combines calibrated item difficulty, item discrimination, guessing "
-        "parameters where available, response correctness, test information, "
-        "standard error, and a 90% confidence interval. Norm-certified IQ "
-        "interpretation requires a validated calibration and norming sample."
+        "This IQMeridian IQ Score uses provisional IRT-style latent ability "
+        "estimation. The result combines calibrated item difficulty, item "
+        "discrimination, guessing parameters where available, response "
+        "correctness, test information, standard error, confidence intervals, "
+        "and validity controls. It is not a clinical diagnosis."
     )
 
 
@@ -435,6 +516,13 @@ def _domain_interpretation(
 def _resolve_scoring_mode_used(requested_mode: ScoringMode) -> ScoringMode:
     if requested_mode == "BASELINE_CLASSICAL":
         return "IRT_2PL_PROVISIONAL"
+
+    if requested_mode in {
+        "ML_VALIDITY_ASSISTED_EXPERIMENTAL",
+        "ML_ABILITY_ESTIMATION_EXPERIMENTAL",
+        "HYBRID_RESEARCH",
+    }:
+        return "HYBRID_PSYCHOMETRIC_IQ"
 
     return requested_mode
 

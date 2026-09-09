@@ -27,21 +27,20 @@ export const EmployerResultThresholdControl = ({
 }: EmployerResultThresholdControlProps) => {
   const router = useRouter();
   const [formState, setFormState] = useState<CandidateResultThresholdConfig>(
-    normaliseCandidateResultThresholdConfig(thresholdConfig),
+    normaliseCandidateResultThresholdConfig(thresholdConfig)
   );
   const [savedState, setSavedState] = useState<CandidateResultThresholdConfig>(
-    normaliseCandidateResultThresholdConfig(thresholdConfig),
+    normaliseCandidateResultThresholdConfig(thresholdConfig)
   );
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  const hasChanges =
-    JSON.stringify(formState) !== JSON.stringify(savedState);
+  const hasChanges = JSON.stringify(formState) !== JSON.stringify(savedState);
 
   const updateFormState = <Key extends keyof CandidateResultThresholdConfig>(
     key: Key,
-    value: CandidateResultThresholdConfig[Key],
+    value: CandidateResultThresholdConfig[Key]
   ) => {
     setFormState((current) => ({
       ...current,
@@ -63,7 +62,7 @@ export const EmployerResultThresholdControl = ({
     try {
       const response = await fetch(
         `/api/employer/campaigns/${encodeURIComponent(
-          campaignId,
+          campaignId
         )}/candidate-result-thresholds`,
         {
           method: 'PATCH',
@@ -71,7 +70,7 @@ export const EmployerResultThresholdControl = ({
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(formState),
-        },
+        }
       );
 
       if (!response.ok) {
@@ -87,7 +86,7 @@ export const EmployerResultThresholdControl = ({
         throw new Error(
           message ??
             payload.error ??
-            `Threshold update failed with status ${response.status}`,
+            `Threshold update failed with status ${response.status}`
         );
       }
 
@@ -98,7 +97,7 @@ export const EmployerResultThresholdControl = ({
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : 'Candidate result filters could not be updated.',
+          : 'Candidate result filters could not be updated.'
       );
     } finally {
       setIsSaving(false);
@@ -161,7 +160,7 @@ export const EmployerResultThresholdControl = ({
               onChange={(event) => {
                 updateFormState(
                   'minimumOverallBand',
-                  nullableBand(event.currentTarget.value),
+                  nullableBand(event.currentTarget.value)
                 );
               }}
               className="mt-2 min-h-12 w-full rounded-2xl border border-white/10 bg-[#020817] px-4 text-sm font-bold text-white outline-none transition focus:border-cyan-300/50"
@@ -184,7 +183,7 @@ export const EmployerResultThresholdControl = ({
               onChange={(event) => {
                 updateFormState(
                   'minimumAbstractReasoningBand',
-                  nullableBand(event.currentTarget.value),
+                  nullableBand(event.currentTarget.value)
                 );
               }}
               className="mt-2 min-h-12 w-full rounded-2xl border border-white/10 bg-[#020817] px-4 text-sm font-bold text-white outline-none transition focus:border-cyan-300/50"
@@ -207,7 +206,7 @@ export const EmployerResultThresholdControl = ({
               onChange={(event) => {
                 updateFormState(
                   'minimumNumericalReasoningBand',
-                  nullableBand(event.currentTarget.value),
+                  nullableBand(event.currentTarget.value)
                 );
               }}
               className="mt-2 min-h-12 w-full rounded-2xl border border-white/10 bg-[#020817] px-4 text-sm font-bold text-white outline-none transition focus:border-cyan-300/50"
@@ -230,7 +229,7 @@ export const EmployerResultThresholdControl = ({
               onChange={(event) => {
                 updateFormState(
                   'hideUnscoredFromFilteredView',
-                  event.currentTarget.checked,
+                  event.currentTarget.checked
                 );
               }}
               className="mt-1 h-4 w-4 accent-cyan-300"
@@ -254,7 +253,7 @@ export const EmployerResultThresholdControl = ({
               onChange={(event) => {
                 updateFormState(
                   'requireNoHighSeverityValidityFlags',
-                  event.currentTarget.checked,
+                  event.currentTarget.checked
                 );
               }}
               className="mt-1 h-4 w-4 accent-cyan-300"

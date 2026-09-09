@@ -24,8 +24,33 @@ import { PrismaService } from '../prisma/prisma.service';
 type RequestUser = {
   id: string;
   role: string;
+  roles?: string[];
   organisationId?: string | null;
+  organisationMemberships?: {
+    organisationId: string;
+    role: string;
+    status: string;
+  }[];
 };
+
+function hasRole(user: RequestUser, role: UserRole) {
+  return user.role === role || user.roles?.includes(role) === true;
+}
+
+function hasActiveOrganisationRole(
+  user: RequestUser,
+  organisationId: string,
+  role: UserRole,
+) {
+  return (
+    user.organisationMemberships?.some(
+      (membership) =>
+        membership.organisationId === organisationId &&
+        membership.role === role &&
+        membership.status === 'ACTIVE',
+    ) === true
+  );
+}
 
 @Injectable()
 export class InvitationsService {
@@ -827,7 +852,7 @@ export class InvitationsService {
   }
 
   private assertCanManageCampaign(user: RequestUser, organisationId: string) {
-    if (user.role === UserRole.PLATFORM_ADMIN) {
+    if (hasRole(user, UserRole.PLATFORM_ADMIN)) {
       return;
     }
 
@@ -838,9 +863,14 @@ export class InvitationsService {
       return;
     }
 
+    if (
+      hasActiveOrganisationRole(user, organisationId, UserRole.EMPLOYER_ADMIN)
+    ) {
+      return;
+    }
+
     throw new ForbiddenException('Not authorised for this campaign');
   }
-
   private getWebAppBaseUrl() {
     const baseUrl =
       process.env.WEB_APP_URL ??

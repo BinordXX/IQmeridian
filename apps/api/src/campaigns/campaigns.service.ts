@@ -19,8 +19,47 @@ import { PrismaService } from '../prisma/prisma.service';
 type RequestUser = {
   id: string;
   role: string;
+  roles?: string[];
   organisationId?: string | null;
+  organisationMemberships?: {
+    organisationId: string;
+    role: string;
+    status: string;
+  }[];
 };
+
+function hasRole(user: RequestUser, role: UserRole) {
+  return user.role === role || user.roles?.includes(role) === true;
+}
+
+function hasActiveOrganisationRole(
+  user: RequestUser,
+  organisationId: string,
+  role: UserRole,
+) {
+  return (
+    user.organisationMemberships?.some(
+      (membership) =>
+        membership.organisationId === organisationId &&
+        membership.role === role &&
+        membership.status === 'ACTIVE',
+    ) === true
+  );
+}
+
+function getPrimaryEmployerOrganisationId(user: RequestUser) {
+  if (user.role === UserRole.EMPLOYER_ADMIN && user.organisationId) {
+    return user.organisationId;
+  }
+
+  return (
+    user.organisationMemberships?.find(
+      (membership) =>
+        membership.role === UserRole.EMPLOYER_ADMIN &&
+        membership.status === 'ACTIVE',
+    )?.organisationId ?? null
+  );
+}
 
 type CandidateResultThresholdConfig = {
   enabled: boolean;
@@ -31,7 +70,8 @@ type CandidateResultThresholdConfig = {
   requireNoHighSeverityValidityFlags: boolean;
 };
 
-type UpdateCandidateResultThresholdsInput = Partial<CandidateResultThresholdConfig>;
+type UpdateCandidateResultThresholdsInput =
+  Partial<CandidateResultThresholdConfig>;
 
 const DEFAULT_CANDIDATE_RESULT_THRESHOLD_CONFIG: CandidateResultThresholdConfig =
   {
@@ -57,10 +97,12 @@ export class CampaignsService {
     assessmentFormId?: string;
     requestingUser: RequestUser;
   }) {
-    const organisationId =
-      input.requestingUser.role === UserRole.PLATFORM_ADMIN
-        ? input.organisationId
-        : input.requestingUser.organisationId;
+    const organisationId = hasRole(
+      input.requestingUser,
+      UserRole.PLATFORM_ADMIN,
+    )
+      ? input.organisationId
+      : getPrimaryEmployerOrganisationId(input.requestingUser);
 
     if (!organisationId) {
       throw new ForbiddenException('User is not attached to an organisation');
@@ -95,7 +137,7 @@ export class CampaignsService {
         assessmentFormId: input.assessmentFormId,
         candidateResultVisibility: CandidateResultVisibility.SUMMARY_ONLY,
         candidateResultThresholdConfig:
-        DEFAULT_CANDIDATE_RESULT_THRESHOLD_CONFIG as Prisma.InputJsonValue,
+          DEFAULT_CANDIDATE_RESULT_THRESHOLD_CONFIG as Prisma.InputJsonValue,
       },
       include: {
         organisation: true,
@@ -138,12 +180,17 @@ export class CampaignsService {
 
     let organisationId = filters.organisationId;
 
-    if (user.role !== UserRole.PLATFORM_ADMIN) {
-      if (!user.organisationId) {
+    if (!hasRole(user, UserRole.PLATFORM_ADMIN)) {
+      const employerOrganisationId = filters.organisationId
+        ? filters.organisationId
+        : getPrimaryEmployerOrganisationId(user);
+
+      if (!employerOrganisationId) {
         throw new ForbiddenException('User is not attached to an organisation');
       }
 
-      organisationId = user.organisationId;
+      this.assertCanManageOrganisation(user, employerOrganisationId);
+      organisationId = employerOrganisationId;
     }
 
     const where: Prisma.CampaignWhereInput = {
@@ -283,7 +330,7 @@ export class CampaignsService {
     return updatedCampaign;
   }
 
-    async updateCandidateResultVisibility(
+  async updateCandidateResultVisibility(
     id: string,
     candidateResultVisibility: CandidateResultVisibility,
     user: RequestUser,
@@ -333,10 +380,8 @@ export class CampaignsService {
       entityType: 'Campaign',
       entityId: updatedCampaign.id,
       metadata: {
-        previousCandidateResultVisibility:
-          campaign.candidateResultVisibility,
-        newCandidateResultVisibility:
-          updatedCampaign.candidateResultVisibility,
+        previousCandidateResultVisibility: campaign.candidateResultVisibility,
+        newCandidateResultVisibility: updatedCampaign.candidateResultVisibility,
         organisationId: updatedCampaign.organisationId,
         assessmentFormId: updatedCampaign.assessmentFormId,
       },
@@ -345,7 +390,7 @@ export class CampaignsService {
     return updatedCampaign;
   }
 
-    async updateCandidateResultThresholds(
+  async updateCandidateResultThresholds(
     id: string,
     input: UpdateCandidateResultThresholdsInput,
     user: RequestUser,
@@ -390,8 +435,7 @@ export class CampaignsService {
     const updatedCampaign = await this.prisma.campaign.update({
       where: { id },
       data: {
-        candidateResultThresholdConfig:
-          nextConfig as Prisma.InputJsonValue,
+        candidateResultThresholdConfig: nextConfig as Prisma.InputJsonValue,
       },
       include: {
         organisation: true,
@@ -423,7 +467,7 @@ export class CampaignsService {
 
     return updatedCampaign;
   }
-    private normaliseCandidateResultThresholdConfig(
+  private normaliseCandidateResultThresholdConfig(
     value: unknown,
   ): CandidateResultThresholdConfig {
     if (!value || typeof value !== 'object') {
@@ -433,7 +477,8 @@ export class CampaignsService {
     const config = value as Partial<CandidateResultThresholdConfig>;
 
     return {
-      enabled: config.enabled ?? DEFAULT_CANDIDATE_RESULT_THRESHOLD_CONFIG.enabled,
+      enabled:
+        config.enabled ?? DEFAULT_CANDIDATE_RESULT_THRESHOLD_CONFIG.enabled,
       minimumOverallBand:
         config.minimumOverallBand ??
         DEFAULT_CANDIDATE_RESULT_THRESHOLD_CONFIG.minimumOverallBand,
@@ -451,12 +496,12 @@ export class CampaignsService {
         DEFAULT_CANDIDATE_RESULT_THRESHOLD_CONFIG.requireNoHighSeverityValidityFlags,
     };
   }
-  
+
   private assertCanManageOrganisation(
     user: RequestUser,
     organisationId: string,
   ) {
-    if (user.role === UserRole.PLATFORM_ADMIN) {
+    if (hasRole(user, UserRole.PLATFORM_ADMIN)) {
       return;
     }
 
@@ -467,9 +512,14 @@ export class CampaignsService {
       return;
     }
 
+    if (
+      hasActiveOrganisationRole(user, organisationId, UserRole.EMPLOYER_ADMIN)
+    ) {
+      return;
+    }
+
     throw new ForbiddenException('Not authorised for this organisation');
   }
-
   private assertValidStatusTransition(
     current: CampaignStatus,
     next: CampaignStatus,

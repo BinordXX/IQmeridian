@@ -95,6 +95,12 @@ export type AssessmentPsychometricDomainScore = {
   theta: number | null;
   standardScore: number | null;
   percentile: number | null;
+  iqScore?: number | null;
+  iqPercentile?: number | null;
+  iqCi90Lower?: number | null;
+  iqCi90Upper?: number | null;
+  iqScaleMean?: number;
+  iqScaleSd?: number;
   scoreBand: string;
   standardError: number | null;
   ci90Lower: number | null;
@@ -102,6 +108,7 @@ export type AssessmentPsychometricDomainScore = {
   testInformation: number | null;
   reliability: number | null;
   interpretation: string;
+  featureVector?: unknown;
 };
 
 export type AssessmentPsychometricValidityFlag = {
@@ -124,6 +131,12 @@ export type AssessmentPsychometricScoreResult = {
   overallTheta: number | null;
   overallStandardScore: number | null;
   overallPercentile: number | null;
+  overallIqScore?: number | null;
+  overallIqPercentile?: number | null;
+  overallIqCi90Lower?: number | null;
+  overallIqCi90Upper?: number | null;
+  overallIqScaleMean?: number;
+  overallIqScaleSd?: number;
   overallScoreBand: string;
   overallStandardError: number | null;
   overallCi90Lower: number | null;
@@ -143,6 +156,16 @@ export type AssessmentPsychometricScoreResult = {
   generatedAt: string;
   inputHash: string | null;
   warnings: unknown;
+  scoringEngineVersion?: string | null;
+  scoringModelFamily?: string | null;
+  scoringModelVersion?: string | null;
+  featureSetVersion?: string | null;
+  scoringSignalsUsed?: unknown;
+  scoringFeatureVector?: unknown;
+  scoringFeatureSummary?: unknown;
+  validityAdjusted?: boolean;
+  leaderboardEligible?: boolean;
+  leaderboardIneligibilityReasons?: unknown;
   domainScores: AssessmentPsychometricDomainScore[];
   validityFlags: AssessmentPsychometricValidityFlag[];
   createdAt: string;
@@ -174,7 +197,6 @@ const getStoredSessionAccessToken = (sessionId: string): string | null => {
 
   return window.sessionStorage.getItem(sessionTokenStorageKey(sessionId));
 };
-
 
 export const storeSessionAccessToken = (
   sessionId: string,
@@ -241,7 +263,7 @@ const assessmentEndpoints = {
   getPsychometricScore: (sessionId: string) =>
     `/sessions/${encodeURIComponent(sessionId)}/psychometric-score`,
 
-    candidateResultSummary: (sessionId: string, hasSessionAccessToken = false) =>
+  candidateResultSummary: (sessionId: string, hasSessionAccessToken = false) =>
     hasSessionAccessToken
       ? `/sessions/public/${encodeURIComponent(sessionId)}/candidate-summary`
       : `/sessions/${encodeURIComponent(sessionId)}/candidate-summary`,

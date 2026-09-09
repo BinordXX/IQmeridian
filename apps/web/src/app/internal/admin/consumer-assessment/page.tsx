@@ -1,6 +1,7 @@
+import { redirect } from 'next/navigation';
+
 import { auth } from '@/auth';
 import { getApiBaseUrl } from '@/lib/api-base-url';
-import { redirect } from 'next/navigation';
 
 import { setConsumerDefaultAssessmentAction } from './actions';
 
@@ -84,6 +85,15 @@ const normaliseForms = (value: unknown): InternalAssessmentForm[] => {
   return [];
 };
 
+const formatDate = (value?: string | null) => {
+  if (!value) return 'Not available';
+
+  return new Intl.DateTimeFormat('en', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(value));
+};
+
 export default async function ConsumerAssessmentAdminPage({
   searchParams,
 }: PageProps) {
@@ -99,86 +109,95 @@ export default async function ConsumerAssessmentAdminPage({
 
   return (
     <section className="space-y-6">
-      <div>
-        <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-          Consumer assessment
-        </p>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight">
-          Public consumer default
-        </h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-          Select the active assessment form that self-service consumers will see
-          on their dashboard and use when starting a new assessment.
-        </p>
-      </div>
+      <header className="relative overflow-hidden rounded-[2rem] border border-cyan-300/15 bg-[#07142f]/90 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.28)]">
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.14),transparent_34%),radial-gradient(circle_at_90%_10%,rgba(59,130,246,0.14),transparent_30%)]"
+        />
+
+        <div className="relative">
+          <p className="text-xs font-black uppercase tracking-[0.28em] text-cyan-300">
+            Consumer assessment
+          </p>
+
+          <h1 className="mt-3 text-3xl font-black tracking-tight text-white">
+            Public consumer default
+          </h1>
+
+          <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-300">
+            Select the active assessment form that self-service consumers will
+            see on their dashboard and use when starting a new assessment.
+          </p>
+        </div>
+      </header>
 
       {resolvedSearchParams?.updated ? (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-medium text-emerald-700">
+        <div className="rounded-2xl border border-emerald-300/20 bg-emerald-400/10 p-4 text-sm font-bold text-emerald-100">
           Consumer default assessment updated.
         </div>
       ) : null}
 
       {resolvedSearchParams?.error ? (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
+        <div className="rounded-2xl border border-red-300/20 bg-red-400/10 p-4 text-sm font-bold text-red-100">
           The consumer default assessment could not be updated.
         </div>
       ) : null}
 
-      <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-xl font-bold">Current default</h2>
+      <article className="rounded-[2rem] border border-white/10 bg-[#07142f]/90 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.24)]">
+        <h2 className="text-xl font-black text-white">Current default</h2>
 
         {defaultSetting.assessmentForm ? (
           <dl className="mt-5 grid gap-4 text-sm md:grid-cols-2">
-            <div>
-              <dt className="font-medium text-slate-500">Assessment form</dt>
-              <dd className="mt-1 font-semibold">
+            <div className="rounded-2xl border border-white/10 bg-[#020817]/70 p-4">
+              <dt className="font-bold text-slate-400">Assessment form</dt>
+              <dd className="mt-2 font-black text-white">
                 {defaultSetting.assessmentForm.name ??
                   defaultSetting.assessmentForm.id}
               </dd>
             </div>
 
-            <div>
-              <dt className="font-medium text-slate-500">Status</dt>
-              <dd className="mt-1 font-semibold">
+            <div className="rounded-2xl border border-white/10 bg-[#020817]/70 p-4">
+              <dt className="font-bold text-slate-400">Status</dt>
+              <dd className="mt-2 font-black text-white">
                 {defaultSetting.assessmentForm.isActive ? 'Active' : 'Inactive'}
               </dd>
             </div>
 
-            <div>
-              <dt className="font-medium text-slate-500">Form ID</dt>
-              <dd className="mt-1 break-all font-mono text-xs">
+            <div className="rounded-2xl border border-white/10 bg-[#020817]/70 p-4">
+              <dt className="font-bold text-slate-400">Form ID</dt>
+              <dd className="mt-2 break-all font-mono text-xs text-cyan-100">
                 {defaultSetting.assessmentFormId}
               </dd>
             </div>
 
-            <div>
-              <dt className="font-medium text-slate-500">Updated</dt>
-              <dd className="mt-1 font-semibold">
-                {defaultSetting.updatedAt ?? 'Not available'}
+            <div className="rounded-2xl border border-white/10 bg-[#020817]/70 p-4">
+              <dt className="font-bold text-slate-400">Updated</dt>
+              <dd className="mt-2 font-black text-white">
+                {formatDate(defaultSetting.updatedAt)}
               </dd>
             </div>
           </dl>
         ) : (
-          <p className="mt-4 text-sm text-slate-600">
+          <p className="mt-4 rounded-2xl border border-white/10 bg-[#020817]/70 p-4 text-sm text-slate-400">
             No consumer default assessment has been selected yet.
           </p>
         )}
       </article>
 
-      <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-xl font-bold">Set consumer default</h2>
+      <article className="rounded-[2rem] border border-white/10 bg-[#07142f]/90 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.24)]">
+        <h2 className="text-xl font-black text-white">Set consumer default</h2>
 
         {activeForms.length > 0 ? (
           <form action={setConsumerDefaultAssessmentAction} className="mt-5">
             <label
-              className="block text-sm font-medium text-slate-700"
+              className="block text-sm font-bold text-slate-300"
               htmlFor="assessmentFormId"
             >
               Active assessment form
             </label>
 
             <select
-              className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              className="mt-2 min-h-12 w-full rounded-2xl border border-white/10 bg-[#020817] px-4 text-sm font-bold text-white outline-none transition focus:border-cyan-300/50"
               defaultValue={defaultSetting.assessmentFormId ?? ''}
               id="assessmentFormId"
               name="assessmentFormId"
@@ -196,14 +215,14 @@ export default async function ConsumerAssessmentAdminPage({
             </select>
 
             <button
-              className="mt-5 rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
+              className="mt-5 rounded-2xl border border-cyan-300/25 bg-cyan-400/15 px-5 py-3 text-sm font-black text-cyan-50 transition hover:bg-cyan-400/20"
               type="submit"
             >
               Save consumer default
             </button>
           </form>
         ) : (
-          <p className="mt-4 text-sm text-slate-600">
+          <p className="mt-4 rounded-2xl border border-white/10 bg-[#020817]/70 p-4 text-sm text-slate-400">
             There are no active forms available. Activate a form first, then
             return to this page.
           </p>

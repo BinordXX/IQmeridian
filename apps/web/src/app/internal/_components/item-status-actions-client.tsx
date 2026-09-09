@@ -79,10 +79,11 @@ export function ItemStatusActionsClient({
   }
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <section className="rounded-[2rem] border border-white/10 bg-[#07142f]/90 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.24)]">
       <div>
-        <h2 className="text-lg font-semibold">Item status actions</h2>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+        <h2 className="text-lg font-black text-white">Item status actions</h2>
+
+        <p className="mt-2 max-w-3xl text-sm leading-7 text-slate-400">
           Use this panel to move an item through its operational lifecycle.
           Status changes are explicit and auditable because they affect form
           quality, exposure, comparability, and later performance
@@ -91,39 +92,41 @@ export function ItemStatusActionsClient({
       </div>
 
       <dl className="mt-5 grid gap-3 text-sm md:grid-cols-2">
-        <div className="rounded-xl bg-slate-50 px-4 py-3">
+        <div className="rounded-2xl border border-white/10 bg-[#020817]/70 px-4 py-3">
           <dt className="text-slate-500">Current status</dt>
-          <dd className="mt-1 font-semibold">{status}</dd>
+          <dd className="mt-1 font-black text-white">{status}</dd>
         </div>
 
-        <div className="rounded-xl bg-slate-50 px-4 py-3">
+        <div className="rounded-2xl border border-white/10 bg-[#020817]/70 px-4 py-3">
           <dt className="text-slate-500">Active form associations</dt>
-          <dd className="mt-1 font-semibold">{activeFormAssociationCount}</dd>
+          <dd className="mt-1 font-black text-white">
+            {activeFormAssociationCount}
+          </dd>
         </div>
       </dl>
 
       {!hasActiveMapping && !isRetired ? (
-        <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-800">
+        <div className="mt-5 rounded-2xl border border-amber-300/20 bg-amber-400/10 px-4 py-3 text-sm font-bold leading-7 text-amber-100">
           This item has no active form mapping. It can be drafted or reviewed,
           but it cannot be activated until it is attached to a form.
         </div>
       ) : null}
 
       {isRetired ? (
-        <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-700">
+        <div className="mt-5 rounded-2xl border border-white/10 bg-[#020817]/70 px-4 py-3 text-sm leading-7 text-slate-400">
           This item is retired. It cannot be silently reactivated. Create a new
           version instead.
         </div>
       ) : null}
 
-      <label className="mt-5 flex flex-col gap-2 text-sm font-medium text-slate-700">
+      <label className="mt-5 flex flex-col gap-2 text-sm font-bold text-slate-300">
         Status-change note
         <textarea
           value={note}
           onChange={(event) => setNote(event.target.value)}
           rows={3}
           placeholder="Optional internal note explaining the status change."
-          className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-950"
+          className="rounded-2xl border border-white/10 bg-[#020817] px-4 py-3 text-sm font-bold text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-300/50"
         />
       </label>
 
@@ -133,7 +136,7 @@ export function ItemStatusActionsClient({
             type="button"
             onClick={() => handleStatusChange('UNDER_REVIEW')}
             disabled={isSubmittingStatus !== null}
-            className="rounded-full border border-slate-300 px-5 py-2 text-sm font-semibold text-slate-800 disabled:cursor-not-allowed disabled:bg-slate-100"
+            className="rounded-full border border-white/10 bg-[#020817]/70 px-5 py-2 text-sm font-black text-slate-200 transition hover:bg-[#0b1d3f] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isSubmittingStatus === 'UNDER_REVIEW'
               ? 'Updating...'
@@ -146,7 +149,7 @@ export function ItemStatusActionsClient({
             type="button"
             onClick={() => handleStatusChange('DRAFT')}
             disabled={isSubmittingStatus !== null}
-            className="rounded-full border border-slate-300 px-5 py-2 text-sm font-semibold text-slate-800 disabled:cursor-not-allowed disabled:bg-slate-100"
+            className="rounded-full border border-white/10 bg-[#020817]/70 px-5 py-2 text-sm font-black text-slate-200 transition hover:bg-[#0b1d3f] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isSubmittingStatus === 'DRAFT' ? 'Updating...' : 'Return to draft'}
           </button>
@@ -157,7 +160,7 @@ export function ItemStatusActionsClient({
             type="button"
             onClick={() => handleStatusChange('ACTIVE')}
             disabled={isSubmittingStatus !== null || !hasActiveMapping}
-            className="rounded-full bg-slate-950 px-5 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-400"
+            className="rounded-full border border-cyan-300/25 bg-cyan-400/15 px-5 py-2 text-sm font-black text-cyan-50 transition hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isSubmittingStatus === 'ACTIVE' ? 'Activating...' : 'Activate'}
           </button>
@@ -168,7 +171,7 @@ export function ItemStatusActionsClient({
             type="button"
             onClick={() => handleStatusChange('RETIRED')}
             disabled={isSubmittingStatus !== null}
-            className="rounded-full border border-red-300 px-5 py-2 text-sm font-semibold text-red-700 disabled:cursor-not-allowed disabled:bg-red-50"
+            className="rounded-full border border-red-300/25 bg-red-400/10 px-5 py-2 text-sm font-black text-red-100 transition hover:bg-red-400/15 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isSubmittingStatus === 'RETIRED' ? 'Retiring...' : 'Retire item'}
           </button>
@@ -179,7 +182,7 @@ export function ItemStatusActionsClient({
             href={`/internal/researcher/item-bank/${encodeURIComponent(
               itemId
             )}/attach-form`}
-            className="rounded-full border border-slate-300 px-5 py-2 text-sm font-semibold text-slate-800"
+            className="rounded-full border border-cyan-300/20 bg-cyan-400/10 px-5 py-2 text-sm font-black text-cyan-100 transition hover:bg-cyan-400/15"
           >
             Attach to form
           </Link>
@@ -187,16 +190,16 @@ export function ItemStatusActionsClient({
       </div>
 
       {errorMessage ? (
-        <div className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm leading-6 text-red-700">
+        <div className="mt-5 rounded-2xl border border-red-300/20 bg-red-400/10 px-4 py-3 text-sm font-bold leading-7 text-red-100">
           {errorMessage}
         </div>
       ) : null}
 
       {updatedItem ? (
-        <div className="mt-5 rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-700">
+        <div className="mt-5 rounded-2xl border border-cyan-300/20 bg-cyan-400/10 px-4 py-3 text-sm leading-7 text-cyan-100">
           Item status updated to{' '}
-          <span className="font-semibold">{updatedItem.status}</span>. Refresh
-          has been requested so the server-rendered metadata reflects the latest
+          <span className="font-black">{updatedItem.status}</span>. Refresh has
+          been requested so the server-rendered metadata reflects the latest
           database state.
         </div>
       ) : null}

@@ -38,7 +38,6 @@ const getAccessErrorMessage = (error: unknown) => {
     : 'The result link could not be opened.';
 };
 
-
 export const CandidateResultAccessLoader = ({
   token,
 }: CandidateResultAccessLoaderProps) => {
@@ -52,13 +51,13 @@ export const CandidateResultAccessLoader = ({
       try {
         const result = await exchangeCandidateResultAccessToken(
           token,
-          controller.signal,
+          controller.signal
         );
 
         storeSessionAccessToken(result.sessionId, result.sessionAccessToken);
 
         router.replace(
-          `/assessment/session/${encodeURIComponent(result.sessionId)}/report`,
+          `/assessment/session/${encodeURIComponent(result.sessionId)}/report`
         );
       } catch (error) {
         if (controller.signal.aborted) {

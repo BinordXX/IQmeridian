@@ -174,6 +174,16 @@ const buildNavGroups = (role: InternalRole): NavGroup[] => {
                 href: '/internal/admin/consumer-assessment',
                 icon: ClipboardList,
               },
+              {
+                label: 'Assessment forms',
+                href: '/internal/admin/assessment-forms',
+                icon: ScrollText,
+              },
+              {
+                label: 'Item review queue',
+                href: '/internal/admin/item-review',
+                icon: FileSearch,
+              },
             ],
           },
           {
@@ -204,7 +214,9 @@ const buildNavGroups = (role: InternalRole): NavGroup[] => {
       : []),
     {
       label: 'Research',
-      description: 'Items, pilot forms, research tools',
+      description: isPlatformAdmin
+        ? 'Items and research tools'
+        : 'Assignments and item authoring',
       icon: FlaskConical,
       tone: iconTones.emerald,
       items: [
@@ -214,13 +226,22 @@ const buildNavGroups = (role: InternalRole): NavGroup[] => {
           exact: true,
           icon: BarChart3,
         },
+        ...(isPlatformAdmin
+          ? []
+          : [
+              {
+                label: 'My assignments',
+                href: '/internal/researcher/assignments',
+                icon: ClipboardList,
+              },
+            ]),
         {
           label: 'Item bank',
           href: '/internal/researcher/item-bank',
           icon: Database,
         },
         {
-          label: 'Pilot forms',
+          label: 'Assessment forms',
           href: '/internal/researcher/pilot-forms',
           icon: ScrollText,
         },

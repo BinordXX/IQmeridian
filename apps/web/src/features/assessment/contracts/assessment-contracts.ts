@@ -20,6 +20,9 @@ export type AssessmentItemType =
   | 'abstract_reasoning'
   | 'numerical_reasoning'
   | 'verbal_reasoning'
+  | 'logical_reasoning'
+  | 'analytical_problem_solving'
+  | 'spatial_reasoning'
   | 'situational_judgement';
 
 export type CandidateStimulusKind =
@@ -201,9 +204,23 @@ export type CandidateResultSummaryResult = {
   visibility: 'summary' | 'hidden';
   audience?: CandidateResultSummaryAudience;
   reason?: 'not_completed' | 'policy_hidden' | 'not_scored';
+  iqScore?: number | null;
+  iqPercentile?: number | null;
+  iqConfidenceInterval90?: {
+    lower: number | null;
+    upper: number | null;
+  };
   overallBand?: string | null;
   abstractReasoningBand?: string | null;
   numericalReasoningBand?: string | null;
+  scoringStatus?: string | null;
+  scoringEngineVersion?: string | null;
+  scoringModelVersion?: string | null;
+  featureSetVersion?: string | null;
+  signalCount?: number | null;
+  leaderboardEligible?: boolean | null;
+  validityFlagCount?: number;
+  generatedAt?: string | null;
 };
 
 const forbiddenCandidateItemFields = new Set([

@@ -20,6 +20,7 @@ import {
   Sparkles,
   UserRound,
   X,
+  Trophy,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
@@ -53,6 +54,12 @@ const navGroups: PublicNavGroup[] = [
         description: 'Plans for individuals, employers, and research.',
         href: '/pricing',
         icon: Gauge,
+      },
+      {
+        label: 'Leaderboard',
+        description: 'Public opt-in IQ Score rankings.',
+        href: '/leaderboard',
+        icon: Trophy,
       },
       {
         label: 'API',

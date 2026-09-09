@@ -37,22 +37,31 @@ function getStatusClassName(
   status: InternalAnalyticsExportRequestOutput['status']
 ) {
   if (status === 'GENERATED') {
-    return 'bg-emerald-100 text-emerald-900';
+    return 'border-emerald-300/20 bg-emerald-400/10 text-emerald-100';
   }
 
   if (status === 'APPROVED') {
-    return 'bg-blue-100 text-blue-900';
+    return 'border-blue-300/20 bg-blue-400/10 text-blue-100';
   }
 
   if (status === 'DECLINED' || status === 'FAILED' || status === 'CANCELLED') {
-    return 'bg-red-100 text-red-900';
+    return 'border-red-300/20 bg-red-400/10 text-red-100';
   }
 
   if (status === 'GENERATING') {
-    return 'bg-slate-200 text-slate-900';
+    return 'border-white/10 bg-[#020817]/70 text-slate-300';
   }
 
-  return 'bg-amber-100 text-amber-900';
+  return 'border-amber-300/20 bg-amber-400/10 text-amber-100';
+}
+
+function ExportMetricCard({ label, value }: { label: string; value: number }) {
+  return (
+    <article className="rounded-[1.5rem] border border-white/10 bg-[#07142f]/90 p-5 shadow-[0_24px_70px_rgba(0,0,0,0.24)]">
+      <p className="text-sm font-bold text-slate-500">{label}</p>
+      <p className="mt-3 text-3xl font-black text-white">{value}</p>
+    </article>
+  );
 }
 
 export function AnalyticsExportClient({
@@ -122,13 +131,14 @@ export function AnalyticsExportClient({
 
   return (
     <section className="space-y-6">
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="rounded-[2rem] border border-white/10 bg-[#07142f]/90 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.24)]">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <h2 className="text-xl font-semibold text-slate-950">
+            <h2 className="text-xl font-black text-white">
               Request analytics export
             </h2>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+
+            <p className="mt-2 max-w-3xl text-sm leading-7 text-slate-400">
               Export definitions come from the internal API.{' '}
               {isAutoApprovalEnabled
                 ? 'Current governance mode allows researcher export requests to be automatically approved and generated.'
@@ -137,10 +147,10 @@ export function AnalyticsExportClient({
           </div>
 
           <span
-            className={`w-fit rounded-full px-3 py-1 text-xs font-semibold ${
+            className={`w-fit rounded-full border px-3 py-1 text-xs font-black ${
               isAutoApprovalEnabled
-                ? 'bg-emerald-100 text-emerald-900'
-                : 'bg-amber-100 text-amber-900'
+                ? 'border-emerald-300/20 bg-emerald-400/10 text-emerald-100'
+                : 'border-amber-300/20 bg-amber-400/10 text-amber-100'
             }`}
           >
             {isAutoApprovalEnabled
@@ -150,7 +160,7 @@ export function AnalyticsExportClient({
         </div>
 
         <div className="mt-6 grid gap-4 lg:grid-cols-3">
-          <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
+          <label className="flex flex-col gap-2 text-sm font-bold text-slate-300">
             Export dataset
             <select
               value={selectedDataset}
@@ -161,7 +171,7 @@ export function AnalyticsExportClient({
                 setRequestedEvent(null);
                 setErrorMessage('');
               }}
-              className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-950"
+              className="min-h-12 rounded-2xl border border-white/10 bg-[#020817] px-4 text-sm font-bold text-white outline-none transition focus:border-cyan-300/50"
             >
               {definitions.map((definition) => (
                 <option key={definition.dataset} value={definition.dataset}>
@@ -171,7 +181,7 @@ export function AnalyticsExportClient({
             </select>
           </label>
 
-          <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
+          <label className="flex flex-col gap-2 text-sm font-bold text-slate-300">
             Date from
             <input
               type="date"
@@ -181,11 +191,11 @@ export function AnalyticsExportClient({
                 setRequestedEvent(null);
                 setErrorMessage('');
               }}
-              className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-950"
+              className="min-h-12 rounded-2xl border border-white/10 bg-[#020817] px-4 text-sm font-bold text-white outline-none transition focus:border-cyan-300/50"
             />
           </label>
 
-          <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
+          <label className="flex flex-col gap-2 text-sm font-bold text-slate-300">
             Date to
             <input
               type="date"
@@ -195,12 +205,12 @@ export function AnalyticsExportClient({
                 setRequestedEvent(null);
                 setErrorMessage('');
               }}
-              className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-950"
+              className="min-h-12 rounded-2xl border border-white/10 bg-[#020817] px-4 text-sm font-bold text-white outline-none transition focus:border-cyan-300/50"
             />
           </label>
         </div>
 
-        <label className="mt-4 flex flex-col gap-2 text-sm font-medium text-slate-700">
+        <label className="mt-4 flex flex-col gap-2 text-sm font-bold text-slate-300">
           Request reason
           <textarea
             value={requestReason}
@@ -210,25 +220,33 @@ export function AnalyticsExportClient({
               setErrorMessage('');
             }}
             rows={3}
-            className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-950"
+            className="rounded-2xl border border-white/10 bg-[#020817] px-4 py-3 text-sm font-bold text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-300/50"
             placeholder="Explain why this export is needed."
           />
         </label>
 
         {selectedDefinition ? (
-          <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <p className="text-sm font-semibold text-slate-950">
+          <div className="mt-6 rounded-2xl border border-white/10 bg-[#020817]/70 p-4">
+            <p className="text-sm font-black text-white">
               {selectedDefinition.label}
             </p>
-            <p className="mt-2 text-sm leading-6 text-slate-600">
+
+            <p className="mt-2 text-sm leading-7 text-slate-400">
               {selectedDefinition.description}
             </p>
 
             <div className="mt-3 flex flex-wrap gap-2">
-              <span className="rounded-full border border-slate-300 bg-white px-2 py-1 text-xs font-semibold">
+              <span className="rounded-full border border-white/10 bg-[#07142f]/80 px-2 py-1 text-xs font-bold text-slate-300">
                 Format: {selectedDefinition.format}
               </span>
-              <span className="rounded-full border border-slate-300 bg-white px-2 py-1 text-xs font-semibold">
+
+              <span
+                className={`rounded-full border px-2 py-1 text-xs font-bold ${
+                  selectedDefinition.currentlyAvailable
+                    ? 'border-emerald-300/20 bg-emerald-400/10 text-emerald-100'
+                    : 'border-amber-300/20 bg-amber-400/10 text-amber-100'
+                }`}
+              >
                 {selectedDefinition.currentlyAvailable
                   ? 'Available'
                   : 'Pending backend wiring'}
@@ -242,7 +260,7 @@ export function AnalyticsExportClient({
             type="button"
             disabled={!selectedDefinition?.currentlyAvailable || isSubmitting}
             onClick={() => void handleRequestExport()}
-            className="rounded-full bg-slate-950 px-5 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-400"
+            className="rounded-full border border-cyan-300/25 bg-cyan-400/15 px-5 py-2 text-sm font-black text-cyan-50 transition hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isSubmitting
               ? 'Processing export...'
@@ -257,23 +275,22 @@ export function AnalyticsExportClient({
               setRequestedEvent(null);
               setErrorMessage('');
             }}
-            className="rounded-full border border-slate-300 px-5 py-2 text-sm font-semibold text-slate-800"
+            className="rounded-full border border-white/10 bg-[#020817]/70 px-5 py-2 text-sm font-black text-slate-200 transition hover:bg-[#0b1d3f]"
           >
             Clear message
           </button>
         </div>
 
         {errorMessage ? (
-          <div className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm leading-6 text-red-800">
+          <div className="mt-5 rounded-2xl border border-red-300/20 bg-red-400/10 px-4 py-3 text-sm font-bold leading-7 text-red-100">
             {errorMessage}
           </div>
         ) : null}
 
         {requestedEvent && selectedDefinition ? (
-          <div className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-800">
+          <div className="mt-5 rounded-2xl border border-emerald-300/20 bg-emerald-400/10 px-4 py-3 text-sm font-bold leading-7 text-emerald-100">
             Export request recorded for {selectedDefinition.label}. Current
-            status:{' '}
-            <span className="font-semibold">{requestedEvent.status}</span>.
+            status: <span className="font-black">{requestedEvent.status}</span>.
             {requestedEvent.status === 'GENERATED'
               ? ' The export is ready to download from your request history below.'
               : null}
@@ -282,47 +299,34 @@ export function AnalyticsExportClient({
       </section>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-sm font-medium text-slate-500">Requested</p>
-          <p className="mt-3 text-3xl font-semibold text-slate-950">
-            {countByStatus(requests, 'REQUESTED')}
-          </p>
-        </article>
-
-        <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-sm font-medium text-slate-500">Approved</p>
-          <p className="mt-3 text-3xl font-semibold text-slate-950">
-            {countByStatus(requests, 'APPROVED')}
-          </p>
-        </article>
-
-        <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-sm font-medium text-slate-500">Declined</p>
-          <p className="mt-3 text-3xl font-semibold text-slate-950">
-            {countByStatus(requests, 'DECLINED')}
-          </p>
-        </article>
-
-        <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-sm font-medium text-slate-500">Generated</p>
-          <p className="mt-3 text-3xl font-semibold text-slate-950">
-            {countByStatus(requests, 'GENERATED')}
-          </p>
-        </article>
-
-        <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-sm font-medium text-slate-500">Failed</p>
-          <p className="mt-3 text-3xl font-semibold text-slate-950">
-            {countByStatus(requests, 'FAILED')}
-          </p>
-        </article>
+        <ExportMetricCard
+          label="Requested"
+          value={countByStatus(requests, 'REQUESTED')}
+        />
+        <ExportMetricCard
+          label="Approved"
+          value={countByStatus(requests, 'APPROVED')}
+        />
+        <ExportMetricCard
+          label="Declined"
+          value={countByStatus(requests, 'DECLINED')}
+        />
+        <ExportMetricCard
+          label="Generated"
+          value={countByStatus(requests, 'GENERATED')}
+        />
+        <ExportMetricCard
+          label="Failed"
+          value={countByStatus(requests, 'FAILED')}
+        />
       </section>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-950">
+      <section className="rounded-[2rem] border border-white/10 bg-[#07142f]/90 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.24)]">
+        <h2 className="text-lg font-black text-white">
           My export request history
         </h2>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+
+        <p className="mt-2 max-w-3xl text-sm leading-7 text-slate-400">
           Track review status and download generated exports after platform
           admin approval, or immediately when auto-approval is enabled.
         </p>
@@ -335,96 +339,101 @@ export function AnalyticsExportClient({
             return (
               <article
                 key={request.id}
-                className="rounded-2xl border border-slate-200 bg-slate-50 p-5 text-sm"
+                className="rounded-[1.5rem] border border-white/10 bg-[#020817]/70 p-5 text-sm"
               >
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                   <div>
                     <p
-                      className={`w-fit rounded-full px-3 py-1 text-xs font-semibold ${getStatusClassName(
+                      className={`w-fit rounded-full border px-3 py-1 text-xs font-black ${getStatusClassName(
                         request.status
                       )}`}
                     >
                       {request.status}
                     </p>
 
-                    <h3 className="mt-3 text-lg font-semibold text-slate-950">
+                    <h3 className="mt-3 text-lg font-black text-white">
                       {definition?.label ?? request.dataset}
                     </h3>
 
-                    <p className="mt-2 max-w-3xl leading-6 text-slate-600">
+                    <p className="mt-2 max-w-3xl leading-7 text-slate-400">
                       {definition?.description ??
                         'No export definition description is available.'}
                     </p>
                   </div>
 
-                  <span className="w-fit rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold">
+                  <span className="w-fit rounded-full border border-white/10 bg-[#07142f]/80 px-3 py-1 text-xs font-bold text-slate-300">
                     {request.format}
                   </span>
                 </div>
 
                 <dl className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                  <div className="rounded-xl bg-white px-4 py-3">
-                    <dt className="text-xs font-medium text-slate-500">
+                  <div className="rounded-2xl border border-white/10 bg-[#07142f]/80 px-4 py-3">
+                    <dt className="text-xs font-bold text-slate-500">
                       Date range
                     </dt>
-                    <dd className="mt-1 font-semibold text-slate-950">
+                    <dd className="mt-1 font-black text-white">
                       {formatDate(request.dateFrom)} to{' '}
                       {formatDate(request.dateTo)}
                     </dd>
                   </div>
 
-                  <div className="rounded-xl bg-white px-4 py-3">
-                    <dt className="text-xs font-medium text-slate-500">
+                  <div className="rounded-2xl border border-white/10 bg-[#07142f]/80 px-4 py-3">
+                    <dt className="text-xs font-bold text-slate-500">
                       Requested at
                     </dt>
-                    <dd className="mt-1 font-semibold text-slate-950">
+                    <dd className="mt-1 font-black text-white">
                       {formatDateTime(request.createdAt)}
                     </dd>
                   </div>
 
-                  <div className="rounded-xl bg-white px-4 py-3">
-                    <dt className="text-xs font-medium text-slate-500">
+                  <div className="rounded-2xl border border-white/10 bg-[#07142f]/80 px-4 py-3">
+                    <dt className="text-xs font-bold text-slate-500">
                       Reviewed at
                     </dt>
-                    <dd className="mt-1 font-semibold text-slate-950">
+                    <dd className="mt-1 font-black text-white">
                       {formatDateTime(request.reviewedAt)}
                     </dd>
                   </div>
 
-                  <div className="rounded-xl bg-white px-4 py-3">
-                    <dt className="text-xs font-medium text-slate-500">
+                  <div className="rounded-2xl border border-white/10 bg-[#07142f]/80 px-4 py-3">
+                    <dt className="text-xs font-bold text-slate-500">
                       Generated at
                     </dt>
-                    <dd className="mt-1 font-semibold text-slate-950">
+                    <dd className="mt-1 font-black text-white">
                       {formatDateTime(request.generatedAt)}
                     </dd>
                   </div>
                 </dl>
 
                 {request.requestReason ? (
-                  <p className="mt-4 rounded-xl bg-white px-4 py-3 leading-6 text-slate-700">
-                    <span className="font-semibold">Request reason:</span>{' '}
+                  <p className="mt-4 rounded-2xl border border-white/10 bg-[#07142f]/80 px-4 py-3 leading-7 text-slate-300">
+                    <span className="font-black text-white">
+                      Request reason:
+                    </span>{' '}
                     {request.requestReason}
                   </p>
                 ) : null}
 
                 {request.reviewReason ? (
-                  <p className="mt-4 rounded-xl bg-white px-4 py-3 leading-6 text-slate-700">
-                    <span className="font-semibold">Review reason:</span>{' '}
+                  <p className="mt-4 rounded-2xl border border-white/10 bg-[#07142f]/80 px-4 py-3 leading-7 text-slate-300">
+                    <span className="font-black text-white">
+                      Review reason:
+                    </span>{' '}
                     {request.reviewReason}
                   </p>
                 ) : null}
 
                 {isGenerated ? (
-                  <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 leading-6 text-emerald-800">
+                  <div className="mt-4 rounded-2xl border border-emerald-300/20 bg-emerald-400/10 px-4 py-3 leading-7 text-emerald-100">
                     <p>
                       This export has been generated and is ready to download.
                     </p>
+
                     <a
                       href={`/internal/api/researcher/exports/requests/${encodeURIComponent(
                         request.id
                       )}/download`}
-                      className="mt-3 inline-flex rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white"
+                      className="mt-3 inline-flex rounded-full border border-cyan-300/25 bg-cyan-400/15 px-4 py-2 text-sm font-black text-cyan-50 transition hover:bg-cyan-400/20"
                     >
                       Download export
                     </a>
@@ -436,7 +445,7 @@ export function AnalyticsExportClient({
         </div>
 
         {requests.length === 0 ? (
-          <p className="mt-5 rounded-xl bg-slate-50 p-4 text-sm text-slate-600">
+          <p className="mt-5 rounded-2xl border border-white/10 bg-[#020817]/70 p-4 text-sm text-slate-500">
             No export requests have been created yet.
           </p>
         ) : null}

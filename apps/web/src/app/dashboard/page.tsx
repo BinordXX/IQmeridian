@@ -2,30 +2,36 @@ import {
   AlertTriangle,
   CheckCircle2,
   ClipboardCheck,
-  Clock3,
   FileText,
-  LockKeyhole,
   PlayCircle,
+  Settings,
+  Trophy,
   UserRound,
-  Wrench,
 } from 'lucide-react';
-import { CandidatePendingInvitationsPanel } from './_components/candidate-pending-invitations-panel';
-import {
-  listCandidatePendingInvitations,
-  type CandidatePendingInvitationSummary,
-} from './candidate-dashboard-api';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
 import { auth } from '@/auth';
 import { getDefaultDashboardForRole, isAppRole } from '@/lib/role-routing';
 
-import { startConsumerAssessmentAction } from './actions';
+import { CandidatePendingInvitationsPanel } from './_components/candidate-pending-invitations-panel';
+import {
+  startConsumerAssessmentAction,
+  updateLeaderboardPreferencesAction,
+} from './actions';
+import {
+  listCandidatePendingInvitations,
+  type CandidatePendingInvitationSummary,
+} from './candidate-dashboard-api';
 import {
   getConsumerAssessmentDefault,
+  getMyLeaderboardSummary,
   listConsumerSessionsWithPsychometricScores,
   type ConsumerAssessmentDefault,
+  type ConsumerPsychometricDomainScore,
+  type ConsumerPsychometricScoreResult,
   type ConsumerSessionSummary,
+  type ConsumerLeaderboardSummary,
 } from './consumer-dashboard-api';
 
 type DashboardPageProps = {
@@ -33,28 +39,6 @@ type DashboardPageProps = {
     startError?: string;
   }>;
 };
-
-const profileTools = [
-  {
-    title: 'Profile',
-    description: 'Review and update your account identity.',
-  },
-  {
-    title: 'Assessment readiness',
-    description:
-      'Review instructions, timing expectations, and assessment preparation notes.',
-  },
-  {
-    title: 'Reports',
-    description:
-      'View reports only where your account or organisation policy permits access.',
-  },
-  {
-    title: 'Privacy and data',
-    description:
-      'Manage account settings, sessions, notification preferences, and data controls.',
-  },
-];
 
 const formatDate = (value?: string | null) => {
   if (!value) return 'Not available';
@@ -69,6 +53,12 @@ const formatDate = (value?: string | null) => {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(parsed);
+};
+
+const formatRank = (value?: number | null) => {
+  if (typeof value !== 'number') return 'Not ranked';
+
+  return `#${value}`;
 };
 
 const formatScoreBand = (value?: string | null) => {
@@ -106,150 +96,86 @@ const getTimestampValue = (value?: string | null) => {
   return Number.isNaN(parsed) ? 0 : parsed;
 };
 
-const STANDARD_SCORE_MEAN = 100;
-const STANDARD_SCORE_SD = 15;
-const STANDARD_SCORE_MIN = 40;
-const STANDARD_SCORE_MAX = 160;
-const MAX_DISPLAYABLE_INTERVAL_WIDTH = 45;
-
-const formatStandardScoreInterval = (
-  lowerTheta: number | null | undefined,
-  upperTheta: number | null | undefined
-) => {
-  if (typeof lowerTheta !== 'number' || typeof upperTheta !== 'number') {
-    return 'Not available';
-  }
-
-  const lowerStandardScore =
-    STANDARD_SCORE_MEAN + lowerTheta * STANDARD_SCORE_SD;
-  const upperStandardScore =
-    STANDARD_SCORE_MEAN + upperTheta * STANDARD_SCORE_SD;
-  const rawIntervalWidth = upperStandardScore - lowerStandardScore;
-
-  if (
-    rawIntervalWidth > MAX_DISPLAYABLE_INTERVAL_WIDTH ||
-    lowerStandardScore < STANDARD_SCORE_MIN ||
-    upperStandardScore > STANDARD_SCORE_MAX
-  ) {
-    return 'Low precision';
-  }
-
-  const clampedLower = Math.max(
-    STANDARD_SCORE_MIN,
-    Math.min(STANDARD_SCORE_MAX, lowerStandardScore)
-  );
-
-  const clampedUpper = Math.max(
-    STANDARD_SCORE_MIN,
-    Math.min(STANDARD_SCORE_MAX, upperStandardScore)
-  );
-
-  return `${Math.round(clampedLower)}-${Math.round(clampedUpper)}`;
-};
-
-const VALIDITY_SEVERITY_RANK: Record<string, number> = {
-  HIGH: 3,
-  MEDIUM: 2,
-  LOW: 1,
-};
-
-const getHighestValiditySeverity = (
-  validityFlags:
-    | {
-        severity: string;
-      }[]
-    | null
-    | undefined
-) => {
-  if (!validityFlags?.length) {
-    return null;
-  }
-
-  return validityFlags.reduce<string | null>((highest, flag) => {
-    if (!highest) {
-      return flag.severity;
-    }
-
-    return (VALIDITY_SEVERITY_RANK[flag.severity] ?? 0) >
-      (VALIDITY_SEVERITY_RANK[highest] ?? 0)
-      ? flag.severity
-      : highest;
-  }, null);
-};
-
-const getAttemptQualityLabel = (
-  validityFlags:
-    | {
-        severity: string;
-      }[]
-    | null
-    | undefined
-) => {
-  const highestSeverity = getHighestValiditySeverity(validityFlags);
-
-  if (highestSeverity === 'HIGH') return 'Low-validity attempt';
-  if (highestSeverity === 'MEDIUM') return 'Interpret with caution';
-  if (highestSeverity === 'LOW') return 'Minor validity notice';
-
-  return 'Clean attempt';
-};
-
-const getAttemptQualityDescription = (
-  validityFlags:
-    | {
-        severity: string;
-      }[]
-    | null
-    | undefined
-) => {
-  const highestSeverity = getHighestValiditySeverity(validityFlags);
-
-  if (highestSeverity === 'HIGH') {
-    return 'This result may not be a dependable estimate because the attempt triggered serious validity concerns.';
-  }
-
-  if (highestSeverity === 'MEDIUM') {
-    return 'This result is usable as a provisional estimate, but the attempt had factors that may reduce interpretive confidence.';
-  }
-
-  if (highestSeverity === 'LOW') {
-    return 'This result has a minor validity notice. Interpret the score alongside the listed flags.';
-  }
-
-  return 'No major validity issues were detected for this attempt.';
-};
-
-const getAttemptQualityClassName = (
-  validityFlags:
-    | {
-        severity: string;
-      }[]
-    | null
-    | undefined
-) => {
-  const highestSeverity = getHighestValiditySeverity(validityFlags);
-
-  if (highestSeverity === 'HIGH') {
-    return 'border-red-300/20 bg-red-400/10 text-red-100';
-  }
-
-  if (highestSeverity === 'MEDIUM') {
-    return 'border-amber-300/20 bg-amber-400/10 text-amber-100';
-  }
-
-  if (highestSeverity === 'LOW') {
-    return 'border-blue-300/20 bg-blue-400/10 text-blue-100';
-  }
-
-  return 'border-emerald-300/20 bg-emerald-400/10 text-emerald-100';
-};
-
 const isCompletedSession = (session: ConsumerSessionSummary) => {
   return session.status === 'COMPLETED' || session.status === 'FINALISED';
 };
 
 const isActiveSession = (session: ConsumerSessionSummary) => {
   return session.status === 'NOT_STARTED' || session.status === 'IN_PROGRESS';
+};
+
+const getPrimaryIqScore = (score?: ConsumerPsychometricScoreResult | null) => {
+  return score?.overallIqScore ?? score?.overallStandardScore ?? null;
+};
+
+const getPrimaryIqPercentile = (
+  score?: ConsumerPsychometricScoreResult | null
+) => {
+  return score?.overallIqPercentile ?? score?.overallPercentile ?? null;
+};
+
+const formatIqScoreInterval = (
+  score?: ConsumerPsychometricScoreResult | null
+) => {
+  if (
+    typeof score?.overallIqCi90Lower === 'number' &&
+    typeof score.overallIqCi90Upper === 'number'
+  ) {
+    return `${Math.round(score.overallIqCi90Lower)}-${Math.round(
+      score.overallIqCi90Upper
+    )}`;
+  }
+
+  if (
+    typeof score?.overallCi90Lower === 'number' &&
+    typeof score.overallCi90Upper === 'number'
+  ) {
+    return `${Math.round(100 + score.overallCi90Lower * 15)}-${Math.round(
+      100 + score.overallCi90Upper * 15
+    )}`;
+  }
+
+  return 'Not available';
+};
+
+const getDomainIqScore = (
+  domainScore?: ConsumerPsychometricDomainScore | null
+) => {
+  return domainScore?.iqScore ?? domainScore?.standardScore ?? null;
+};
+
+const getSignalCount = (score?: ConsumerPsychometricScoreResult | null) => {
+  const summary = score?.scoringFeatureSummary;
+
+  if (
+    typeof summary === 'object' &&
+    summary !== null &&
+    !Array.isArray(summary) &&
+    'signalCount' in summary
+  ) {
+    const signalCount = (summary as { signalCount?: unknown }).signalCount;
+
+    if (typeof signalCount === 'number') {
+      return signalCount;
+    }
+  }
+
+  const signals = score?.scoringSignalsUsed;
+
+  if (Array.isArray(signals)) {
+    return signals.length;
+  }
+
+  return null;
+};
+
+const getStrongestDomain = (session?: ConsumerSessionSummary) => {
+  const domainScores = session?.psychometricScore?.domainScores ?? [];
+
+  return [...domainScores].sort(
+    (left, right) =>
+      (getDomainIqScore(right) ?? 0) - (getDomainIqScore(left) ?? 0)
+  )[0];
 };
 
 const getCurrentProfileSession = (sessions: ConsumerSessionSummary[]) => {
@@ -270,12 +196,22 @@ const getCurrentProfileSession = (sessions: ConsumerSessionSummary[]) => {
     })[0];
 };
 
-const getStrongestDomain = (session: ConsumerSessionSummary | undefined) => {
-  const domainScores = session?.psychometricScore?.domainScores ?? [];
+const getValidityLabel = (score?: ConsumerPsychometricScoreResult | null) => {
+  const flags = score?.validityFlags ?? [];
 
-  return [...domainScores].sort(
-    (left, right) => (right.standardScore ?? 0) - (left.standardScore ?? 0)
-  )[0];
+  if (flags.some((flag) => flag.severity === 'HIGH')) {
+    return 'Low validity';
+  }
+
+  if (flags.some((flag) => flag.severity === 'MEDIUM')) {
+    return 'Caution';
+  }
+
+  if (flags.some((flag) => flag.severity === 'LOW')) {
+    return 'Minor notice';
+  }
+
+  return score ? 'Clean' : 'Not available';
 };
 
 const getSessionTitle = (session: ConsumerSessionSummary) => {
@@ -292,17 +228,11 @@ const getSessionHref = (session: ConsumerSessionSummary) => {
     return `/assessment/session/${session.id}`;
   }
 
-  if (isCompletedSession(session)) {
-    return `/assessment/session/${session.id}/review`;
-  }
-
   return `/assessment/session/${session.id}/instructions`;
 };
 
 const getSessionActionLabel = (session: ConsumerSessionSummary) => {
   if (session.status === 'IN_PROGRESS') return 'Resume';
-  if (session.status === 'NOT_STARTED') return 'Open';
-  if (isCompletedSession(session)) return 'Review';
 
   return 'Open';
 };
@@ -343,6 +273,8 @@ export default async function DashboardPage({
   let pendingInvitations: CandidatePendingInvitationSummary[] = [];
   let dashboardError: string | null = null;
   let pendingInvitationError: string | null = null;
+  let leaderboardSummary: ConsumerLeaderboardSummary | null = null;
+  let leaderboardError: string | null = null;
 
   try {
     if (role === 'CONSUMER') {
@@ -381,31 +313,44 @@ export default async function DashboardPage({
     dashboardError =
       error instanceof Error ? error.message : 'Unable to load dashboard data.';
   }
-
+  if (role === 'CONSUMER') {
+    try {
+      leaderboardSummary = await getMyLeaderboardSummary();
+    } catch (error) {
+      leaderboardError =
+        error instanceof Error
+          ? error.message
+          : 'Unable to load leaderboard status.';
+    }
+  }
   const isCandidate = role === 'CANDIDATE';
-  const canShowScoreProfile = role === 'CONSUMER';
-
   const activeSessions = sessions.filter(isActiveSession);
   const completedSessions = sessions.filter(isCompletedSession);
-  const visibleSessions = isCandidate ? activeSessions : sessions;
-  const hasVisibleSessions = visibleSessions.length > 0;
-  const candidateAssessmentRecordCount =
-    pendingInvitations.length + activeSessions.length;
+  const scoredCompletedSessions = completedSessions.filter(
+    (assessmentSession) => Boolean(assessmentSession.psychometricScore)
+  );
+
+  const currentProfileSession =
+    role === 'CONSUMER' ? getCurrentProfileSession(sessions) : undefined;
+  const currentProfileScore = currentProfileSession?.psychometricScore ?? null;
+  const currentProfileIqScore = getPrimaryIqScore(currentProfileScore);
+  const currentProfileIqPercentile =
+    getPrimaryIqPercentile(currentProfileScore);
+  const currentProfileIqInterval = formatIqScoreInterval(currentProfileScore);
+
+  const strongestDomain = getStrongestDomain(currentProfileSession);
+  const currentProfileSignalCount = getSignalCount(currentProfileScore);
+
+  const canStartConsumerAssessment =
+    role === 'CONSUMER' && Boolean(consumerAssessment);
+
   const candidateHasCompletedOnly =
     isCandidate && activeSessions.length === 0 && completedSessions.length > 0;
   const candidateHasNoAssignments =
     isCandidate &&
     activeSessions.length === 0 &&
-    completedSessions.length === 0;
-
-  const currentProfileSession = canShowScoreProfile
-    ? getCurrentProfileSession(sessions)
-    : undefined;
-  const currentProfileScore = currentProfileSession?.psychometricScore ?? null;
-  const strongestDomain = getStrongestDomain(currentProfileSession);
-
-  const canStartConsumerAssessment =
-    role === 'CONSUMER' && Boolean(consumerAssessment);
+    completedSessions.length === 0 &&
+    pendingInvitations.length === 0;
 
   const assessmentAvailabilityLabel =
     role === 'CONSUMER'
@@ -432,15 +377,16 @@ export default async function DashboardPage({
   const startAssessmentDescription =
     role === 'CONSUMER'
       ? consumerAssessment
-        ? 'Create a new consumer-owned assessment session. Your completed attempt will update your IQMeridian profile.'
+        ? 'Start a new consumer-owned assessment session. Your completed attempt will update your IQMeridian profile.'
         : 'No consumer assessment is currently available. A platform administrator must select an active default assessment first.'
       : pendingInvitations.length > 0
         ? 'Open your pending invitation to claim it and create your assessment session.'
         : candidateHasCompletedOnly
-          ? 'Your assigned assessment has been completed. One-off candidate access is now limited to completion status unless a new invitation is issued.'
+          ? 'Your assigned assessment has been completed. A new invitation is required for another attempt.'
           : candidateHasNoAssignments
-            ? 'Candidate assessments are assigned through invitations or organisation campaigns. When a new assignment is issued, it will appear here.'
-            : 'Open or resume your currently assigned assessment. Completed one-off assessments cannot be restarted.';
+            ? 'Candidate assessments are assigned through invitations or organisation campaigns.'
+            : 'Open or resume your currently assigned assessment.';
+
   return (
     <div className="space-y-6 text-white">
       <section className="relative overflow-hidden rounded-[2rem] border border-cyan-300/15 bg-[#07142f]/88 p-6 shadow-[0_30px_90px_rgba(0,0,0,0.28)]">
@@ -459,8 +405,8 @@ export default async function DashboardPage({
             </h1>
             <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-400">
               {isCandidate
-                ? 'This is your controlled candidate assessment workspace. You can access active assignments and completion status only.'
-                : 'This is your personal intelligence assessment workspace. Start assessments, review scored attempts, and track your current IQMeridian profile.'}
+                ? 'This is your controlled candidate workspace for active assignments and completion status.'
+                : 'This is your personal IQMeridian command center. Start a test, view your current IQ Score, or open your full test history.'}
             </p>
           </div>
 
@@ -486,48 +432,88 @@ export default async function DashboardPage({
           <span>{dashboardError}</span>
         </div>
       ) : null}
-      {role === 'CANDIDATE' ? (
-        <CandidatePendingInvitationsPanel
-          invitations={pendingInvitations}
-          errorMessage={pendingInvitationError}
-        />
-      ) : null}
-      {isCandidate ? (
-        <section className="rounded-[2rem] border border-white/10 bg-[#07142f]/82 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.22)]">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-            <div className="flex gap-4">
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-cyan-300/15 bg-cyan-400/10 text-cyan-200">
-                {activeSessions.length > 0 ? (
-                  <PlayCircle size={22} strokeWidth={2} />
-                ) : (
-                  <CheckCircle2 size={22} strokeWidth={2} />
-                )}
-              </span>
 
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">
-                  Candidate access
-                </p>
-                <h2 className="mt-2 text-2xl font-black text-white">
-                  {activeSessions.length > 0
-                    ? 'You have an active assigned assessment'
-                    : pendingInvitations.length > 0
-                      ? 'You have a pending invitation'
-                      : candidateHasCompletedOnly
-                        ? 'Assessment completed'
-                        : 'No active assessment'}
-                </h2>
-                <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
-                  {startAssessmentDescription}
-                </p>
+      {isCandidate ? (
+        <>
+          <CandidatePendingInvitationsPanel
+            invitations={pendingInvitations}
+            errorMessage={pendingInvitationError}
+          />
+
+          <section className="rounded-[2rem] border border-white/10 bg-[#07142f]/82 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.22)]">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+              <div className="flex gap-4">
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-cyan-300/15 bg-cyan-400/10 text-cyan-200">
+                  {activeSessions.length > 0 ? (
+                    <PlayCircle size={22} strokeWidth={2} />
+                  ) : (
+                    <CheckCircle2 size={22} strokeWidth={2} />
+                  )}
+                </span>
+
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">
+                    Candidate access
+                  </p>
+                  <h2 className="mt-2 text-2xl font-black text-white">
+                    {activeSessions.length > 0
+                      ? 'You have an active assigned assessment'
+                      : pendingInvitations.length > 0
+                        ? 'You have a pending invitation'
+                        : candidateHasCompletedOnly
+                          ? 'Assessment completed'
+                          : 'No active assessment'}
+                  </h2>
+                  <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
+                    {startAssessmentDescription}
+                  </p>
+                </div>
               </div>
+
+              <span className="w-fit rounded-full border border-cyan-300/20 bg-cyan-400/10 px-3 py-1 text-xs font-black uppercase tracking-wide text-cyan-100">
+                {assessmentAvailabilityLabel}
+              </span>
             </div>
 
-            <span className="w-fit rounded-full border border-cyan-300/20 bg-cyan-400/10 px-3 py-1 text-xs font-black uppercase tracking-wide text-cyan-100">
-              {assessmentAvailabilityLabel}
-            </span>
-          </div>
-        </section>
+            {activeSessions.length > 0 ? (
+              <div className="mt-6 grid gap-3 md:grid-cols-2">
+                {activeSessions.map((assessmentSession) => (
+                  <div
+                    className="rounded-2xl border border-white/10 bg-white/[0.035] p-4"
+                    key={assessmentSession.id}
+                  >
+                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                      <div>
+                        <h3 className="font-black text-white">
+                          {getSessionTitle(assessmentSession)}
+                        </h3>
+                        <p className="mt-1 text-sm leading-6 text-slate-500">
+                          Created: {formatDate(assessmentSession.createdAt)}
+                        </p>
+                      </div>
+
+                      <div className="flex flex-col items-start gap-3 md:items-end">
+                        <span
+                          className={`rounded-full border px-3 py-1 text-xs font-black uppercase tracking-wide ${getStatusBadgeClassName(
+                            assessmentSession
+                          )}`}
+                        >
+                          {assessmentSession.status}
+                        </span>
+                        <Link
+                          className="rounded-2xl border border-cyan-300/20 bg-cyan-400/10 px-4 py-2 text-xs font-black text-cyan-100 transition hover:bg-cyan-400/15"
+                          href={getSessionHref(assessmentSession)}
+                        >
+                          {getSessionActionLabel(assessmentSession)}
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </section>
+        </>
       ) : (
         <section className="rounded-[2rem] border border-white/10 bg-[#07142f]/82 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.22)]">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
@@ -537,13 +523,13 @@ export default async function DashboardPage({
               </p>
               <h2 className="mt-3 text-3xl font-black tracking-tight text-white">
                 {currentProfileScore
-                  ? formatScoreBand(currentProfileScore.overallScoreBand)
+                  ? 'Your current IQ Score'
                   : 'Profile not available yet'}
               </h2>
               <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-400">
                 {currentProfileScore
-                  ? currentProfileScore.overallInterpretation
-                  : 'Complete an assessment to generate your current IQMeridian intelligence profile. Your profile will update when a new valid score is generated.'}
+                  ? 'The dashboard shows only the current headline result. Full attempt history and detailed profiles live under Test History.'
+                  : 'Complete an assessment to generate your current IQMeridian IQ Score profile.'}
               </p>
             </div>
 
@@ -554,25 +540,70 @@ export default async function DashboardPage({
             </span>
           </div>
 
+          <div className="mt-8 rounded-[2rem] border border-cyan-300/20 bg-[#020817]/80 p-6 text-center shadow-[0_24px_80px_rgba(8,145,178,0.12)]">
+            <p className="text-xs font-black uppercase tracking-[0.32em] text-cyan-300">
+              IQ Score
+            </p>
+            <p className="mt-4 text-7xl font-black tracking-tight text-white md:text-8xl">
+              {formatWholeNumber(currentProfileIqScore)}
+            </p>
+            <p className="mt-4 text-sm font-bold text-slate-300">
+              IQMeridian IQ Score
+            </p>
+
+            <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+                  Percentile
+                </p>
+                <p className="mt-2 text-lg font-black text-white">
+                  {formatPercentile(currentProfileIqPercentile)}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+                  90% IQ interval
+                </p>
+                <p className="mt-2 text-lg font-black text-white">
+                  {currentProfileIqInterval}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+                  Cognitive band
+                </p>
+                <p className="mt-2 text-lg font-black text-white">
+                  {currentProfileScore
+                    ? formatScoreBand(currentProfileScore.overallScoreBand)
+                    : 'Not available'}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+                  Validity
+                </p>
+                <p className="mt-2 text-lg font-black text-white">
+                  {getValidityLabel(currentProfileScore)}
+                </p>
+              </div>
+            </div>
+
+            {currentProfileScore ? (
+              <div className="mt-6">
+                <Link
+                  className="inline-flex rounded-2xl border border-cyan-300/20 bg-cyan-400/10 px-5 py-3 text-sm font-black text-cyan-100 transition hover:bg-cyan-400/15"
+                  href="/dashboard/history"
+                >
+                  Open Test History
+                </Link>
+              </div>
+            ) : null}
+          </div>
+
           <dl className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-            <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4">
-              <dt className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
-                Standard score
-              </dt>
-              <dd className="mt-2 text-2xl font-black text-white">
-                {formatWholeNumber(currentProfileScore?.overallStandardScore)}
-              </dd>
-            </div>
-
-            <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4">
-              <dt className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
-                Percentile
-              </dt>
-              <dd className="mt-2 text-2xl font-black text-white">
-                {formatPercentile(currentProfileScore?.overallPercentile)}
-              </dd>
-            </div>
-
             <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4">
               <dt className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
                 Accuracy
@@ -601,33 +632,29 @@ export default async function DashboardPage({
                   : 'Not available'}
               </dd>
             </div>
+
+            <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4">
+              <dt className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+                Signals used
+              </dt>
+              <dd className="mt-2 text-2xl font-black text-white">
+                {typeof currentProfileSignalCount === 'number'
+                  ? currentProfileSignalCount
+                  : 'Not available'}
+              </dd>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4">
+              <dt className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+                Leaderboard
+              </dt>
+              <dd className="mt-2 text-2xl font-black text-white">
+                {currentProfileScore?.leaderboardEligible
+                  ? 'Eligible'
+                  : 'Pending'}
+              </dd>
+            </div>
           </dl>
-
-          {currentProfileScore ? (
-            <div
-              className={`mt-5 rounded-2xl border p-4 text-sm leading-6 ${getAttemptQualityClassName(
-                currentProfileScore.validityFlags
-              )}`}
-            >
-              <p className="font-black">
-                {getAttemptQualityLabel(currentProfileScore.validityFlags)}
-              </p>
-              <p className="mt-1">
-                {getAttemptQualityDescription(
-                  currentProfileScore.validityFlags
-                )}
-              </p>
-            </div>
-          ) : null}
-
-          {currentProfileScore ? (
-            <div className="mt-5 rounded-2xl border border-amber-300/20 bg-amber-400/10 p-4 text-sm leading-6 text-amber-100">
-              This profile currently reflects your latest scored assessment. A
-              future IQMeridian release will calculate this as a longitudinal
-              ability estimate across valid attempts with retake interval
-              controls and calibration safeguards.
-            </div>
-          ) : null}
         </section>
       )}
 
@@ -656,11 +683,11 @@ export default async function DashboardPage({
         <article className="rounded-2xl border border-white/10 bg-[#07142f]/82 p-5 shadow-[0_24px_70px_rgba(0,0,0,0.18)]">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-sm font-bold text-slate-500">
-                Assessment records
-              </p>
+              <p className="text-sm font-bold text-slate-500">Test history</p>
               <p className="mt-3 text-2xl font-black text-white">
-                {isCandidate ? candidateAssessmentRecordCount : sessions.length}
+                {role === 'CONSUMER'
+                  ? scoredCompletedSessions.length
+                  : completedSessions.length}
               </p>
             </div>
 
@@ -670,9 +697,9 @@ export default async function DashboardPage({
           </div>
 
           <p className="mt-2 text-sm leading-6 text-slate-500">
-            {isCandidate
-              ? 'Pending invitations and active candidate sessions available to this account.'
-              : 'Saved sessions in your personal account history.'}
+            {role === 'CONSUMER'
+              ? 'Completed scored tests are managed in the dedicated Test History page.'
+              : 'Completed candidate assignments are recorded separately from active access.'}
           </p>
         </article>
 
@@ -694,418 +721,191 @@ export default async function DashboardPage({
         </article>
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-[1.4fr_0.8fr]">
-        <div className="space-y-6">
-          <article
-            className="rounded-[2rem] border border-white/10 bg-[#07142f]/82 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.22)]"
-            id="assessment"
-          >
-            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-              <div className="flex gap-4">
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-emerald-300/15 bg-emerald-400/10 text-emerald-200">
-                  <PlayCircle size={22} strokeWidth={2} />
-                </span>
+      <section className="grid gap-4 lg:grid-cols-3">
+        {role === 'CONSUMER' ? (
+          <article className="rounded-[2rem] border border-cyan-300/15 bg-[#07142f]/82 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.22)]">
+            <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-cyan-300/20 bg-cyan-400/10 text-cyan-100">
+              <PlayCircle size={22} strokeWidth={2} />
+            </span>
 
-                <div>
-                  <p className="text-sm font-black text-slate-500">
-                    Assessment
-                  </p>
-                  <h2 className="mt-2 text-2xl font-black text-white">
-                    {isCandidate ? 'Assigned assessment' : 'Start assessment'}
-                  </h2>
-                  <p className="mt-2 text-sm leading-6 text-slate-500">
-                    {startAssessmentDescription}
-                  </p>
-                </div>
-              </div>
+            <h2 className="mt-5 text-2xl font-black text-white">Take test</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-500">
+              {startAssessmentDescription}
+            </p>
 
-              <span className="w-fit rounded-full border border-emerald-300/20 bg-emerald-400/10 px-3 py-1 text-xs font-black text-emerald-100">
-                {assessmentAvailabilityLabel}
-              </span>
-            </div>
-
-            {isCandidate ? (
-              activeSessions.length > 0 ? (
-                <div className="mt-6 space-y-3">
-                  {activeSessions.map((assessmentSession) => (
-                    <div
-                      className="rounded-2xl border border-white/10 bg-white/[0.035] p-4"
-                      key={assessmentSession.id}
-                    >
-                      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                        <div>
-                          <h3 className="font-black text-white">
-                            {getSessionTitle(assessmentSession)}
-                          </h3>
-                          <p className="mt-1 text-sm leading-6 text-slate-500">
-                            Created: {formatDate(assessmentSession.createdAt)}
-                          </p>
-                          <p className="text-sm leading-6 text-slate-500">
-                            Started: {formatDate(assessmentSession.startedAt)}
-                          </p>
-                        </div>
-
-                        <div className="flex flex-col items-start gap-3 md:items-end">
-                          <span
-                            className={`rounded-full border px-3 py-1 text-xs font-black uppercase tracking-wide ${getStatusBadgeClassName(
-                              assessmentSession
-                            )}`}
-                          >
-                            {assessmentSession.status}
-                          </span>
-                          <Link
-                            className="rounded-2xl border border-cyan-300/20 bg-cyan-400/10 px-4 py-2 text-xs font-black text-cyan-100 transition hover:bg-cyan-400/15"
-                            href={getSessionHref(assessmentSession)}
-                          >
-                            {getSessionActionLabel(assessmentSession)}
-                          </Link>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.035] p-5">
-                  <div className="flex gap-3">
-                    <LockKeyhole
-                      className="mt-0.5 shrink-0 text-cyan-300"
-                      size={18}
-                    />
-                    <div>
-                      <h3 className="font-black text-white">
-                        No active candidate assessment
-                      </h3>
-                      <p className="mt-1 text-sm leading-6 text-slate-500">
-                        {candidateHasCompletedOnly
-                          ? 'Your previous assigned assessment is complete. One-off candidate access is restricted after completion.'
-                          : 'A new assignment must be issued before you can take another assessment.'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )
-            ) : (
-              <form action={startConsumerAssessmentAction} className="mt-6">
-                <button
-                  className="rounded-2xl border border-cyan-300/20 bg-cyan-400/10 px-5 py-3 text-sm font-black text-cyan-100 transition hover:bg-cyan-400/15 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/[0.04] disabled:text-slate-500"
-                  disabled={!canStartConsumerAssessment}
-                  type="submit"
-                >
-                  Start new assessment
-                </button>
-              </form>
-            )}
+            <form action={startConsumerAssessmentAction} className="mt-5">
+              <button
+                className="rounded-2xl border border-cyan-300/20 bg-cyan-400/10 px-5 py-3 text-sm font-black text-cyan-100 transition hover:bg-cyan-400/15 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/[0.04] disabled:text-slate-500"
+                disabled={!canStartConsumerAssessment}
+                type="submit"
+              >
+                Start new assessment
+              </button>
+            </form>
           </article>
+        ) : null}
 
-          <article
-            className="rounded-[2rem] border border-white/10 bg-[#07142f]/82 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.22)]"
-            id="history"
-          >
-            <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-              <div className="flex gap-4">
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-blue-300/15 bg-blue-400/10 text-blue-200">
-                  <FileText size={22} strokeWidth={2} />
-                </span>
-
-                <div>
-                  <p className="text-sm font-black text-slate-500">
-                    {isCandidate ? 'Completion status' : 'Test history'}
-                  </p>
-                  <h2 className="mt-2 text-2xl font-black text-white">
-                    {isCandidate
-                      ? 'Your candidate assessment state'
-                      : 'Your assessment records'}
-                  </h2>
-                </div>
-              </div>
-
-              <span className="w-fit rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-black text-slate-300">
-                {isCandidate
-                  ? `${completedSessions.length} completed`
-                  : `${sessions.length} session${sessions.length === 1 ? '' : 's'}`}
-              </span>
-            </div>
-
-            <div className="mt-5 space-y-3">
-              {isCandidate ? (
-                completedSessions.length > 0 ? (
-                  completedSessions.map((assessmentSession) => (
-                    <div
-                      className="rounded-2xl border border-emerald-300/15 bg-emerald-400/10 p-4"
-                      key={assessmentSession.id}
-                    >
-                      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                        <div>
-                          <h3 className="font-black text-emerald-100">
-                            {getSessionTitle(assessmentSession)}
-                          </h3>
-                          <p className="mt-1 text-sm leading-6 text-emerald-100/70">
-                            Completed:{' '}
-                            {formatDate(assessmentSession.completedAt)}
-                          </p>
-                          <p className="text-sm leading-6 text-emerald-100/70">
-                            Your one-off candidate access is now limited to
-                            completion status.
-                          </p>
-                        </div>
-
-                        <span className="w-fit rounded-full border border-emerald-300/25 bg-emerald-400/10 px-3 py-1 text-xs font-black uppercase tracking-wide text-emerald-100">
-                          Completed
-                        </span>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-5">
-                    <h3 className="font-black text-white">
-                      No completed candidate assessments
-                    </h3>
-                    <p className="mt-1 text-sm leading-6 text-slate-500">
-                      Completion records will appear here after an assigned
-                      assessment is submitted.
-                    </p>
-                  </div>
-                )
-              ) : hasVisibleSessions ? (
-                visibleSessions.map((assessmentSession) => (
-                  <div
-                    className="rounded-2xl border border-white/10 bg-white/[0.035] p-4"
-                    key={assessmentSession.id}
-                  >
-                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                      <div>
-                        <h3 className="font-black text-white">
-                          {getSessionTitle(assessmentSession)}
-                        </h3>
-                        <p className="mt-1 text-sm leading-6 text-slate-500">
-                          Created: {formatDate(assessmentSession.createdAt)}
-                        </p>
-                        <p className="text-sm leading-6 text-slate-500">
-                          Started: {formatDate(assessmentSession.startedAt)}
-                        </p>
-                      </div>
-
-                      <div className="flex flex-col items-start gap-3 md:items-end">
-                        <span
-                          className={`rounded-full border px-3 py-1 text-xs font-black uppercase tracking-wide ${getStatusBadgeClassName(
-                            assessmentSession
-                          )}`}
-                        >
-                          {assessmentSession.status}
-                        </span>
-                        <Link
-                          className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-black text-slate-200 transition hover:border-cyan-300/20 hover:text-cyan-100"
-                          href={getSessionHref(assessmentSession)}
-                        >
-                          {getSessionActionLabel(assessmentSession)}
-                        </Link>
-                      </div>
-                    </div>
-
-                    {isCompletedSession(assessmentSession) &&
-                    assessmentSession.psychometricScore ? (
-                      <div className="mt-4 rounded-2xl border border-emerald-300/15 bg-emerald-400/10 p-4">
-                        <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
-                          <div>
-                            <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-200">
-                              Psychometric profile
-                            </p>
-                            <h4 className="mt-1 text-lg font-black text-white">
-                              {formatScoreBand(
-                                assessmentSession.psychometricScore
-                                  .overallScoreBand
-                              )}
-                            </h4>
-                            <p className="mt-1 text-sm leading-6 text-slate-400">
-                              {
-                                assessmentSession.psychometricScore
-                                  .overallInterpretation
-                              }
-                            </p>
-                          </div>
-
-                          <span className="w-fit rounded-full border border-emerald-300/20 bg-emerald-400/10 px-3 py-1 text-xs font-black text-emerald-100">
-                            {assessmentSession.psychometricScore.scoringStatus}
-                          </span>
-                        </div>
-
-                        <dl className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                          <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
-                            <dt className="text-xs font-bold text-slate-500">
-                              Standard score
-                            </dt>
-                            <dd className="mt-1 text-lg font-black text-white">
-                              {formatWholeNumber(
-                                assessmentSession.psychometricScore
-                                  .overallStandardScore
-                              )}
-                            </dd>
-                          </div>
-
-                          <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
-                            <dt className="text-xs font-bold text-slate-500">
-                              Percentile
-                            </dt>
-                            <dd className="mt-1 text-lg font-black text-white">
-                              {formatPercentile(
-                                assessmentSession.psychometricScore
-                                  .overallPercentile
-                              )}
-                            </dd>
-                          </div>
-
-                          <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
-                            <dt className="text-xs font-bold text-slate-500">
-                              Accuracy
-                            </dt>
-                            <dd className="mt-1 text-lg font-black text-white">
-                              {formatAccuracy(
-                                assessmentSession.psychometricScore
-                                  .overallAccuracy
-                              )}
-                            </dd>
-                          </div>
-
-                          <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
-                            <dt className="text-xs font-bold text-slate-500">
-                              90% score interval
-                            </dt>
-                            <dd className="mt-1 text-lg font-black text-white">
-                              {formatStandardScoreInterval(
-                                assessmentSession.psychometricScore
-                                  .overallCi90Lower,
-                                assessmentSession.psychometricScore
-                                  .overallCi90Upper
-                              )}
-                            </dd>
-                          </div>
-                        </dl>
-
-                        <div
-                          className={`mt-4 rounded-xl border p-4 text-sm ${getAttemptQualityClassName(
-                            assessmentSession.psychometricScore.validityFlags
-                          )}`}
-                        >
-                          <p className="font-black">
-                            {getAttemptQualityLabel(
-                              assessmentSession.psychometricScore.validityFlags
-                            )}
-                          </p>
-                          <p className="mt-1">
-                            {getAttemptQualityDescription(
-                              assessmentSession.psychometricScore.validityFlags
-                            )}
-                          </p>
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
-                ))
-              ) : (
-                <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.035] p-5">
-                  <h3 className="font-black text-white">No assessments yet</h3>
-                  <p className="mt-1 text-sm leading-6 text-slate-500">
-                    Your assessment history will appear here after you create or
-                    complete your first session.
-                  </p>
-                </div>
-              )}
-            </div>
-          </article>
-        </div>
-
-        <aside className="space-y-6">
+        {role === 'CONSUMER' ? (
           <article className="rounded-[2rem] border border-white/10 bg-[#07142f]/82 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.22)]">
-            <div className="flex gap-4">
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-violet-300/15 bg-violet-400/10 text-violet-200">
-                <UserRound size={22} strokeWidth={2} />
-              </span>
+            <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-violet-300/20 bg-violet-400/10 text-violet-100">
+              <FileText size={22} strokeWidth={2} />
+            </span>
 
-              <div>
-                <p className="text-sm font-black text-slate-500">Profile</p>
-                <h2 className="mt-2 text-xl font-black text-white">
-                  Account details
-                </h2>
-              </div>
-            </div>
-
-            <dl className="mt-5 space-y-4 text-sm">
-              <div>
-                <dt className="font-bold text-slate-500">Name</dt>
-                <dd className="mt-1 font-black text-white">
-                  {session.user.name ?? 'Not set'}
-                </dd>
-              </div>
-              <div>
-                <dt className="font-bold text-slate-500">Email</dt>
-                <dd className="mt-1 break-all font-black text-white">
-                  {session.user.email}
-                </dd>
-              </div>
-              <div>
-                <dt className="font-bold text-slate-500">Role</dt>
-                <dd className="mt-1 font-black text-white">{role}</dd>
-              </div>
-            </dl>
+            <h2 className="mt-5 text-2xl font-black text-white">
+              Test History
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-slate-500">
+              View completed attempts in a controlled history table. Detailed
+              profiles should be opened from there.
+            </p>
 
             <Link
-              className="mt-5 inline-flex rounded-2xl border border-cyan-300/20 bg-cyan-400/10 px-4 py-2 text-sm font-black text-cyan-100 transition hover:bg-cyan-400/15"
-              href="/dashboard/settings"
+              className="mt-5 inline-flex rounded-2xl border border-cyan-300/20 bg-cyan-400/10 px-5 py-3 text-sm font-black text-cyan-100 transition hover:bg-cyan-400/15"
+              href="/dashboard/history"
             >
-              Account settings
+              Open Test History
             </Link>
           </article>
+        ) : null}
 
+        {role === 'CONSUMER' ? (
           <article className="rounded-[2rem] border border-white/10 bg-[#07142f]/82 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.22)]">
-            <div className="flex gap-4">
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-amber-300/15 bg-amber-400/10 text-amber-200">
-                {isCandidate ? (
-                  <LockKeyhole size={22} strokeWidth={2} />
-                ) : (
-                  <Wrench size={22} strokeWidth={2} />
-                )}
-              </span>
+            <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-amber-300/20 bg-amber-400/10 text-amber-100">
+              <Trophy size={22} strokeWidth={2} />
+            </span>
 
-              <div>
-                <p className="text-sm font-black text-slate-500">
-                  {isCandidate ? 'Candidate controls' : 'Tools'}
+            <h2 className="mt-5 text-2xl font-black text-white">
+              Your leaderboard position
+            </h2>
+
+            {leaderboardError ? (
+              <p className="mt-2 text-sm font-bold leading-6 text-amber-100">
+                {leaderboardError}
+              </p>
+            ) : (
+              <>
+                <dl className="mt-5 grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4">
+                    <dt className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+                      Rank
+                    </dt>
+                    <dd className="mt-2 text-2xl font-black text-white">
+                      {formatRank(leaderboardSummary?.rank)}
+                    </dd>
+                  </div>
+
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4">
+                    <dt className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+                      Listing
+                    </dt>
+                    <dd className="mt-2 text-2xl font-black text-white">
+                      {leaderboardSummary?.eligibility.publicListingActive
+                        ? 'Public'
+                        : leaderboardSummary?.preferences.optIn
+                          ? 'Pending'
+                          : 'Off'}
+                    </dd>
+                  </div>
+                </dl>
+
+                <p className="mt-4 text-sm leading-6 text-slate-500">
+                  {leaderboardSummary?.entry
+                    ? `Best eligible IQ Score: ${leaderboardSummary.entry.iqScore}.`
+                    : 'No eligible public ranking result is available yet.'}
                 </p>
-                <h2 className="mt-2 text-xl font-black text-white">
-                  {isCandidate ? 'Access policy' : 'Consumer workspace'}
-                </h2>
-              </div>
-            </div>
 
-            <div className="mt-5 space-y-3">
-              {profileTools.map((tool) => (
-                <div
-                  className="rounded-2xl border border-white/10 bg-white/[0.035] p-4"
-                  key={tool.title}
+                {leaderboardSummary?.eligibility.reasons.length ? (
+                  <div className="mt-4 rounded-2xl border border-amber-300/20 bg-amber-400/10 p-4 text-sm leading-6 text-amber-100">
+                    {leaderboardSummary.eligibility.reasons[0]}
+                  </div>
+                ) : null}
+
+                <form
+                  action={updateLeaderboardPreferencesAction}
+                  className="mt-5 space-y-3"
                 >
-                  <h3 className="text-sm font-black text-white">
-                    {tool.title}
-                  </h3>
-                  <p className="mt-1 text-sm leading-6 text-slate-500">
-                    {tool.description}
-                  </p>
-                </div>
-              ))}
-            </div>
+                  <div>
+                    <label
+                      className="text-xs font-black uppercase tracking-[0.16em] text-slate-500"
+                      htmlFor="leaderboard-display-name"
+                    >
+                      Public display name
+                    </label>
+                    <input
+                      className="mt-2 w-full rounded-2xl border border-white/10 bg-[#020817] px-4 py-3 text-sm font-bold text-white outline-none placeholder:text-slate-600 focus:border-cyan-300/40"
+                      defaultValue={
+                        leaderboardSummary?.preferences.displayName ??
+                        session.user.name ??
+                        ''
+                      }
+                      id="leaderboard-display-name"
+                      maxLength={40}
+                      name="displayName"
+                      placeholder="Example: Cipher Nyx"
+                    />
+                  </div>
 
-            {isCandidate ? (
-              <div className="mt-5 rounded-2xl border border-cyan-300/15 bg-cyan-400/10 p-4 text-sm leading-6 text-cyan-100">
-                <div className="flex gap-2">
-                  <Clock3 className="mt-0.5 shrink-0" size={16} />
-                  <p>
-                    Candidate access is assignment-based. Completed one-off
-                    assessments remain recorded, but they do not keep the
-                    assessment open.
-                  </p>
-                </div>
-              </div>
-            ) : null}
+                  <input
+                    name="optIn"
+                    type="hidden"
+                    value={
+                      leaderboardSummary?.preferences.optIn ? 'false' : 'true'
+                    }
+                  />
+
+                  <button
+                    className="rounded-2xl border border-cyan-300/20 bg-cyan-400/10 px-5 py-3 text-sm font-black text-cyan-100 transition hover:bg-cyan-400/15"
+                    type="submit"
+                  >
+                    {leaderboardSummary?.preferences.optIn
+                      ? 'Turn off public listing'
+                      : 'Enable public listing'}
+                  </button>
+                </form>
+              </>
+            )}
           </article>
-        </aside>
+        ) : null}
+
+        {role === 'CONSUMER' ? (
+          <article className="rounded-[2rem] border border-white/10 bg-[#07142f]/82 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.22)]">
+            <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-amber-300/20 bg-amber-400/10 text-amber-100">
+              <Trophy size={22} strokeWidth={2} />
+            </span>
+
+            <h2 className="mt-5 text-2xl font-black text-white">Leaderboard</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-500">
+              View the public opt-in leaderboard. Your dashboard will later show
+              only your own position and listing status.
+            </p>
+
+            <Link
+              className="mt-5 inline-flex rounded-2xl border border-cyan-300/20 bg-cyan-400/10 px-5 py-3 text-sm font-black text-cyan-100 transition hover:bg-cyan-400/15"
+              href="/leaderboard"
+            >
+              Open leaderboard
+            </Link>
+          </article>
+        ) : null}
+
+        <article className="rounded-[2rem] border border-white/10 bg-[#07142f]/82 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.22)]">
+          <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-blue-300/20 bg-blue-400/10 text-blue-100">
+            <Settings size={22} strokeWidth={2} />
+          </span>
+
+          <h2 className="mt-5 text-2xl font-black text-white">Settings</h2>
+          <p className="mt-2 text-sm leading-6 text-slate-500">
+            Manage account security, sessions, notification preferences, and
+            password settings.
+          </p>
+
+          <Link
+            className="mt-5 inline-flex rounded-2xl border border-cyan-300/20 bg-cyan-400/10 px-5 py-3 text-sm font-black text-cyan-100 transition hover:bg-cyan-400/15"
+            href="/dashboard/settings"
+          >
+            Open settings
+          </Link>
+        </article>
       </section>
     </div>
   );

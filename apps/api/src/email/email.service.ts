@@ -89,7 +89,6 @@ type CandidateResultHiddenEmailInput = {
   campaignName?: string | null;
 };
 
-
 @Injectable()
 export class EmailService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(EmailService.name);
@@ -389,10 +388,11 @@ export class EmailService implements OnModuleInit, OnModuleDestroy {
     });
   }
 
-    async sendCandidateResultAvailableEmail(
+  async sendCandidateResultAvailableEmail(
     input: CandidateResultAvailableEmailInput,
   ): Promise<EmailDeliveryResult> {
-    const organisationName = input.organisationName ?? 'the inviting organisation';
+    const organisationName =
+      input.organisationName ?? 'the inviting organisation';
     const campaignName = input.campaignName ?? 'your assessment';
 
     const safeOrganisationName = this.escapeHtml(organisationName);
@@ -438,7 +438,8 @@ export class EmailService implements OnModuleInit, OnModuleDestroy {
   async sendCandidateResultHiddenEmail(
     input: CandidateResultHiddenEmailInput,
   ): Promise<EmailDeliveryResult> {
-    const organisationName = input.organisationName ?? 'the inviting organisation';
+    const organisationName =
+      input.organisationName ?? 'the inviting organisation';
     const campaignName = input.campaignName ?? 'your assessment';
 
     const safeOrganisationName = this.escapeHtml(organisationName);

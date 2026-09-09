@@ -18,7 +18,7 @@ type EmployerCandidateReportProps = {
 
 const getCandidateIdentifier = (
   invitation: EmployerInvitationSummary | undefined,
-  session: EmployerSessionSummary,
+  session: EmployerSessionSummary
 ): string => {
   return (
     session.applicantName ??

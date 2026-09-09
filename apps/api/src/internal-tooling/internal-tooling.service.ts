@@ -169,6 +169,7 @@ const PILOT_BLUEPRINT: Record<AssessmentDomain, number> = {
   [AssessmentDomain.ABSTRACT_REASONING]: 10,
   [AssessmentDomain.LOGICAL_REASONING]: 8,
   [AssessmentDomain.ANALYTICAL_PROBLEM_SOLVING]: 6,
+  [AssessmentDomain.SPATIAL_REASONING]: 8,
 };
 
 const PILOT_TIMING_RULES = {
@@ -179,6 +180,7 @@ const PILOT_TIMING_RULES = {
     ABSTRACT_REASONING: 720,
     LOGICAL_REASONING: 600,
     ANALYTICAL_PROBLEM_SOLVING: 480,
+    SPATIAL_REASONING: 600,
   },
 };
 

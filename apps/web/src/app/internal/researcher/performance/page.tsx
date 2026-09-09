@@ -16,35 +16,49 @@ export default async function InternalSectionAndFormPerformancePage() {
   return (
     <div className="flex flex-col gap-6">
       <nav className="flex flex-wrap gap-3 text-sm">
-        <Link href="/internal" className="font-medium text-slate-600">
+        <Link
+          href="/internal"
+          className="font-bold text-slate-500 underline-offset-4 hover:text-cyan-200 hover:underline"
+        >
           Internal dashboard
         </Link>
-        <span className="text-slate-400">/</span>
-        <span className="font-semibold text-slate-950">
+        <span className="text-slate-600">/</span>
+        <span className="font-black text-slate-300">
           Section and form performance
         </span>
       </nav>
 
-      <header className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p className="text-sm font-semibold uppercase tracking-[0.25em] text-slate-500">
-          Researcher analytics
-        </p>
-        <h1 className="mt-3 text-3xl font-semibold tracking-tight">
-          Section- and form-level performance
-        </h1>
-        <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
-          This view now reads section and form aggregates from the internal API.
-          It helps distinguish isolated item problems from broader form design,
-          timing, completion, or score-spread issues.
-        </p>
+      <header className="relative overflow-hidden rounded-[2rem] border border-cyan-300/15 bg-[#07142f]/90 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.28)] lg:p-8">
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.14),transparent_34%),radial-gradient(circle_at_90%_10%,rgba(59,130,246,0.14),transparent_30%)]"
+        />
+
+        <div className="relative">
+          <p className="text-xs font-black uppercase tracking-[0.28em] text-cyan-300">
+            Researcher analytics
+          </p>
+
+          <h1 className="mt-3 text-3xl font-black tracking-tight text-white">
+            Section- and form-level performance
+          </h1>
+
+          <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-300">
+            This view reads section and form aggregates from the internal API.
+            It helps distinguish isolated item problems from broader form
+            design, timing, completion, or score-spread issues.
+          </p>
+        </div>
       </header>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold">Section performance summary</h2>
+      <section className="rounded-[2rem] border border-white/10 bg-[#07142f]/90 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.24)]">
+        <h2 className="text-lg font-black text-white">
+          Section performance summary
+        </h2>
 
-        <div className="mt-5 overflow-hidden rounded-xl border border-slate-200">
+        <div className="mt-5 overflow-hidden rounded-2xl border border-white/10">
           <table className="w-full min-w-[920px] text-left text-sm">
-            <thead className="bg-slate-100 text-xs uppercase tracking-wide text-slate-600">
+            <thead className="bg-[#020817]/80 text-xs font-black uppercase tracking-[0.16em] text-slate-500">
               <tr>
                 <th className="px-4 py-3">Section</th>
                 <th className="px-4 py-3">Started</th>
@@ -56,19 +70,28 @@ export default async function InternalSectionAndFormPerformancePage() {
               </tr>
             </thead>
 
-            <tbody className="divide-y divide-slate-200 bg-white">
+            <tbody className="divide-y divide-white/10 bg-[#020817]/45">
               {sectionPerformance.map((section) => (
-                <tr key={section.section} className="align-top">
-                  <td className="px-4 py-4 font-semibold">
+                <tr
+                  key={section.section}
+                  className="align-top transition hover:bg-cyan-400/[0.04]"
+                >
+                  <td className="px-4 py-4 font-black text-white">
                     {section.sectionLabel}
                   </td>
-                  <td className="px-4 py-4">{section.startedSessions}</td>
-                  <td className="px-4 py-4">{section.completedSessions}</td>
-                  <td className="px-4 py-4">
+                  <td className="px-4 py-4 text-slate-300">
+                    {section.startedSessions}
+                  </td>
+                  <td className="px-4 py-4 text-slate-300">
+                    {section.completedSessions}
+                  </td>
+                  <td className="px-4 py-4 text-slate-300">
                     {formatInternalRate(section.completionRate)}
                   </td>
-                  <td className="px-4 py-4">{section.averageScorePercent}%</td>
-                  <td className="px-4 py-4">
+                  <td className="px-4 py-4 text-slate-300">
+                    {section.averageScorePercent}%
+                  </td>
+                  <td className="px-4 py-4 text-slate-300">
                     {formatInternalDuration(
                       section.averageCompletionTimeMinutes
                     )}
@@ -78,7 +101,7 @@ export default async function InternalSectionAndFormPerformancePage() {
                       {section.scoreDistribution.map((bucket) => (
                         <span
                           key={`${section.section}-${bucket.label}`}
-                          className="rounded-full border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700"
+                          className="rounded-full border border-white/10 bg-[#07142f]/80 px-2 py-1 text-xs font-bold text-slate-300"
                         >
                           {bucket.label}: {bucket.count}
                         </span>
@@ -91,59 +114,70 @@ export default async function InternalSectionAndFormPerformancePage() {
           </table>
 
           {sectionPerformance.length === 0 ? (
-            <div className="bg-white px-4 py-8 text-center text-sm text-slate-600">
+            <div className="border-t border-white/10 bg-[#020817]/70 px-4 py-8 text-center text-sm text-slate-500">
               No section-performance data is available yet.
             </div>
           ) : null}
         </div>
       </section>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold">Form performance summary</h2>
+      <section className="rounded-[2rem] border border-white/10 bg-[#07142f]/90 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.24)]">
+        <h2 className="text-lg font-black text-white">
+          Form performance summary
+        </h2>
 
         <div className="mt-5 grid gap-5 lg:grid-cols-3">
           {formPerformance.map((form) => (
             <article
               key={form.formId}
-              className="rounded-2xl border border-slate-200 bg-slate-50 p-5"
+              className="rounded-[1.5rem] border border-white/10 bg-[#020817]/70 p-5"
             >
-              <p className="text-sm font-semibold text-slate-500">
+              <p className="break-all text-sm font-bold text-slate-500">
                 {form.formId}
               </p>
-              <h3 className="mt-2 text-lg font-semibold">{form.formLabel}</h3>
+
+              <h3 className="mt-2 text-lg font-black text-white">
+                {form.formLabel}
+              </h3>
 
               <dl className="mt-5 space-y-3 text-sm">
-                <div className="flex justify-between rounded-xl bg-white px-4 py-3">
+                <div className="flex justify-between rounded-2xl border border-white/10 bg-[#07142f]/80 px-4 py-3">
                   <dt className="text-slate-500">Started</dt>
-                  <dd className="font-semibold">{form.startedSessions}</dd>
+                  <dd className="font-black text-white">
+                    {form.startedSessions}
+                  </dd>
                 </div>
-                <div className="flex justify-between rounded-xl bg-white px-4 py-3">
+
+                <div className="flex justify-between rounded-2xl border border-white/10 bg-[#07142f]/80 px-4 py-3">
                   <dt className="text-slate-500">Completed</dt>
-                  <dd className="font-semibold">{form.completedSessions}</dd>
+                  <dd className="font-black text-white">
+                    {form.completedSessions}
+                  </dd>
                 </div>
-                <div className="flex justify-between rounded-xl bg-white px-4 py-3">
+
+                <div className="flex justify-between rounded-2xl border border-white/10 bg-[#07142f]/80 px-4 py-3">
                   <dt className="text-slate-500">Completion rate</dt>
-                  <dd className="font-semibold">
+                  <dd className="font-black text-white">
                     {formatInternalRate(form.completionRate)}
                   </dd>
                 </div>
-                <div className="flex justify-between rounded-xl bg-white px-4 py-3">
+
+                <div className="flex justify-between rounded-2xl border border-white/10 bg-[#07142f]/80 px-4 py-3">
                   <dt className="text-slate-500">Average time</dt>
-                  <dd className="font-semibold">
+                  <dd className="font-black text-white">
                     {formatInternalDuration(form.averageCompletionTimeMinutes)}
                   </dd>
                 </div>
               </dl>
 
               <div className="mt-5">
-                <p className="text-sm font-medium text-slate-500">
-                  Score spread
-                </p>
+                <p className="text-sm font-bold text-slate-500">Score spread</p>
+
                 <div className="mt-3 flex flex-wrap gap-2">
                   {form.scoreSpread.map((bucket) => (
                     <span
                       key={`${form.formId}-${bucket.label}`}
-                      className="rounded-full border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700"
+                      className="rounded-full border border-white/10 bg-[#07142f]/80 px-2 py-1 text-xs font-bold text-slate-300"
                     >
                       {bucket.label}: {bucket.count}
                     </span>
@@ -155,7 +189,7 @@ export default async function InternalSectionAndFormPerformancePage() {
         </div>
 
         {formPerformance.length === 0 ? (
-          <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-600">
+          <div className="mt-5 rounded-2xl border border-white/10 bg-[#020817]/70 px-4 py-8 text-center text-sm text-slate-500">
             No form-performance data is available yet.
           </div>
         ) : null}

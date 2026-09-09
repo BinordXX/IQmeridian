@@ -1,6 +1,14 @@
-import { Type } from 'class-transformer';
-import { IsEnum, IsInt, IsNotEmpty, IsString, Min } from 'class-validator';
 import { AssessmentDomain, AssessmentSectionType } from '@prisma/client';
+import {
+  IsEnum,
+  IsInt,
+  IsObject,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
 
 export class CreateAssessmentSectionDto {
   @IsEnum(AssessmentSectionType)
@@ -10,16 +18,29 @@ export class CreateAssessmentSectionDto {
   domain!: AssessmentDomain;
 
   @IsString()
-  @IsNotEmpty()
+  @MaxLength(160)
   title!: string;
 
-  @Type(() => Number)
   @IsInt()
-  @Min(1)
+  @Min(30)
+  @Max(7200)
   timeLimitSec!: number;
 
-  @Type(() => Number)
   @IsInt()
-  @Min(1)
+  @Min(0)
   orderIndex!: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  targetBankItemCount?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  deliveryItemCount?: number;
+
+  @IsOptional()
+  @IsObject()
+  difficultyMix?: Record<string, unknown>;
 }

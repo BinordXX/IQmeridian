@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { createHash } from 'crypto';
-import { FormItemMappingStatus, Prisma, SessionStatus } from '@prisma/client';
+import { Prisma, SessionItemStatus, SessionStatus } from '@prisma/client';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -33,40 +33,62 @@ export class ResponsesService {
   async saveItemResponse(input: SaveItemResponseInput) {
     const session = await this.getSessionOrThrow(input.sessionId);
 
-    this.assertCanWriteSession(session, input);
+    if (input.user) {
+      this.assertUserCanWriteSession(session, input.user);
+    }
     this.assertSessionOpenForResponseWrite(session.status);
 
-    const mapping = await this.prisma.formItemMapping.findFirst({
-      where: {
-        formId: session.assessmentFormId,
-        itemId: input.itemId,
-        status: FormItemMappingStatus.ACTIVE,
-      },
-    });
-
-    if (!mapping) {
-      throw new BadRequestException(
-        'Item does not belong to the assigned assessment form',
-      );
-    }
-
-    const answer = this.normaliseAnswer(input.answer);
-
-    return this.prisma.response.upsert({
+    const sessionItem = await this.prisma.sessionItem.findUnique({
       where: {
         sessionId_itemId: {
           sessionId: input.sessionId,
           itemId: input.itemId,
         },
       },
-      create: {
-        sessionId: input.sessionId,
-        itemId: input.itemId,
-        answer,
+      select: {
+        id: true,
+        status: true,
       },
-      update: {
-        answer,
-      },
+    });
+
+    if (!sessionItem) {
+      throw new BadRequestException(
+        'Item was not selected for this assessment session.',
+      );
+    }
+
+    const answer = this.normaliseAnswer(input.answer);
+    const now = new Date();
+
+    return this.prisma.$transaction(async (tx) => {
+      const response = await tx.response.upsert({
+        where: {
+          sessionId_itemId: {
+            sessionId: input.sessionId,
+            itemId: input.itemId,
+          },
+        },
+        create: {
+          sessionId: input.sessionId,
+          itemId: input.itemId,
+          answer,
+        },
+        update: {
+          answer,
+        },
+      });
+
+      await tx.sessionItem.update({
+        where: {
+          id: sessionItem.id,
+        },
+        data: {
+          status: SessionItemStatus.ANSWERED,
+          answeredAt: now,
+        },
+      });
+
+      return response;
     });
   }
 
@@ -138,6 +160,22 @@ export class ResponsesService {
         },
         data: {
           submittedAt: now,
+        },
+      });
+
+      await tx.sessionItem.updateMany({
+        where: {
+          sessionId,
+          status: {
+            in: [
+              SessionItemStatus.SELECTED,
+              SessionItemStatus.PRESENTED,
+              SessionItemStatus.SKIPPED,
+            ],
+          },
+        },
+        data: {
+          status: SessionItemStatus.OMITTED,
         },
       });
 

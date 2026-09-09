@@ -1,21 +1,50 @@
 'use client';
 
 import {
-  ClipboardCheck,
   FileText,
   Home,
   LogOut,
   LucideIcon,
   Settings,
   ShieldCheck,
+  Trophy,
   UserRound,
 } from 'lucide-react';
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 type DashboardRole = 'CONSUMER' | 'CANDIDATE';
+
+export type ConsumerLeaderboardEntry = {
+  rank?: number;
+  displayName?: string;
+  iqScore: number;
+  percentile: number | null;
+  scoreBand: string;
+  generatedAt: string;
+};
+
+export type ConsumerLeaderboardSummary = {
+  preferences: {
+    optIn: boolean;
+    displayName: string | null;
+  };
+  eligibility: {
+    eligible: boolean;
+    publicListingActive: boolean;
+    reasons: string[];
+  };
+  rank: number | null;
+  totalRanked: number;
+  entry: ConsumerLeaderboardEntry | null;
+};
+
+export type UpdateLeaderboardPreferencesInput = {
+  optIn?: boolean;
+  displayName?: string | null;
+};
 
 type DashboardSidebarShellProps = {
   children: ReactNode;
@@ -34,30 +63,32 @@ type NavItem = {
   exact?: boolean;
   icon: LucideIcon;
   tone: string;
+  consumerOnly?: boolean;
 };
 
 const navItems: NavItem[] = [
   {
     label: 'Dashboard',
-    description: 'Current profile',
+    description: 'Overview',
     href: '/dashboard',
     exact: true,
     icon: Home,
     tone: 'border-cyan-300/20 bg-cyan-400/10 text-cyan-100',
   },
   {
-    label: 'Assessment',
-    description: 'Start or resume',
-    href: '/dashboard#assessment',
-    icon: ClipboardCheck,
-    tone: 'border-emerald-300/20 bg-emerald-400/10 text-emerald-100',
-  },
-  {
-    label: 'Results',
-    description: 'Completed assessments',
-    href: '/dashboard#history',
+    label: 'Test History',
+    description: 'Completed tests',
+    href: '/dashboard/history',
     icon: FileText,
     tone: 'border-violet-300/20 bg-violet-400/10 text-violet-100',
+    consumerOnly: true,
+  },
+  {
+    label: 'Leaderboard',
+    description: 'Public rankings',
+    href: '/leaderboard',
+    icon: Trophy,
+    tone: 'border-amber-300/20 bg-amber-400/10 text-amber-100',
   },
   {
     label: 'Settings',
@@ -82,24 +113,9 @@ const getInitials = (name?: string | null, email?: string | null) => {
   return `${first}${second}`.toUpperCase();
 };
 
-const getBaseHref = (href: string) => href.split('#')[0] ?? href;
-
-const getHrefHash = (href: string) => {
-  const hash = href.split('#')[1];
-
-  return hash ? `#${hash}` : '';
-};
-
-const isActivePath = (pathname: string, hash: string, item: NavItem) => {
-  const baseHref = getBaseHref(item.href);
-  const itemHash = getHrefHash(item.href);
-
-  if (itemHash) {
-    return pathname === baseHref && hash === itemHash;
-  }
-
+const isActivePath = (pathname: string, item: NavItem) => {
   if (item.exact) {
-    return pathname === item.href && hash === '';
+    return pathname === item.href;
   }
 
   return pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -111,23 +127,12 @@ export function DashboardSidebarShell({
   user,
 }: DashboardSidebarShellProps) {
   const pathname = usePathname();
-  const [hash, setHash] = useState('');
   const initials = getInitials(user.name, user.email);
   const displayName = user.name || user.email || 'Dashboard user';
 
-  useEffect(() => {
-    const syncHash = () => {
-      setHash(window.location.hash);
-    };
-
-    syncHash();
-
-    window.addEventListener('hashchange', syncHash);
-
-    return () => {
-      window.removeEventListener('hashchange', syncHash);
-    };
-  }, []);
+  const visibleNavItems = navItems.filter((item) => {
+    return !item.consumerOnly || role === 'CONSUMER';
+  });
 
   return (
     <div className="min-h-screen bg-[#020817] text-white">
@@ -175,9 +180,9 @@ export function DashboardSidebarShell({
 
           <nav className="flex-1 px-3 py-4">
             <div className="space-y-1">
-              {navItems.map((item) => {
+              {visibleNavItems.map((item) => {
                 const Icon = item.icon;
-                const isActive = isActivePath(pathname, hash, item);
+                const isActive = isActivePath(pathname, item);
 
                 return (
                   <Link
@@ -232,7 +237,7 @@ export function DashboardSidebarShell({
                   Assessment workspace
                 </p>
                 <p className="mt-1 text-sm text-slate-500">
-                  Manage your IQMeridian assessment activity and results.
+                  Manage your IQMeridian assessment activity and test history.
                 </p>
               </div>
 
@@ -242,10 +247,19 @@ export function DashboardSidebarShell({
               </div>
             </div>
 
-            <nav className="grid grid-cols-4 gap-2 lg:hidden">
-              {navItems.map((item) => {
+            <nav
+              className={[
+                'grid gap-2 lg:hidden',
+                visibleNavItems.length === 4
+                  ? 'grid-cols-4'
+                  : visibleNavItems.length === 3
+                    ? 'grid-cols-3'
+                    : 'grid-cols-2',
+              ].join(' ')}
+            >
+              {visibleNavItems.map((item) => {
                 const Icon = item.icon;
-                const isActive = isActivePath(pathname, hash, item);
+                const isActive = isActivePath(pathname, item);
 
                 return (
                   <Link

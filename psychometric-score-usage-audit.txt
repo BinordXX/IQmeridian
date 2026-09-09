@@ -1,0 +1,69 @@
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\dto\update-candidate-result-thresholds.dto.ts:1: import { PsychometricScoreBand } from '@prisma/client';
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\dto\update-candidate-result-thresholds.dto.ts:10: @IsEnum(PsychometricScoreBand)
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\dto\update-candidate-result-thresholds.dto.ts:11: minimumOverallBand?: PsychometricScoreBand | null;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\dto\update-candidate-result-thresholds.dto.ts:14: @IsEnum(PsychometricScoreBand)
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\dto\update-candidate-result-thresholds.dto.ts:15: minimumAbstractReasoningBand?: PsychometricScoreBand | null;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\dto\update-candidate-result-thresholds.dto.ts:18: @IsEnum(PsychometricScoreBand)
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\dto\update-candidate-result-thresholds.dto.ts:19: minimumNumericalReasoningBand?: PsychometricScoreBand | null;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\campaigns.service.ts:12: PsychometricScoreBand,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\campaigns.service.ts:66: minimumOverallBand: PsychometricScoreBand | null;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\campaigns.service.ts:67: minimumAbstractReasoningBand: PsychometricScoreBand | null;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\campaigns.service.ts:68: minimumNumericalReasoningBand: PsychometricScoreBand | null;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\campaigns.service.ts:275: psychometricScoreResult: {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\campaigns\campaigns.service.ts:277: domainScores: true,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\internal-tooling\internal-tooling.service.ts:646: const sessionScores = this.calculateDomainSessionScores({
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\internal-tooling\internal-tooling.service.ts:662: this.calculateCompletionTimeMinutes({
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\internal-tooling\internal-tooling.service.ts:1552: this.calculateCompletionTimeMinutes({
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\internal-tooling\internal-tooling.service.ts:2780: domainScores: this.stringifyExportValue(score.domainScores),
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\internal-tooling\internal-tooling.service.ts:3022: const completionTimeMinutes = this.calculateCompletionTimeMinutes({
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\internal-tooling\internal-tooling.service.ts:3194: private calculateCompletionTimeMinutes({
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\internal-tooling\internal-tooling.service.ts:3458: : this.calculateAverageItemResponseTimeSeconds(item),
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\internal-tooling\internal-tooling.service.ts:3547: private calculateAverageItemResponseTimeSeconds(
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\internal-tooling\internal-tooling.service.ts:3659: private calculateDomainSessionScores({
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\psychometrics\psychometric-score-persistence.service.ts:4: PsychometricScoreBand as PrismaPsychometricScoreBand,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\psychometrics\psychometric-score-persistence.service.ts:25: const existingResult = await tx.psychometricScoreResult.findUnique({
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\psychometrics\psychometric-score-persistence.service.ts:40: return tx.psychometricScoreResult.upsert({
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\psychometrics\psychometric-score-persistence.service.ts:45: domainScores: {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\psychometrics\psychometric-score-persistence.service.ts:58: domainScores: {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\psychometrics\psychometric-score-persistence.service.ts:70: domainScores: {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\psychometrics\psychometric-score-persistence.service.ts:82: return this.prisma.psychometricScoreResult.findUnique({
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\psychometrics\psychometric-score-persistence.service.ts:85: domainScores: {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\psychometrics\psychometric-score-persistence.service.ts:96: return this.prisma.psychometricScoreResult.deleteMany({
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\psychometrics\psychometric-score-persistence.service.ts:110: overallStandardScore: response.overall.standardScore,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\psychometrics\psychometric-score-persistence.service.ts:112: overallScoreBand: response.overall
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\psychometrics\psychometric-score-persistence.service.ts:113: .scoreBand as PrismaPsychometricScoreBand,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\psychometrics\psychometric-score-persistence.service.ts:146: standardScore: domainScore.standardScore,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\psychometrics\psychometric-score-persistence.service.ts:148: scoreBand: domainScore.scoreBand as PrismaPsychometricScoreBand,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\psychometrics\psychometric-scoring-contract.types.ts:33: export type PsychometricScoreBand =
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\psychometrics\psychometric-scoring-contract.types.ts:34: | 'VERY_LOW'
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\psychometrics\psychometric-scoring-contract.types.ts:158: standardScore: number | null;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\psychometrics\psychometric-scoring-contract.types.ts:160: scoreBand: PsychometricScoreBand;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\psychometrics\psychometric-scoring-contract.types.ts:207: standardScore: number | null;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\psychometrics\psychometric-scoring-contract.types.ts:209: scoreBand: PsychometricScoreBand;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\reports\reports.service.ts:291: domainScores: session.score.domainScores,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\reports\reports.service.ts:342: domainScores: session.score.domainScores,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\scoring\scoring.service.ts:75: const domainScores: Record<AssessmentDomain, DomainAccumulator> = {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\scoring\scoring.service.ts:106: domainScores[domain].maxScore += 1;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\scoring\scoring.service.ts:115: domainScores[domain].rawScore += 1;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\scoring\scoring.service.ts:120: domainScores[AssessmentDomain.ABSTRACT_REASONING].rawScore;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\scoring\scoring.service.ts:122: domainScores[AssessmentDomain.ABSTRACT_REASONING].maxScore;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\scoring\scoring.service.ts:125: domainScores[AssessmentDomain.NUMERICAL_REASONING].rawScore;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\scoring\scoring.service.ts:127: domainScores[AssessmentDomain.NUMERICAL_REASONING].maxScore;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\scoring\scoring.service.ts:198: domainScores: domainScorePayload,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\scoring\scoring.service.ts:213: domainScores: domainScorePayload,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\sessions\sessions.service.ts:144: psychometricScoreResult: {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\sessions\sessions.service.ts:146: domainScores: {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\sessions\sessions.service.ts:165: return session.psychometricScoreResult;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\sessions\sessions.service.ts:207: psychometricScoreResult: {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\sessions\sessions.service.ts:209: domainScores: {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\sessions\sessions.service.ts:247: const score = session.psychometricScoreResult;
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\sessions\sessions.service.ts:259: score.domainScores.find((domainScore) => domainScore.domain === domain)
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\sessions\sessions.service.ts:260: ?.scoreBand ?? null
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\sessions\sessions.service.ts:267: overallBand: score.overallScoreBand,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\sessions\sessions.service.ts:295: psychometricScoreResult: {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\sessions\sessions.service.ts:349: scoreResultId: session.psychometricScoreResult?.id ?? null,
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\sessions\sessions.service.ts:415: psychometricScoreResult: {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\sessions\sessions.service.ts:417: domainScores: {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\sessions\sessions.service.ts:1574: const existingScore = await this.prisma.psychometricScoreResult.findUnique({
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\sessions\sessions.service.ts:1727: psychometricScoreResult: {
+C:\Users\REX\Desktop\IQmeridian\apps\api\src\sessions\sessions.service.ts:1756: if (!session.psychometricScoreResult) {

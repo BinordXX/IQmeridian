@@ -39,12 +39,12 @@ const performancePatternLabels: Record<PerformanceFilter, string> = {
 };
 
 const badgeToneClasses: Record<BadgeTone, string> = {
-  neutral: 'border-slate-300 bg-white text-slate-700',
-  info: 'border-blue-200 bg-blue-50 text-blue-800',
-  success: 'border-emerald-200 bg-emerald-50 text-emerald-800',
-  warning: 'border-amber-200 bg-amber-50 text-amber-800',
-  danger: 'border-red-200 bg-red-50 text-red-800',
-  dark: 'border-slate-900 bg-slate-950 text-white',
+  neutral: 'border-white/10 bg-[#020817]/70 text-slate-300',
+  info: 'border-blue-300/20 bg-blue-400/10 text-blue-100',
+  success: 'border-emerald-300/20 bg-emerald-400/10 text-emerald-100',
+  warning: 'border-amber-300/20 bg-amber-400/10 text-amber-100',
+  danger: 'border-red-300/20 bg-red-400/10 text-red-100',
+  dark: 'border-cyan-300/20 bg-cyan-400/10 text-cyan-100',
 };
 
 function getPerformancePatterns(item: InternalItemOutput): PerformanceFilter[] {
@@ -160,10 +160,11 @@ function ReadinessBadge({ item }: { item: InternalItemOutput }) {
   return (
     <div className="space-y-2">
       <span
-        className={`inline-flex w-fit rounded-full border px-2.5 py-1 text-xs font-semibold ${badgeToneClasses[readiness.tone]}`}
+        className={`inline-flex w-fit rounded-full border px-2.5 py-1 text-xs font-black ${badgeToneClasses[readiness.tone]}`}
       >
         {readiness.label}
       </span>
+
       <p className="max-w-[180px] text-xs leading-5 text-slate-500">
         {readiness.description}
       </p>
@@ -186,7 +187,7 @@ function ReviewBadge({ item }: { item: InternalItemOutput }) {
 
   return (
     <span
-      className={`inline-flex w-fit rounded-full border px-2.5 py-1 text-xs font-semibold ${badgeToneClasses[tone]}`}
+      className={`inline-flex w-fit rounded-full border px-2.5 py-1 text-xs font-black ${badgeToneClasses[tone]}`}
     >
       {itemReviewStatusLabels[item.reviewStatus] ?? item.reviewStatus}
     </span>
@@ -244,11 +245,14 @@ export function ItemBankManagementClient({
   }, [domainFilter, items, performanceFilter, searchTerm, statusFilter]);
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <section className="rounded-[2rem] border border-white/10 bg-[#07142f]/90 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.24)]">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h2 className="text-xl font-semibold">Item-bank management</h2>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+          <h2 className="text-xl font-black text-white">
+            Item-bank management
+          </h2>
+
+          <p className="mt-2 max-w-3xl text-sm leading-7 text-slate-400">
             This table supports quick review of item status, assessment role,
             readiness, exposure, response behaviour, and pilot suitability.
           </p>
@@ -256,29 +260,29 @@ export function ItemBankManagementClient({
 
         <Link
           href="/internal/researcher/item-bank/new"
-          className="w-fit rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white"
+          className="w-fit rounded-full border border-cyan-300/25 bg-cyan-400/15 px-4 py-2 text-sm font-black text-cyan-50 transition hover:bg-cyan-400/20"
         >
           Create new item
         </Link>
       </div>
 
       <div className="mt-6 grid gap-4 md:grid-cols-4">
-        <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
+        <label className="flex flex-col gap-2 text-sm font-bold text-slate-300">
           Search item ID, label, prompt, family, or readiness
           <input
             value={searchTerm}
             onChange={(event) => setSearchTerm(event.target.value)}
             placeholder="Example: analogy, pilot-ready, matrix"
-            className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-950"
+            className="min-h-12 rounded-2xl border border-white/10 bg-[#020817] px-4 text-sm font-bold text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-300/50"
           />
         </label>
 
-        <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
+        <label className="flex flex-col gap-2 text-sm font-bold text-slate-300">
           Filter by domain
           <select
             value={domainFilter}
             onChange={(event) => setDomainFilter(event.target.value)}
-            className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-950"
+            className="min-h-12 rounded-2xl border border-white/10 bg-[#020817] px-4 text-sm font-bold text-white outline-none transition focus:border-cyan-300/50"
           >
             {domainOptions.map((domain) => (
               <option key={domain} value={domain}>
@@ -290,12 +294,12 @@ export function ItemBankManagementClient({
           </select>
         </label>
 
-        <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
+        <label className="flex flex-col gap-2 text-sm font-bold text-slate-300">
           Filter by operational status
           <select
             value={statusFilter}
             onChange={(event) => setStatusFilter(event.target.value)}
-            className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-950"
+            className="min-h-12 rounded-2xl border border-white/10 bg-[#020817] px-4 text-sm font-bold text-white outline-none transition focus:border-cyan-300/50"
           >
             {statusOptions.map((status) => (
               <option key={status} value={status}>
@@ -307,14 +311,14 @@ export function ItemBankManagementClient({
           </select>
         </label>
 
-        <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
+        <label className="flex flex-col gap-2 text-sm font-bold text-slate-300">
           Filter by performance
           <select
             value={performanceFilter}
             onChange={(event) =>
               setPerformanceFilter(event.target.value as PerformanceFilter)
             }
-            className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-950"
+            className="min-h-12 rounded-2xl border border-white/10 bg-[#020817] px-4 text-sm font-bold text-white outline-none transition focus:border-cyan-300/50"
           >
             {performanceFilterOptions.map((pattern) => (
               <option key={pattern} value={pattern}>
@@ -325,9 +329,9 @@ export function ItemBankManagementClient({
         </label>
       </div>
 
-      <div className="mt-6 overflow-x-auto rounded-xl border border-slate-200">
+      <div className="mt-6 overflow-x-auto rounded-2xl border border-white/10">
         <table className="w-full min-w-[1220px] text-left text-sm">
-          <thead className="bg-slate-100 text-xs uppercase tracking-wide text-slate-600">
+          <thead className="bg-[#020817]/80 text-xs font-black uppercase tracking-[0.16em] text-slate-500">
             <tr>
               <th className="px-4 py-3">Item</th>
               <th className="px-4 py-3">Assessment role</th>
@@ -341,7 +345,7 @@ export function ItemBankManagementClient({
             </tr>
           </thead>
 
-          <tbody className="divide-y divide-slate-200 bg-white">
+          <tbody className="divide-y divide-white/10 bg-[#020817]/45">
             {filteredItems.map((item) => {
               const performancePatterns = getPerformancePatterns(item);
               const detailHref = `/internal/researcher/item-bank/${encodeURIComponent(
@@ -353,45 +357,53 @@ export function ItemBankManagementClient({
                 item.activeFormAssociationCount === 0;
 
               return (
-                <tr key={item.id} className="align-top hover:bg-slate-50">
+                <tr
+                  key={item.id}
+                  className="align-top transition hover:bg-cyan-400/[0.04]"
+                >
                   <td className="px-4 py-4">
                     <Link
                       href={detailHref}
-                      className="block max-w-[220px] break-words font-semibold text-slate-950 underline-offset-4 hover:underline"
+                      className="block max-w-[220px] break-words font-black text-white underline-offset-4 hover:text-cyan-100 hover:underline"
                     >
                       {item.id}
                     </Link>
+
                     <Link
                       href={detailHref}
-                      className="mt-1 block max-w-[220px] break-words text-slate-600 underline-offset-4 hover:underline"
+                      className="mt-1 block max-w-[220px] break-words text-slate-400 underline-offset-4 hover:text-cyan-200 hover:underline"
                     >
                       {item.label}
                     </Link>
+
                     <p className="mt-2 line-clamp-2 max-w-[240px] text-xs leading-5 text-slate-500">
                       {item.prompt}
                     </p>
                   </td>
 
-                  <td className="px-4 py-4 text-slate-700">
+                  <td className="px-4 py-4 text-slate-400">
                     <div className="space-y-1 text-sm">
-                      <p className="font-semibold">
+                      <p className="font-black text-slate-200">
                         {itemDomainLabels[item.domain] ?? item.domain}
                       </p>
+
                       <p className="text-xs text-slate-500">
                         Subdomain:{' '}
-                        <span className="text-slate-700">
+                        <span className="text-slate-300">
                           {item.subdomain ?? 'Not set'}
                         </span>
                       </p>
+
                       <p className="text-xs text-slate-500">
                         Family:{' '}
-                        <span className="text-slate-700">
+                        <span className="text-slate-300">
                           {item.itemFamily ?? 'Not set'}
                         </span>
                       </p>
+
                       <p className="text-xs text-slate-500">
                         Intended:{' '}
-                        <span className="text-slate-700">
+                        <span className="text-slate-300">
                           {item.intendedDifficulty
                             ? (itemIntendedDifficultyLabels[
                                 item.intendedDifficulty
@@ -409,6 +421,7 @@ export function ItemBankManagementClient({
                   <td className="px-4 py-4">
                     <div className="space-y-2">
                       <ReviewBadge item={item} />
+
                       <span className="block text-xs text-slate-500">
                         Operational:{' '}
                         {itemStatusLabels[item.status] ?? item.status}
@@ -416,21 +429,23 @@ export function ItemBankManagementClient({
                     </div>
                   </td>
 
-                  <td className="px-4 py-4 text-slate-700">
+                  <td className="px-4 py-4 text-slate-400">
                     {item.empiricalDifficulty !== null ? (
                       <div>
-                        <p className="font-semibold">
+                        <p className="font-black text-white">
                           {formatCorrectRate(item.empiricalDifficulty)}
                         </p>
+
                         <p className="mt-1 text-xs text-slate-500">
                           Latest psychometric run
                         </p>
                       </div>
                     ) : (
                       <div>
-                        <p className="font-semibold text-slate-500">
+                        <p className="font-black text-slate-500">
                           Not available
                         </p>
+
                         <p className="mt-1 text-xs text-slate-500">
                           Needs pilot response data
                         </p>
@@ -438,21 +453,21 @@ export function ItemBankManagementClient({
                     )}
                   </td>
 
-                  <td className="px-4 py-4 text-slate-700">
+                  <td className="px-4 py-4 text-slate-400">
                     {item.status === 'ACTIVE' ? (
-                      <span className="text-xs font-semibold text-slate-700">
+                      <span className="text-xs font-black text-slate-200">
                         Operationally active
                       </span>
                     ) : needsAttachment ? (
-                      <span className="text-xs font-semibold text-amber-700">
+                      <span className="text-xs font-black text-amber-100">
                         Attach before activation
                       </span>
                     ) : item.status === 'RETIRED' ? (
-                      <span className="text-xs font-semibold text-slate-500">
+                      <span className="text-xs font-black text-slate-500">
                         Retired; new version required
                       </span>
                     ) : (
-                      <span className="text-xs font-semibold text-slate-700">
+                      <span className="text-xs font-black text-slate-300">
                         Open detail to activate
                       </span>
                     )}
@@ -463,7 +478,7 @@ export function ItemBankManagementClient({
                     </p>
                   </td>
 
-                  <td className="px-4 py-4 text-slate-700">
+                  <td className="px-4 py-4 text-slate-400">
                     <div className="space-y-1 text-sm">
                       <p>Exposure: {item.performance.exposureCount}</p>
                       <p>Valid: {item.performance.validResponses}</p>
@@ -489,7 +504,7 @@ export function ItemBankManagementClient({
                         ? item.psychometricFlags.map((flag) => (
                             <span
                               key={flag.id}
-                              className="rounded-full border border-red-200 bg-red-50 px-2 py-1 text-xs font-medium text-red-800"
+                              className="rounded-full border border-red-300/20 bg-red-400/10 px-2 py-1 text-xs font-bold text-red-100"
                               title={flag.message}
                             >
                               {flag.flagType}
@@ -501,7 +516,7 @@ export function ItemBankManagementClient({
                         performancePatterns.map((pattern) => (
                           <span
                             key={pattern}
-                            className="rounded-full border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700"
+                            className="rounded-full border border-white/10 bg-[#07142f]/80 px-2 py-1 text-xs font-bold text-slate-300"
                           >
                             {performancePatternLabels[pattern]}
                           </span>
@@ -518,21 +533,21 @@ export function ItemBankManagementClient({
                     <div className="flex min-w-[130px] flex-col gap-2">
                       <Link
                         href={detailHref}
-                        className="w-fit rounded-full bg-slate-950 px-3 py-2 text-xs font-semibold text-white"
+                        className="w-fit rounded-full border border-cyan-300/25 bg-cyan-400/15 px-3 py-2 text-xs font-black text-cyan-50 transition hover:bg-cyan-400/20"
                       >
                         Open detail
                       </Link>
 
                       <Link
                         href={`${detailHref}/performance`}
-                        className="w-fit rounded-full border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-800"
+                        className="w-fit rounded-full border border-white/10 bg-[#07142f]/80 px-3 py-2 text-xs font-black text-slate-200 transition hover:bg-[#0b1d3f]"
                       >
                         Performance
                       </Link>
 
                       <Link
                         href={`${detailHref}/traceability`}
-                        className="w-fit rounded-full border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-800"
+                        className="w-fit rounded-full border border-white/10 bg-[#07142f]/80 px-3 py-2 text-xs font-black text-slate-200 transition hover:bg-[#0b1d3f]"
                       >
                         Traceability
                       </Link>
@@ -540,7 +555,7 @@ export function ItemBankManagementClient({
                       {needsAttachment ? (
                         <Link
                           href={`${detailHref}/attach-form`}
-                          className="w-fit rounded-full border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-800"
+                          className="w-fit rounded-full border border-white/10 bg-[#07142f]/80 px-3 py-2 text-xs font-black text-slate-200 transition hover:bg-[#0b1d3f]"
                         >
                           Attach to form
                         </Link>
@@ -548,8 +563,10 @@ export function ItemBankManagementClient({
 
                       {item.status === 'DRAFT' ? (
                         <Link
-                          href={`/internal/researcher/item-bank/${encodeURIComponent(item.id)}/edit`}
-                          className="w-fit rounded-full border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-800"
+                          href={`/internal/researcher/item-bank/${encodeURIComponent(
+                            item.id
+                          )}/edit`}
+                          className="w-fit rounded-full border border-white/10 bg-[#07142f]/80 px-3 py-2 text-xs font-black text-slate-200 transition hover:bg-[#0b1d3f]"
                         >
                           Edit draft
                         </Link>
@@ -563,7 +580,7 @@ export function ItemBankManagementClient({
         </table>
 
         {filteredItems.length === 0 ? (
-          <div className="bg-white px-4 py-8 text-center text-sm text-slate-600">
+          <div className="border-t border-white/10 bg-[#020817]/70 px-4 py-8 text-center text-sm text-slate-500">
             No items match the current filters.
           </div>
         ) : null}
