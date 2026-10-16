@@ -18,12 +18,13 @@ import {
   ShieldCheck,
   UserRound,
   Users,
+  Crown,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ReactNode, useMemo } from 'react';
 
-type InternalRole = 'PLATFORM_ADMIN' | 'RESEARCHER';
+type InternalRole = 'SUPER_ADMIN' | 'PLATFORM_ADMIN' | 'RESEARCHER';
 
 type InternalSidebarShellProps = {
   children: ReactNode;
@@ -118,7 +119,8 @@ const isActivePath = (pathname: string, item: NavItem) => {
 };
 
 const buildNavGroups = (role: InternalRole): NavGroup[] => {
-  const isPlatformAdmin = role === 'PLATFORM_ADMIN';
+  const isSuperAdmin = role === 'SUPER_ADMIN';
+  const isPlatformAdmin = role === 'SUPER_ADMIN' || role === 'PLATFORM_ADMIN';
 
   return [
     {
@@ -135,6 +137,25 @@ const buildNavGroups = (role: InternalRole): NavGroup[] => {
         },
       ],
     },
+    ...(isSuperAdmin
+      ? [
+          {
+            label: 'Super administration',
+            description: 'Root governance and security',
+            icon: Crown,
+            tone: iconTones.amber,
+            items: [
+              {
+                label: 'Super overview',
+                href: '/internal/admin/super',
+                exact: true,
+                icon: Crown,
+              },
+            ],
+          },
+        ]
+      : []),
+
     ...(isPlatformAdmin
       ? [
           {

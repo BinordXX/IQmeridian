@@ -3,10 +3,12 @@ export type AppRole =
   | 'RESEARCHER'
   | 'EMPLOYER_ADMIN'
   | 'CANDIDATE'
-  | 'CONSUMER';
+  | 'CONSUMER'
+  | 'SUPER_ADMIN';
 
 export const roleDefaultDashboard: Record<AppRole, string> = {
   PLATFORM_ADMIN: '/internal/admin',
+  SUPER_ADMIN: '/internal/admin',
   RESEARCHER: '/internal/researcher',
   EMPLOYER_ADMIN: '/employer/dashboard',
   CANDIDATE: '/dashboard',
@@ -19,6 +21,7 @@ export const getDefaultDashboardForRole = (role: AppRole) => {
 
 export const isAppRole = (value: unknown): value is AppRole => {
   return (
+    value === 'SUPER_ADMIN' ||
     value === 'PLATFORM_ADMIN' ||
     value === 'RESEARCHER' ||
     value === 'EMPLOYER_ADMIN' ||
@@ -83,15 +86,23 @@ export const isPathAllowedForRole = ({
   }
 
   if (safePath === '/internal' || safePath.startsWith('/internal/admin')) {
-    return role === 'PLATFORM_ADMIN';
+    return role === 'SUPER_ADMIN' || role === 'PLATFORM_ADMIN';
   }
 
   if (safePath.startsWith('/internal/researcher')) {
-    return role === 'PLATFORM_ADMIN' || role === 'RESEARCHER';
+    return (
+      role === 'SUPER_ADMIN' ||
+      role === 'PLATFORM_ADMIN' ||
+      role === 'RESEARCHER'
+    );
   }
 
   if (safePath.startsWith('/internal')) {
-    return role === 'PLATFORM_ADMIN' || role === 'RESEARCHER';
+    return (
+      role === 'SUPER_ADMIN' ||
+      role === 'PLATFORM_ADMIN' ||
+      role === 'RESEARCHER'
+    );
   }
 
   if (safePath.startsWith('/employer')) {

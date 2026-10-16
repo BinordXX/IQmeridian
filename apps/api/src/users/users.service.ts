@@ -4,7 +4,13 @@ import {
   NotFoundException,
   ConflictException,
 } from '@nestjs/common';
-import { Prisma, User, UserRole, UserStatus } from '@prisma/client';
+import {
+  AuthSessionStatus,
+  Prisma,
+  User,
+  UserRole,
+  UserStatus,
+} from '@prisma/client';
 import { RequestUser } from '../auth/request-user.type';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -465,6 +471,217 @@ export class UsersService {
     });
 
     return this.toSafeUser(updatedUser);
+  }
+
+  async getSuperAdminOverview() {
+    const adminRoles: UserRole[] = [
+      UserRole.SUPER_ADMIN,
+      UserRole.PLATFORM_ADMIN,
+    ];
+
+    const [
+      totalSuperAdmins,
+      activeSuperAdmins,
+      totalPlatformAdmins,
+      inactiveAdminAccounts,
+      activePrivilegedSessions,
+      recentPrivilegedAudit,
+    ] = await this.prisma.$transaction([
+      this.prisma.user.count({
+        where: {
+          role: UserRole.SUPER_ADMIN,
+        },
+      }),
+      this.prisma.user.count({
+        where: {
+          role: UserRole.SUPER_ADMIN,
+          status: UserStatus.ACTIVE,
+        },
+      }),
+      this.prisma.user.count({
+        where: {
+          role: UserRole.PLATFORM_ADMIN,
+        },
+      }),
+      this.prisma.user.count({
+        where: {
+          role: {
+            in: adminRoles,
+          },
+          status: {
+            not: UserStatus.ACTIVE,
+          },
+        },
+      }),
+      this.prisma.authSession.count({
+        where: {
+          status: AuthSessionStatus.ACTIVE,
+          user: {
+            role: {
+              in: adminRoles,
+            },
+          },
+        },
+      }),
+      this.prisma.auditLog.findMany({
+        where: {
+          OR: [
+            {
+              user: {
+                is: {
+                  role: {
+                    in: adminRoles,
+                  },
+                },
+              },
+            },
+            {
+              action: {
+                in: [
+                  'SUPER_ADMIN_BOOTSTRAPPED',
+                  'SUPER_ADMIN_PASSWORD_RESET_BY_BREAK_GLASS',
+                  'SUPER_ADMIN_ADMIN_SESSIONS_REVOKED',
+                  'USER_CREATED_BY_PLATFORM_ADMIN',
+                  'USER_ROLE_UPDATED',
+                  'USER_STATUS_UPDATED',
+                ],
+              },
+            },
+          ],
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+        take: 12,
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              role: true,
+            },
+          },
+        },
+      }),
+    ]);
+
+    return {
+      totalSuperAdmins,
+      activeSuperAdmins,
+      totalPlatformAdmins,
+      inactiveAdminAccounts,
+      activePrivilegedSessions,
+      recentPrivilegedAudit,
+    };
+  }
+
+  async listAdminLevelUsers() {
+    const adminRoles: UserRole[] = [
+      UserRole.SUPER_ADMIN,
+      UserRole.PLATFORM_ADMIN,
+    ];
+
+    const users = await this.prisma.user.findMany({
+      where: {
+        role: {
+          in: adminRoles,
+        },
+      },
+      orderBy: [
+        {
+          role: 'asc',
+        },
+        {
+          createdAt: 'asc',
+        },
+      ],
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        status: true,
+        emailVerifiedAt: true,
+        lastLoginAt: true,
+        createdAt: true,
+        updatedAt: true,
+        _count: {
+          select: {
+            authSessions: {
+              where: {
+                status: AuthSessionStatus.ACTIVE,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return users.map(({ _count, ...user }) => ({
+      ...user,
+      emailVerified: Boolean(user.emailVerifiedAt),
+      activeSessionCount: _count.authSessions,
+    }));
+  }
+
+  async revokeAdminSessions(input: { actor: RequestUser; userId: string }) {
+    if (!this.isSuperAdmin(input.actor)) {
+      throw new BadRequestException(
+        'Only super admins can revoke administrator sessions.',
+      );
+    }
+
+    const targetUser = await this.getExistingUser(input.userId);
+
+    if (
+      targetUser.role !== UserRole.SUPER_ADMIN &&
+      targetUser.role !== UserRole.PLATFORM_ADMIN
+    ) {
+      throw new BadRequestException(
+        'Session revocation from this surface is limited to administrator accounts.',
+      );
+    }
+
+    this.assertActorCanManageTargetUser(input.actor, targetUser);
+
+    if (targetUser.id === input.actor.id) {
+      throw new BadRequestException(
+        'Super admins cannot revoke their own sessions from the privileged admin-management surface.',
+      );
+    }
+
+    const revokedAt = new Date();
+
+    const result = await this.prisma.authSession.updateMany({
+      where: {
+        userId: targetUser.id,
+        status: AuthSessionStatus.ACTIVE,
+      },
+      data: {
+        status: AuthSessionStatus.REVOKED,
+        revokedAt,
+        revokedReason: 'SUPER_ADMIN_REVOKED',
+      },
+    });
+
+    await this.auditService.record({
+      action: 'SUPER_ADMIN_ADMIN_SESSIONS_REVOKED',
+      userId: input.actor.id,
+      entityType: 'User',
+      entityId: targetUser.id,
+      metadata: {
+        targetUserId: targetUser.id,
+        targetRole: targetUser.role,
+        revokedSessionCount: result.count,
+      },
+    });
+
+    return {
+      userId: targetUser.id,
+      revokedSessionCount: result.count,
+      revokedAt,
+    };
   }
 
   private async getExistingUser(userId: string) {

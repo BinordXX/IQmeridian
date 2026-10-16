@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import { requireAnyRole } from '@/lib/route-guards';
+
+import { requirePlatformAdmin } from '@/lib/route-guards';
 
 type InternalAdminLayoutProps = {
   children: ReactNode;
@@ -8,7 +9,7 @@ type InternalAdminLayoutProps = {
 export default async function InternalAdminLayout({
   children,
 }: InternalAdminLayoutProps) {
-  await requireAnyRole(['PLATFORM_ADMIN'], '/internal/admin');
+  await requirePlatformAdmin('/internal/admin');
 
   return children;
 }

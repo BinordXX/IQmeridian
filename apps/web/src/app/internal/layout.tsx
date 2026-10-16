@@ -13,13 +13,17 @@ export default async function InternalLayout({
 }: InternalLayoutProps) {
   const { session, role } = await requireInternalStaff('/internal');
 
-  if (role !== 'PLATFORM_ADMIN' && role !== 'RESEARCHER') {
+  if (
+    session.user.role !== 'SUPER_ADMIN' &&
+    session.user.role !== 'PLATFORM_ADMIN' &&
+    session.user.role !== 'RESEARCHER'
+  ) {
     redirect('/dashboard');
   }
 
   return (
     <InternalSidebarShell
-      role={role}
+      role={session.user.role}
       user={{
         email: session.user.email,
         image: session.user.image,
