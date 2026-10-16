@@ -20,6 +20,7 @@ import { ChangePasswordForm } from './change-password-form';
 import { useRouter } from 'next/navigation';
 
 type AppRole =
+  | 'SUPER_ADMIN'
   | 'PLATFORM_ADMIN'
   | 'RESEARCHER'
   | 'EMPLOYER_ADMIN'
