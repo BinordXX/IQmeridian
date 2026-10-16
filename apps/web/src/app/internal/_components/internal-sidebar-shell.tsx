@@ -18,6 +18,7 @@ import {
   ShieldCheck,
   UserRound,
   Users,
+  Crown,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -118,6 +119,7 @@ const isActivePath = (pathname: string, item: NavItem) => {
 };
 
 const buildNavGroups = (role: InternalRole): NavGroup[] => {
+  const isSuperAdmin = role === 'SUPER_ADMIN';
   const isPlatformAdmin = role === 'SUPER_ADMIN' || role === 'PLATFORM_ADMIN';
 
   return [
@@ -135,6 +137,25 @@ const buildNavGroups = (role: InternalRole): NavGroup[] => {
         },
       ],
     },
+    ...(isSuperAdmin
+      ? [
+          {
+            label: 'Super administration',
+            description: 'Root governance and security',
+            icon: Crown,
+            tone: iconTones.amber,
+            items: [
+              {
+                label: 'Super overview',
+                href: '/internal/admin/super',
+                exact: true,
+                icon: Crown,
+              },
+            ],
+          },
+        ]
+      : []),
+
     ...(isPlatformAdmin
       ? [
           {

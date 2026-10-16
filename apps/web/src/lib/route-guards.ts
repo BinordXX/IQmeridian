@@ -74,6 +74,15 @@ export const requirePlatformAdmin = async (
   });
 };
 
+export const requireSuperAdmin = async (
+  requestedPath = '/internal/admin/super'
+) => {
+  return requireRole({
+    allowedRoles: ['SUPER_ADMIN'],
+    requestedPath,
+  });
+};
+
 export const requireInternalStaff = async (requestedPath = '/internal') => {
   return requireRole({
     allowedRoles: ['SUPER_ADMIN', 'PLATFORM_ADMIN', 'RESEARCHER'],
