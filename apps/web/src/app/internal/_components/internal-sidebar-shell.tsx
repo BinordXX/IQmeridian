@@ -23,7 +23,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ReactNode, useMemo } from 'react';
 
-type InternalRole = 'PLATFORM_ADMIN' | 'RESEARCHER';
+type InternalRole = 'SUPER_ADMIN' | 'PLATFORM_ADMIN' | 'RESEARCHER';
 
 type InternalSidebarShellProps = {
   children: ReactNode;
@@ -118,7 +118,7 @@ const isActivePath = (pathname: string, item: NavItem) => {
 };
 
 const buildNavGroups = (role: InternalRole): NavGroup[] => {
-  const isPlatformAdmin = role === 'PLATFORM_ADMIN';
+  const isPlatformAdmin = role === 'SUPER_ADMIN' || role === 'PLATFORM_ADMIN';
 
   return [
     {

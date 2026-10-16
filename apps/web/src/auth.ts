@@ -3,6 +3,7 @@ import type { JWT } from 'next-auth/jwt';
 import Credentials from 'next-auth/providers/credentials';
 
 type AppRole =
+  | 'SUPER_ADMIN'
   | 'PLATFORM_ADMIN'
   | 'RESEARCHER'
   | 'EMPLOYER_ADMIN'
@@ -30,7 +31,6 @@ type ApiAuthResponse = {
 declare module 'next-auth' {
   interface Session {
     accessToken?: string;
-    refreshToken?: string;
     accessTokenExpiresAt?: string;
     error?: 'RefreshAccessTokenError';
     user: {
@@ -80,6 +80,7 @@ const getApiBaseUrl = () => {
 
 const isAppRole = (value: unknown): value is AppRole => {
   return (
+    value === 'SUPER_ADMIN' ||
     value === 'PLATFORM_ADMIN' ||
     value === 'RESEARCHER' ||
     value === 'EMPLOYER_ADMIN' ||
@@ -254,8 +255,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
       session.accessToken =
         typeof token.accessToken === 'string' ? token.accessToken : undefined;
-      session.refreshToken =
-        typeof token.refreshToken === 'string' ? token.refreshToken : undefined;
       session.accessTokenExpiresAt =
         typeof token.accessTokenExpiresAt === 'string'
           ? token.accessTokenExpiresAt

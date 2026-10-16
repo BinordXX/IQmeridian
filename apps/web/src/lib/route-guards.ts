@@ -69,14 +69,14 @@ export const requirePlatformAdmin = async (
   requestedPath = '/internal/admin'
 ) => {
   return requireRole({
-    allowedRoles: ['PLATFORM_ADMIN'],
+    allowedRoles: ['SUPER_ADMIN', 'PLATFORM_ADMIN'],
     requestedPath,
   });
 };
 
 export const requireInternalStaff = async (requestedPath = '/internal') => {
   return requireRole({
-    allowedRoles: ['PLATFORM_ADMIN', 'RESEARCHER'],
+    allowedRoles: ['SUPER_ADMIN', 'PLATFORM_ADMIN', 'RESEARCHER'],
     requestedPath,
   });
 };

@@ -4,6 +4,7 @@ const ROLE_HOME_PATHS: Record<string, string> = {
   CANDIDATE: '/dashboard',
   CONSUMER: '/dashboard',
   EMPLOYER_ADMIN: '/employer',
+  SUPER_ADMIN: '/internal/admin',
   PLATFORM_ADMIN: '/internal/admin',
   RESEARCHER: '/internal/researcher',
 };

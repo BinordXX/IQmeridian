@@ -118,4 +118,41 @@ export class UsersController {
       organisationId: body.organisationId ?? null,
     });
   }
+  @Roles('SUPER_ADMIN')
+  @Get('super-admin/overview')
+  getSuperAdminOverview() {
+    return this.usersService.getSuperAdminOverview();
+  }
+
+  @Roles('SUPER_ADMIN')
+  @Get('super-admin/admins')
+  listAdminLevelUsers() {
+    return this.usersService.listAdminLevelUsers();
+  }
+
+  @Roles('SUPER_ADMIN')
+  @Patch('super-admin/admins/:userId/status')
+  updateAdminLevelUserStatus(
+    @CurrentUser() actor: RequestUser,
+    @Param() params: UserIdParamDto,
+    @Body() body: UpdateUserStatusDto,
+  ) {
+    return this.usersService.updateUserStatus({
+      actor,
+      userId: params.userId,
+      status: body.status,
+    });
+  }
+
+  @Roles('SUPER_ADMIN')
+  @Post('super-admin/admins/:userId/revoke-sessions')
+  revokeAdminSessions(
+    @CurrentUser() actor: RequestUser,
+    @Param() params: UserIdParamDto,
+  ) {
+    return this.usersService.revokeAdminSessions({
+      actor,
+      userId: params.userId,
+    });
+  }
 }
