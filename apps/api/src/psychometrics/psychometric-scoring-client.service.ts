@@ -27,11 +27,69 @@ function isScoringResponse(
 
 @Injectable()
 export class PsychometricScoringClientService {
-  private readonly baseUrl =
-    process.env.PSYCHOMETRICS_SERVICE_URL ?? 'http://127.0.0.1:8001';
+  private readonly baseUrl: string;
+  private readonly internalToken: string;
 
-  private readonly internalToken =
-    process.env.PSYCHOMETRICS_INTERNAL_TOKEN ?? 'dev-psychometrics-token';
+  constructor() {
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    const configuredUrl = process.env.PSYCHOMETRICS_SERVICE_URL?.trim();
+
+    const configuredToken = process.env.PSYCHOMETRICS_INTERNAL_TOKEN?.trim();
+
+    if (isProduction) {
+      if (!configuredUrl) {
+        throw new Error('PSYCHOMETRICS_SERVICE_URL is required in production.');
+      }
+
+      if (
+        !configuredToken ||
+        configuredToken.length < 32 ||
+        configuredToken === 'dev-psychometrics-token'
+      ) {
+        throw new Error(
+          'A secure PSYCHOMETRICS_INTERNAL_TOKEN ' +
+            'is required in production.',
+        );
+      }
+
+      let parsedUrl: URL;
+
+      try {
+        parsedUrl = new URL(configuredUrl);
+      } catch {
+        throw new Error('PSYCHOMETRICS_SERVICE_URL must be a valid URL.');
+      }
+
+      const hostname = parsedUrl.hostname.toLowerCase().replace(/\.$/, '');
+
+      const forbiddenHosts = new Set([
+        'localhost',
+        '127.0.0.1',
+        '[::1]',
+        '0.0.0.0',
+      ]);
+
+      if (
+        !['http:', 'https:'].includes(parsedUrl.protocol) ||
+        forbiddenHosts.has(hostname) ||
+        parsedUrl.username ||
+        parsedUrl.password
+      ) {
+        throw new Error(
+          'Production psychometrics service URL ' +
+            'must use a valid non-localhost HTTP address.',
+        );
+      }
+    }
+
+    this.baseUrl = (configuredUrl || 'http://127.0.0.1:8001').replace(
+      /\/+$/,
+      '',
+    );
+
+    this.internalToken = configuredToken || 'dev-psychometrics-token';
+  }
 
   async scoreSession(
     request: PsychometricScoringRequest,
