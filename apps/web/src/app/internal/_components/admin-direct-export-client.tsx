@@ -2,10 +2,11 @@
 
 import { useState } from 'react';
 
-import {
-  createDirectAnalyticsExport,
-  type AnalyticsExportDataset,
-  type AnalyticsExportDefinition,
+import { createDirectAnalyticsExport } from './export-client-api';
+
+import type {
+  AnalyticsExportDataset,
+  AnalyticsExportDefinition,
 } from '../_lib/internal-api';
 
 function downloadTextFile({

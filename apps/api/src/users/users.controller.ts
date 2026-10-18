@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -14,6 +15,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RequestUser } from '../auth/request-user.type';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
+import { PermanentlyDeleteUserDto } from './dto/permanently-delete-user.dto';
 import { CreateManagedUserDto } from './dto/create-managed-user.dto';
 import { ListUsersQueryDto } from './dto/list-users-query.dto';
 import { UpdateUserNameDto } from './dto/update-user-name.dto';
@@ -153,6 +155,19 @@ export class UsersController {
     return this.usersService.revokeAdminSessions({
       actor,
       userId: params.userId,
+    });
+  }
+  @Roles('SUPER_ADMIN')
+  @Delete(':userId')
+  permanentlyDeleteUser(
+    @CurrentUser() actor: RequestUser,
+    @Param() params: UserIdParamDto,
+    @Body() body: PermanentlyDeleteUserDto,
+  ) {
+    return this.usersService.permanentlyDeleteUser({
+      actor,
+      userId: params.userId,
+      confirmationEmail: body.confirmationEmail,
     });
   }
 }

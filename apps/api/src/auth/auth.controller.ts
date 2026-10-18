@@ -7,8 +7,12 @@ import {
   Param,
   UseGuards,
 } from '@nestjs/common';
-import { AuthService } from './auth.service';
 import { CurrentUser } from './current-user.decorator';
+import { Roles } from './roles.decorator';
+import { RolesGuard } from './roles.guard';
+import { AcceptPlatformAdminInvitationDto } from './dto/accept-platform-admin-invitation.dto';
+import { InvitePlatformAdminDto } from './dto/invite-platform-admin.dto';
+import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { LogoutDto } from './dto/logout.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
@@ -35,6 +39,28 @@ type RequestMetadataSource = {
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPER_ADMIN')
+  @Post('platform-admin-invitations')
+  invitePlatformAdmin(
+    @CurrentUser() actor: RequestUser,
+    @Body() dto: InvitePlatformAdminDto,
+  ) {
+    return this.authService.invitePlatformAdmin(actor, dto);
+  }
+
+  @Get('platform-admin-invitations/:token')
+  getPlatformAdminInvitation(@Param('token') token: string) {
+    return this.authService.getPlatformAdminInvitationByToken(token);
+  }
+
+  @Post('platform-admin-invitations/:token/accept')
+  acceptPlatformAdminInvitation(
+    @Param('token') token: string,
+    @Body() dto: AcceptPlatformAdminInvitationDto,
+  ) {
+    return this.authService.acceptPlatformAdminInvitation(token, dto);
+  }
 
   @Get('organisation-admin-invitations/:token')
   getOrganisationAdminInvitation(@Param('token') token: string) {

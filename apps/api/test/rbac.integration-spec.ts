@@ -30,6 +30,7 @@ type TestUser = {
   id: string;
   email: string;
   role: TestRole;
+  roles: TestRole[];
   organisationId: string | null;
 };
 
@@ -65,10 +66,13 @@ class TestAuthGuard implements CanActivate {
       throw new UnauthorizedException('Authentication is required.');
     }
 
+    const testRole = role as TestRole;
+
     requestObject.user = {
       id: userId,
       email: `${userId}@iqmeridian.test`,
-      role: role as TestRole,
+      role: testRole,
+      roles: [testRole],
       organisationId: organisationId || null,
     };
 

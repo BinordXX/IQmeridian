@@ -25,6 +25,8 @@ import {
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { EmailService } from '../email/email.service';
+import { AcceptPlatformAdminInvitationDto } from './dto/accept-platform-admin-invitation.dto';
+import { InvitePlatformAdminDto } from './dto/invite-platform-admin.dto';
 import { VerificationTokensService } from '../verification-tokens/verification-tokens.service';
 import { ResendEmailVerificationDto } from './dto/resend-email-verification.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
@@ -107,6 +109,342 @@ export class AuthService {
     private readonly verificationTokensService: VerificationTokensService,
     private readonly emailService: EmailService,
   ) {}
+
+  async invitePlatformAdmin(actor: RequestUser, dto: InvitePlatformAdminDto) {
+    if (actor.role !== UserRole.SUPER_ADMIN) {
+      throw new ForbiddenException(
+        'Only a super admin can invite platform administrators.',
+      );
+    }
+
+    const email = this.normaliseEmail(dto.email);
+    const name = dto.name.trim();
+
+    const existingUser = await this.prisma.user.findUnique({
+      where: {
+        email,
+      },
+      select: {
+        id: true,
+        role: true,
+        status: true,
+      },
+    });
+
+    if (existingUser) {
+      throw new ConflictException(
+        'An IQMeridian account with this email already exists.',
+      );
+    }
+
+    const invitedUser = await this.prisma.user.create({
+      data: {
+        email,
+        name,
+        role: UserRole.PLATFORM_ADMIN,
+        status: UserStatus.PENDING_EMAIL_VERIFICATION,
+        emailVerifiedAt: null,
+      },
+    });
+
+    const expiresAt = this.verificationTokensService.getExpiryDate(24 * 60);
+
+    let verificationToken: Awaited<
+      ReturnType<VerificationTokensService['createToken']>
+    >;
+
+    try {
+      verificationToken = await this.verificationTokensService.createToken({
+        purpose: VerificationTokenPurpose.PLATFORM_ADMIN_INVITATION,
+        email,
+        subjectUserId: invitedUser.id,
+        expiresAt,
+        metadata: {
+          invitedByUserId: actor.id,
+          invitedRole: UserRole.PLATFORM_ADMIN,
+        },
+        revokeExisting: true,
+      });
+    } catch (error) {
+      await this.prisma.user.delete({
+        where: {
+          id: invitedUser.id,
+        },
+      });
+
+      throw error;
+    }
+
+    const invitationUrl = `${this.getWebAppBaseUrl()}/platform-admin-invitations/${encodeURIComponent(
+      verificationToken.rawToken,
+    )}`;
+
+    let emailDelivery:
+      | {
+          status: 'SMTP_ACCEPTED' | 'CONSOLE';
+          mode: 'smtp' | 'console';
+          messageId: string | null;
+          accepted: string[];
+          rejected: string[];
+        }
+      | {
+          status: 'SMTP_REJECTED';
+          mode: 'smtp';
+          messageId: string | null;
+          accepted: string[];
+          rejected: string[];
+        }
+      | {
+          status: 'FAILED';
+          error: string;
+        };
+
+    try {
+      const delivery = await this.emailService.sendPlatformAdminInvitationEmail(
+        {
+          to: {
+            email,
+            name,
+          },
+          invitationUrl,
+          expiresAt,
+        },
+      );
+
+      const accepted = delivery.accepted ?? [];
+      const rejected = delivery.rejected ?? [];
+      const messageId = delivery.messageId ?? null;
+
+      if (delivery.mode === 'console') {
+        emailDelivery = {
+          status: 'CONSOLE',
+          mode: 'console',
+          messageId,
+          accepted,
+          rejected,
+        };
+      } else if (accepted.length > 0 && rejected.length === 0) {
+        emailDelivery = {
+          status: 'SMTP_ACCEPTED',
+          mode: 'smtp',
+          messageId,
+          accepted,
+          rejected,
+        };
+      } else {
+        emailDelivery = {
+          status: 'SMTP_REJECTED',
+          mode: 'smtp',
+          messageId,
+          accepted,
+          rejected,
+        };
+      }
+    } catch (error) {
+      emailDelivery = {
+        status: 'FAILED',
+        error:
+          error instanceof Error
+            ? error.message.slice(0, 500)
+            : 'Email delivery failed.',
+      };
+    }
+
+    await this.prisma.auditLog.create({
+      data: {
+        action: 'SUPER_ADMIN_PLATFORM_ADMIN_INVITED',
+        userId: actor.id,
+        entityType: 'User',
+        entityId: invitedUser.id,
+        metadata: this.toJsonValue({
+          invitedUserId: invitedUser.id,
+          invitedEmail: email,
+          invitedRole: invitedUser.role,
+          expiresAt,
+          emailDelivery,
+        }),
+      },
+    });
+
+    return {
+      status: 'invitation_created',
+      user: {
+        id: invitedUser.id,
+        email: invitedUser.email,
+        name: invitedUser.name,
+        role: invitedUser.role,
+        status: invitedUser.status,
+      },
+      expiresAt,
+      emailDelivery,
+    };
+  }
+
+  async getPlatformAdminInvitationByToken(token: string) {
+    const verificationToken =
+      await this.verificationTokensService.findUsableToken({
+        rawToken: token,
+        purpose: VerificationTokenPurpose.PLATFORM_ADMIN_INVITATION,
+      });
+
+    const invitedUser = verificationToken.subjectUser;
+
+    if (
+      !invitedUser ||
+      invitedUser.role !== UserRole.PLATFORM_ADMIN ||
+      invitedUser.status !== UserStatus.PENDING_EMAIL_VERIFICATION
+    ) {
+      throw new BadRequestException(
+        'Platform Admin invitation is no longer available.',
+      );
+    }
+
+    if (
+      this.normaliseEmail(invitedUser.email) !==
+      this.normaliseEmail(verificationToken.email)
+    ) {
+      throw new BadRequestException(
+        'Platform Admin invitation does not match the invited account.',
+      );
+    }
+
+    return {
+      email: invitedUser.email,
+      name: invitedUser.name,
+      role: invitedUser.role,
+      status: 'PENDING',
+      expiresAt: verificationToken.expiresAt,
+    };
+  }
+
+  async acceptPlatformAdminInvitation(
+    token: string,
+    dto: AcceptPlatformAdminInvitationDto,
+  ) {
+    if (dto.password !== dto.confirmPassword) {
+      throw new BadRequestException('Password confirmation does not match.');
+    }
+
+    const verificationToken =
+      await this.verificationTokensService.findUsableToken({
+        rawToken: token,
+        purpose: VerificationTokenPurpose.PLATFORM_ADMIN_INVITATION,
+      });
+
+    const invitedUser = verificationToken.subjectUser;
+
+    if (
+      !invitedUser ||
+      invitedUser.role !== UserRole.PLATFORM_ADMIN ||
+      invitedUser.status !== UserStatus.PENDING_EMAIL_VERIFICATION
+    ) {
+      throw new BadRequestException(
+        'Platform Admin invitation is no longer available.',
+      );
+    }
+
+    if (
+      this.normaliseEmail(invitedUser.email) !==
+      this.normaliseEmail(verificationToken.email)
+    ) {
+      throw new BadRequestException(
+        'Platform Admin invitation does not match the invited account.',
+      );
+    }
+
+    const passwordHash = await this.passwordService.hashPassword(dto.password);
+
+    const now = new Date();
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      const tokenClaim = await tx.verificationToken.updateMany({
+        where: {
+          id: verificationToken.id,
+          purpose: VerificationTokenPurpose.PLATFORM_ADMIN_INVITATION,
+          subjectUserId: invitedUser.id,
+          usedAt: null,
+          revokedAt: null,
+          expiresAt: {
+            gt: now,
+          },
+        },
+        data: {
+          usedAt: now,
+        },
+      });
+
+      if (tokenClaim.count !== 1) {
+        throw new ConflictException(
+          'Platform Admin invitation could not be claimed. It may have already been used.',
+        );
+      }
+
+      const user = await tx.user.update({
+        where: {
+          id: invitedUser.id,
+        },
+        data: {
+          passwordHash,
+          status: UserStatus.ACTIVE,
+          emailVerifiedAt: now,
+        },
+      });
+
+      const authAccount = await tx.authAccount.create({
+        data: {
+          userId: user.id,
+          provider: AuthProvider.LOCAL,
+          providerAccountId: user.email,
+          email: user.email,
+          emailVerifiedAt: now,
+        },
+      });
+
+      await tx.verificationToken.updateMany({
+        where: {
+          purpose: VerificationTokenPurpose.PLATFORM_ADMIN_INVITATION,
+          subjectUserId: user.id,
+          id: {
+            not: verificationToken.id,
+          },
+          usedAt: null,
+          revokedAt: null,
+        },
+        data: {
+          revokedAt: now,
+          revokedReason: 'platform-admin-invitation-accepted',
+        },
+      });
+
+      return {
+        user,
+        authAccount,
+      };
+    });
+
+    await this.recordAudit(
+      'auth.accept_platform_admin_invitation',
+      result.user.id,
+      {
+        provider: AuthProvider.LOCAL,
+        role: result.user.role,
+        email: result.user.email,
+        invitationTokenId: verificationToken.id,
+      },
+    );
+
+    return {
+      status: 'ok',
+      user: {
+        id: result.user.id,
+        email: result.user.email,
+        name: result.user.name,
+        role: result.user.role,
+        status: result.user.status,
+      },
+      message: 'Platform Admin invitation accepted. You can now sign in.',
+    };
+  }
 
   async getOrganisationAdminInvitationByToken(token: string) {
     const tokenHash = this.verificationTokensService.hashRawToken(token);
@@ -1250,6 +1588,7 @@ export class AuthService {
     const refreshTokenHash = this.tokenService.hashRefreshToken(
       dto.refreshToken,
     );
+
     const throttleIdentifier = this.buildThrottleIdentifier({
       action: 'refresh',
       metadata,
@@ -1286,31 +1625,16 @@ export class AuthService {
     }
 
     if (existingSession.status !== AuthSessionStatus.ACTIVE) {
-      if (existingSession.revokedReason === 'REFRESH_TOKEN_ROTATED') {
-        await this.prisma.authSession.updateMany({
-          where: {
-            userId: existingSession.userId,
-            status: AuthSessionStatus.ACTIVE,
-          },
-          data: {
-            status: AuthSessionStatus.REVOKED,
-            revokedAt: new Date(),
-            revokedReason: 'REFRESH_TOKEN_REUSE_DETECTED',
-          },
-        });
-
-        await this.recordAudit(
-          'auth.refresh_token_reuse_detected',
-          existingSession.userId,
-          {
-            reusedSessionId: existingSession.id,
-          },
-        );
-      }
-
       await this.recordThrottleFailure({
         action: AuthRateLimitAction.REFRESH,
         identifier: throttleIdentifier,
+      });
+
+      await this.recordAudit('auth.refresh_failed', existingSession.userId, {
+        reason: 'SESSION_NOT_ACTIVE',
+        sessionId: existingSession.id,
+        sessionStatus: existingSession.status,
+        revokedReason: existingSession.revokedReason,
       });
 
       throw new UnauthorizedException('Refresh token is no longer active.');
@@ -1356,32 +1680,15 @@ export class AuthService {
       throw new ForbiddenException('This account is not active.');
     }
 
-    const nextRefreshToken = this.tokenService.generateRefreshToken();
-    const nextRefreshTokenHash =
-      this.tokenService.hashRefreshToken(nextRefreshToken);
-    const refreshTokenExpiresAt = this.tokenService.getRefreshTokenExpiresAt();
+    const now = new Date();
 
-    const [, newSession, updatedUser] = await this.prisma.$transaction([
+    const [updatedSession, updatedUser] = await this.prisma.$transaction([
       this.prisma.authSession.update({
         where: {
           id: existingSession.id,
         },
         data: {
-          status: AuthSessionStatus.REVOKED,
-          revokedAt: new Date(),
-          revokedReason: 'REFRESH_TOKEN_ROTATED',
-          lastUsedAt: new Date(),
-        },
-      }),
-      this.prisma.authSession.create({
-        data: {
-          userId: existingSession.userId,
-          authAccountId: existingSession.authAccountId,
-          refreshTokenHash: nextRefreshTokenHash,
-          ipAddress: metadata.ipAddress,
-          userAgent: metadata.userAgent,
-          expiresAt: refreshTokenExpiresAt,
-          lastUsedAt: new Date(),
+          lastUsedAt: now,
         },
       }),
       this.prisma.user.update({
@@ -1389,14 +1696,14 @@ export class AuthService {
           id: existingSession.userId,
         },
         data: {
-          lastLoginAt: new Date(),
+          lastLoginAt: now,
         },
       }),
     ]);
 
     await this.recordAudit('auth.refresh', updatedUser.id, {
-      previousSessionId: existingSession.id,
-      newSessionId: newSession.id,
+      sessionId: updatedSession.id,
+      rotated: false,
     });
 
     await this.recordThrottleSuccess({
@@ -1406,9 +1713,9 @@ export class AuthService {
 
     return this.buildAuthResponse({
       user: updatedUser,
-      authSession: newSession,
-      refreshToken: nextRefreshToken,
-      refreshTokenExpiresAt,
+      authSession: updatedSession,
+      refreshToken: dto.refreshToken,
+      refreshTokenExpiresAt: updatedSession.expiresAt,
     });
   }
 

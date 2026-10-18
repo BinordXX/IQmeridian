@@ -53,6 +53,12 @@ type OrganisationAdminInvitationEmailInput = {
   expiresAt: Date;
 };
 
+type PlatformAdminInvitationEmailInput = {
+  to: EmailAddress;
+  invitationUrl: string;
+  expiresAt: Date;
+};
+
 type CandidateInvitationEmailInput = {
   to: EmailAddress;
   organisationName?: string | null;
@@ -256,6 +262,45 @@ export class EmailService implements OnModuleInit, OnModuleDestroy {
     return this.sendTransactionalEmail({
       to: input.to,
       subject: `IQMeridian employer-admin invitation for ${input.organisationName}`,
+      text,
+      html,
+    });
+  }
+
+  async sendPlatformAdminInvitationEmail(
+    input: PlatformAdminInvitationEmailInput,
+  ): Promise<EmailDeliveryResult> {
+    const safeInvitationUrl = this.escapeHtml(input.invitationUrl);
+
+    const html = this.buildHtmlDocument({
+      title: 'Your IQMeridian Platform Admin invitation',
+      preview:
+        'You have been invited to join IQMeridian as a Platform Administrator.',
+      body: `
+      <p>Hello${this.getNameSuffix(input.to.name)},</p>
+      <p>You have been invited to join IQMeridian as a <strong>Platform Administrator</strong>.</p>
+      <p>Platform Administrators have access to protected operational administration tools, so this invitation is intended only for the named recipient.</p>
+      <p><a href="${safeInvitationUrl}" style="${this.buttonStyle()}">Accept Platform Admin invitation</a></p>
+      <p>This invitation expires on ${this.formatDate(input.expiresAt)}.</p>
+      <p>If you were not expecting this invitation, ignore this email.</p>
+    `,
+    });
+
+    const text = [
+      `Hello${this.getNameSuffix(input.to.name)},`,
+      '',
+      'You have been invited to join IQMeridian as a Platform Administrator.',
+      '',
+      `Accept invitation: ${input.invitationUrl}`,
+      '',
+      `This invitation expires on ${this.formatDate(input.expiresAt)}.`,
+      '',
+      'If you were not expecting this invitation, ignore this email.',
+    ].join('\n');
+
+    return this.sendTransactionalEmail({
+      to: input.to,
+      subject: 'Your IQMeridian Platform Admin invitation',
       text,
       html,
     });
