@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  ForbiddenException,
   ConflictException,
 } from '@nestjs/common';
 import {
@@ -409,6 +410,315 @@ export class UsersService {
     });
 
     return this.toSafeUser(updatedUser);
+  }
+
+  async permanentlyDeleteUser(input: {
+    actor: RequestUser;
+    userId: string;
+    confirmationEmail: string;
+  }) {
+    if (!this.isSuperAdmin(input.actor)) {
+      throw new ForbiddenException(
+        'Only super admins can permanently purge user accounts.',
+      );
+    }
+
+    const targetUser = await this.getExistingUser(input.userId);
+
+    if (targetUser.id === input.actor.id) {
+      throw new BadRequestException(
+        'Super admins cannot permanently purge their own signed-in account.',
+      );
+    }
+
+    const confirmationEmail = input.confirmationEmail.trim().toLowerCase();
+    const targetEmail = targetUser.email.trim().toLowerCase();
+
+    if (confirmationEmail !== targetEmail) {
+      throw new BadRequestException(
+        'Confirmation email does not match the target user.',
+      );
+    }
+
+    if (targetUser.role === UserRole.SUPER_ADMIN) {
+      await this.assertNotRemovingLastActiveSuperAdmin({
+        targetUserId: targetUser.id,
+        nextRole: targetUser.role,
+        nextStatus: UserStatus.DISABLED,
+      });
+    }
+
+    const purgeResult = await this.prisma.$transaction(async (tx) => {
+      const participantRecords = await tx.organisationParticipant.findMany({
+        where: {
+          userId: targetUser.id,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      const participantIds = participantRecords.map(
+        (participant) => participant.id,
+      );
+
+      const candidateInvitations = await tx.invitation.findMany({
+        where: {
+          OR: [
+            {
+              candidateUserId: targetUser.id,
+            },
+            {
+              email: {
+                equals: targetUser.email,
+                mode: 'insensitive',
+              },
+            },
+            ...(participantIds.length > 0
+              ? [
+                  {
+                    participantId: {
+                      in: participantIds,
+                    },
+                  },
+                ]
+              : []),
+          ],
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      const candidateInvitationIds = candidateInvitations.map(
+        (invitation) => invitation.id,
+      );
+
+      const deletedReports = await tx.report.deleteMany({
+        where: {
+          subjectUserId: targetUser.id,
+        },
+      });
+
+      const deletedSessions = await tx.session.deleteMany({
+        where: {
+          OR: [
+            {
+              userId: targetUser.id,
+            },
+            {
+              applicantEmail: {
+                equals: targetUser.email,
+                mode: 'insensitive',
+              },
+            },
+            ...(participantIds.length > 0
+              ? [
+                  {
+                    participantId: {
+                      in: participantIds,
+                    },
+                  },
+                ]
+              : []),
+            ...(candidateInvitationIds.length > 0
+              ? [
+                  {
+                    invitationId: {
+                      in: candidateInvitationIds,
+                    },
+                  },
+                ]
+              : []),
+          ],
+        },
+      });
+
+      const deletedCandidateInvitations = await tx.invitation.deleteMany({
+        where: {
+          OR: [
+            {
+              candidateUserId: targetUser.id,
+            },
+            {
+              email: {
+                equals: targetUser.email,
+                mode: 'insensitive',
+              },
+            },
+            ...(participantIds.length > 0
+              ? [
+                  {
+                    participantId: {
+                      in: participantIds,
+                    },
+                  },
+                ]
+              : []),
+          ],
+        },
+      });
+
+      const deletedOrganisationAdminInvitations =
+        await tx.organisationAdminInvitation.deleteMany({
+          where: {
+            email: {
+              equals: targetUser.email,
+              mode: 'insensitive',
+            },
+          },
+        });
+
+      const deletedVerificationTokens = await tx.verificationToken.deleteMany({
+        where: {
+          OR: [
+            {
+              subjectUserId: targetUser.id,
+            },
+            {
+              email: {
+                equals: targetUser.email,
+                mode: 'insensitive',
+              },
+            },
+          ],
+        },
+      });
+
+      const deletedExportRequests = await tx.analyticsExportRequest.deleteMany({
+        where: {
+          requestedById: targetUser.id,
+        },
+      });
+
+      await tx.analyticsExportRequest.updateMany({
+        where: {
+          reviewedById: targetUser.id,
+        },
+        data: {
+          reviewedById: null,
+        },
+      });
+
+      await tx.organisationAccessRequest.updateMany({
+        where: {
+          reviewedById: targetUser.id,
+        },
+        data: {
+          reviewedById: null,
+        },
+      });
+
+      await tx.campaign.updateMany({
+        where: {
+          ownerId: targetUser.id,
+        },
+        data: {
+          ownerId: null,
+        },
+      });
+
+      const deletedResearchAssignments =
+        await tx.assessmentFormSectionResearcherAssignment.deleteMany({
+          where: {
+            researcherId: targetUser.id,
+          },
+        });
+
+      const deletedAuditLogs = await tx.auditLog.deleteMany({
+        where: {
+          OR: [
+            {
+              userId: targetUser.id,
+            },
+            {
+              entityId: targetUser.id,
+            },
+          ],
+        },
+      });
+
+      const deletedMemberships = await tx.organisationMembership.deleteMany({
+        where: {
+          userId: targetUser.id,
+        },
+      });
+
+      const deletedParticipants = await tx.organisationParticipant.deleteMany({
+        where: {
+          userId: targetUser.id,
+        },
+      });
+
+      const deletedAuthSessions = await tx.authSession.deleteMany({
+        where: {
+          userId: targetUser.id,
+        },
+      });
+
+      const deletedAuthAccounts = await tx.authAccount.deleteMany({
+        where: {
+          userId: targetUser.id,
+        },
+      });
+
+      const deletedNotificationPreferences =
+        await tx.accountNotificationPreference.deleteMany({
+          where: {
+            userId: targetUser.id,
+          },
+        });
+
+      const deletedUser = await tx.user.delete({
+        where: {
+          id: targetUser.id,
+        },
+      });
+
+      return {
+        deletedUser,
+        purgedRecords: {
+          reports: deletedReports.count,
+          sessions: deletedSessions.count,
+          candidateInvitations: deletedCandidateInvitations.count,
+          organisationAdminInvitations:
+            deletedOrganisationAdminInvitations.count,
+          verificationTokens: deletedVerificationTokens.count,
+          exportRequests: deletedExportRequests.count,
+          researchAssignments: deletedResearchAssignments.count,
+          auditLogs: deletedAuditLogs.count,
+          organisationMemberships: deletedMemberships.count,
+          organisationParticipants: deletedParticipants.count,
+          authSessions: deletedAuthSessions.count,
+          authAccounts: deletedAuthAccounts.count,
+          notificationPreferences: deletedNotificationPreferences.count,
+        },
+      };
+    });
+
+    await this.auditService.record({
+      action: 'USER_PERMANENTLY_PURGED',
+      userId: input.actor.id,
+      entityType: 'Governance',
+      entityId: null,
+      metadata: {
+        deletedRole: purgeResult.deletedUser.role,
+        deletedStatus: purgeResult.deletedUser.status,
+        purgedAt: new Date().toISOString(),
+      },
+    });
+
+    return {
+      status: 'deleted',
+      deletedUser: {
+        id: purgeResult.deletedUser.id,
+        email: purgeResult.deletedUser.email,
+        name: purgeResult.deletedUser.name,
+        role: purgeResult.deletedUser.role,
+        status: purgeResult.deletedUser.status,
+      },
+      purgedRecords: purgeResult.purgedRecords,
+    };
   }
 
   async updateUserOrganisation(input: {

@@ -24,18 +24,18 @@ export class RolesGuard implements CanActivate {
     }
 
     const request = context.switchToHttp().getRequest<RequestWithUser>();
-    const user = request.user;
+    const roles = request.user?.roles;
 
-    if (!user) {
+    // Fail closed when authentication does not supply a valid role array.
+    if (!Array.isArray(roles)) {
       return false;
     }
 
-    if (user.roles.includes(UserRole.SUPER_ADMIN)) {
+    // Super Admin retains unrestricted role-based access.
+    if (roles.includes(UserRole.SUPER_ADMIN)) {
       return true;
     }
 
-    return requiredRoles.some((requiredRole) =>
-      user.roles.includes(requiredRole),
-    );
+    return requiredRoles.some((requiredRole) => roles.includes(requiredRole));
   }
 }

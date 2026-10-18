@@ -5,8 +5,11 @@ import { useMemo, useState } from 'react';
 import {
   generateAnalyticsExportRequest,
   reviewAnalyticsExportRequest,
-  type AnalyticsExportDefinition,
-  type InternalAnalyticsExportRequestOutput,
+} from './export-client-api';
+
+import type {
+  AnalyticsExportDefinition,
+  InternalAnalyticsExportRequestOutput,
 } from '../_lib/internal-api';
 
 function formatDateTime(value: string | null) {

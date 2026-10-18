@@ -2,12 +2,13 @@
 
 import { useMemo, useState } from 'react';
 
-import {
-  requestAnalyticsExport,
-  type AnalyticsExportDataset,
-  type AnalyticsExportDefinition,
-  type InternalAnalyticsExportGovernanceSettingOutput,
-  type InternalAnalyticsExportRequestOutput,
+import { requestAnalyticsExport } from './export-client-api';
+
+import type {
+  AnalyticsExportDataset,
+  AnalyticsExportDefinition,
+  InternalAnalyticsExportGovernanceSettingOutput,
+  InternalAnalyticsExportRequestOutput,
 } from '../_lib/internal-api';
 
 function formatDateTime(value: string | null) {

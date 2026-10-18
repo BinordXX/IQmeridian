@@ -18,6 +18,7 @@ import {
   ShieldCheck,
   UserRound,
   Users,
+  UserPlus,
   Crown,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -152,6 +153,7 @@ const buildNavGroups = (role: InternalRole): NavGroup[] => {
                 icon: Crown,
               },
             ],
+            
           },
         ]
       : []),
@@ -170,11 +172,25 @@ const buildNavGroups = (role: InternalRole): NavGroup[] => {
                 exact: true,
                 icon: BarChart3,
               },
-              {
-                label: 'Users',
-                href: '/internal/admin/users',
-                icon: Users,
-              },
+{
+  label: 'Users',
+  href: '/internal/admin/users',
+  icon: Users,
+},
+...(isSuperAdmin
+  ? [
+      {
+        label: 'Create platform admin',
+        href: '/internal/admin/super/platform-admin-invitations',
+        icon: UserPlus,
+      },
+    ]
+  : []),
+{
+  label: 'Organisations',
+  href: '/internal/admin/organisations',
+  icon: Building2,
+},
               {
                 label: 'Organisations',
                 href: '/internal/admin/organisations',

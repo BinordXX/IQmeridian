@@ -2,10 +2,9 @@
 
 import { useState } from 'react';
 
-import {
-  updateAnalyticsExportGovernanceSetting,
-  type InternalAnalyticsExportGovernanceSettingOutput,
-} from '../_lib/internal-api';
+import { updateAnalyticsExportGovernanceSetting } from './export-client-api';
+
+import type { InternalAnalyticsExportGovernanceSettingOutput } from '../_lib/internal-api';
 
 export function ExportGovernanceSettingsClient({
   initialSetting,

@@ -33,7 +33,10 @@ type PageProps = {
 const getAccessToken = async () => {
   const session = await auth();
 
-  if (session?.user.role !== 'PLATFORM_ADMIN') {
+  if (
+    session?.user.role !== 'SUPER_ADMIN' &&
+    session?.user.role !== 'PLATFORM_ADMIN'
+  ) {
     redirect('/internal');
   }
 

@@ -1,3 +1,4 @@
+import { auth } from '@/auth';
 import Link from 'next/link';
 
 import {
@@ -8,6 +9,7 @@ import {
   type InternalUserRole,
   type InternalUserStatus,
 } from '../../../_lib/internal-api';
+import { PermanentUserDelete } from './_components/permanent-user-delete';
 import {
   updateUserOrganisationAction,
   updateUserRoleAction,
@@ -32,7 +34,11 @@ const roleOptions: InternalUserRole[] = [
   'PLATFORM_ADMIN',
 ];
 
-const statusOptions: InternalUserStatus[] = ['ACTIVE', 'SUSPENDED', 'DISABLED'];
+const statusOptions: InternalUserStatus[] = [
+  'ACTIVE',
+  'SUSPENDED',
+  'DISABLED',
+];
 
 const formatDate = (value?: string | null) => {
   if (!value) return 'Not available';
@@ -57,6 +63,7 @@ function DetailField({
       <dt className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">
         {label}
       </dt>
+
       <dd
         className={[
           'mt-2 break-all font-bold text-white',
@@ -91,10 +98,13 @@ export default async function InternalAdminUserDetailPage({
   const { userId } = await params;
   const resolvedSearchParams = await searchParams;
 
-  const [user, organisations] = await Promise.all([
+  const [session, user, organisations] = await Promise.all([
+    auth(),
     fetchInternalUserById(userId),
     fetchInternalOrganisations(),
   ]);
+
+  const canPermanentlyDelete = session?.user?.role === 'SUPER_ADMIN';
 
   const updateRole = updateUserRoleAction.bind(null, user.id);
   const updateStatus = updateUserStatusAction.bind(null, user.id);
@@ -217,6 +227,7 @@ export default async function InternalAdminUserDetailPage({
               name="organisationId"
             >
               <option value="">No organisation</option>
+
               {organisations.map((organisation) => (
                 <option key={organisation.id} value={organisation.id}>
                   {organisation.name}
@@ -233,6 +244,15 @@ export default async function InternalAdminUserDetailPage({
           </form>
         </AdminFormCard>
       </div>
+
+      {canPermanentlyDelete ? (
+        <PermanentUserDelete
+          userId={user.id}
+          email={user.email}
+          name={user.name}
+          status={user.status}
+        />
+      ) : null}
     </section>
   );
 }
