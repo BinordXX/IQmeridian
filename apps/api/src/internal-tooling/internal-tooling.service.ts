@@ -156,7 +156,7 @@ type PilotFormWithInternalRelations = Prisma.AssessmentFormGetPayload<{
   include: typeof pilotFormInclude;
 }>;
 
-type InternalApiRole = 'PLATFORM_ADMIN' | 'RESEARCHER';
+type InternalApiRole = 'SUPER_ADMIN' | 'PLATFORM_ADMIN' | 'RESEARCHER';
 
 const IQMERIDIAN_PILOT_FORM_NAME =
   'IQMeridian General Cognitive Ability Pilot Form';
@@ -701,6 +701,15 @@ export class InternalToolingService {
       include: itemInclude,
     });
 
+    if (
+      input.reviewStatus !== undefined ||
+      input.psychometricStatus !== undefined
+    ) {
+      throw new BadRequestException(
+        'Review and psychometric lifecycle statuses cannot be changed through ordinary draft editing.',
+      );
+    }
+
     if (!item) {
       throw new NotFoundException('Internal item record was not found.');
     }
@@ -1142,6 +1151,26 @@ export class InternalToolingService {
   async createInternalDraftItem(
     input: CreateInternalDraftItemInput,
   ): Promise<InternalItemDetailOutput> {
+    if (
+      input.reviewStatus !== undefined &&
+      input.reviewStatus !== null &&
+      input.reviewStatus !== ItemReviewStatus.NOT_REVIEWED
+    ) {
+      throw new BadRequestException(
+        'New items must begin as NOT_REVIEWED. Use the formal review workflow for approval.',
+      );
+    }
+
+    if (
+      input.psychometricStatus !== undefined &&
+      input.psychometricStatus !== null &&
+      input.psychometricStatus !== PsychometricItemStatus.DRAFT
+    ) {
+      throw new BadRequestException(
+        'New items must begin in DRAFT psychometric status.',
+      );
+    }
+
     const itemId =
       input.id && input.id.trim().length > 0
         ? input.id.trim()
@@ -4015,7 +4044,7 @@ export class InternalToolingService {
     overrideReason?: string | null;
     operation: string;
   }) {
-    if (actorRole !== 'PLATFORM_ADMIN') {
+    if (actorRole !== 'SUPER_ADMIN' && actorRole !== 'PLATFORM_ADMIN') {
       throw new BadRequestException(
         `Only platform admins can override locked pilot form governance when ${operation}.`,
       );

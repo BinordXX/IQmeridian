@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  ForbiddenException,
   Get,
   NotFoundException,
   Param,
@@ -8,6 +9,7 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
+import { UserRole } from '@prisma/client';
 
 import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -32,7 +34,7 @@ import {
   UpdatePilotFormStatusInput,
 } from './internal-tooling.types';
 
-type InternalApiRole = 'PLATFORM_ADMIN' | 'RESEARCHER';
+type InternalApiRole = 'SUPER_ADMIN' | 'PLATFORM_ADMIN' | 'RESEARCHER';
 
 @Controller('internal')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -43,10 +45,25 @@ export class InternalToolingController {
   ) {}
 
   private getInternalActorRole(user: RequestUser): InternalApiRole {
-    return user.role as InternalApiRole;
+    if (user.roles.includes(UserRole.SUPER_ADMIN)) {
+      return 'SUPER_ADMIN';
+    }
+
+    if (user.roles.includes(UserRole.PLATFORM_ADMIN)) {
+      return 'PLATFORM_ADMIN';
+    }
+
+    if (user.roles.includes(UserRole.RESEARCHER)) {
+      return 'RESEARCHER';
+    }
+
+    throw new ForbiddenException(
+      'Internal tooling access requires an authorised internal role.',
+    );
   }
 
   @Post('pilot-forms/general-cognitive-ability-v0-1')
+  @Roles('PLATFORM_ADMIN')
   createFormalPilotForm() {
     return this.internalToolingService.createFormalPilotForm();
   }
@@ -57,6 +74,7 @@ export class InternalToolingController {
   }
 
   @Post('forms')
+  @Roles('PLATFORM_ADMIN')
   createInternalAssessmentForm(
     @Body() body: CreateInternalAssessmentFormInput,
   ) {
@@ -86,6 +104,7 @@ export class InternalToolingController {
   }
 
   @Patch('pilot-forms/:formId/status')
+  @Roles('PLATFORM_ADMIN')
   updatePilotFormStatus(
     @Param('formId') formId: string,
     @Body() input: UpdatePilotFormStatusInput,
@@ -97,21 +116,21 @@ export class InternalToolingController {
       this.getInternalActorRole(user),
     );
   }
-
   @Post('items')
+  @Roles('PLATFORM_ADMIN')
   createInternalDraftItem(@Body() input: CreateInternalDraftItemInput) {
     return this.internalToolingService.createInternalDraftItem(input);
   }
-
   @Post('items/:itemId/activate')
+  @Roles('PLATFORM_ADMIN')
   activateInternalItem(
     @Param('itemId') itemId: string,
     @Body() input: ActivateInternalItemInput,
   ) {
     return this.internalToolingService.activateInternalItem(itemId, input);
   }
-
   @Patch('items/:itemId')
+  @Roles('PLATFORM_ADMIN')
   updateInternalDraftItem(
     @Param('itemId') itemId: string,
     @Body() input: UpdateInternalDraftItemInput,
@@ -123,8 +142,8 @@ export class InternalToolingController {
       this.getInternalActorRole(user),
     );
   }
-
   @Post('items/:itemId/status')
+  @Roles('PLATFORM_ADMIN')
   updateInternalItemStatus(
     @Param('itemId') itemId: string,
     @Body() input: UpdateInternalItemStatusInput,
@@ -154,6 +173,7 @@ export class InternalToolingController {
   }
 
   @Post('items/:itemId/form-mappings')
+  @Roles('PLATFORM_ADMIN')
   attachInternalItemToForm(
     @Param('itemId') itemId: string,
     @Body() input: CreateInternalItemFormMappingInput,
